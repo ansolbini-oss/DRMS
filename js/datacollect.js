@@ -1,0 +1,702 @@
+/* ════════════════════════════════════════════════════════════
+   DATACOLLECT — Phase 3에서 메인 <script>에서 분리
+   원본 index.html의 해당 prefix 함수/상수를 모음
+════════════════════════════════════════════════════════════ */
+
+function dcRouteFromDashboard(typeKey){
+  // DR 유형에 속하는 첫 활성 그룹 ID 추출
+  const g = store.groups.find(x=>x.typeKey===typeKey && x.status==='active');
+  navigate('datacollect');
+  setTimeout(()=>{
+    if(g){
+      dcState.groupId = g.id;
+      const sel = $('dc-group');
+      if(sel) sel.value = g.id;
+    }
+    dcRender();
+  }, 100);
+}
+
+/* 시계 */
+const dcState = {
+  range:'7d',
+  from:null, to:null,
+  groupId:'all',
+  status:'all',
+  q:'',
+  expandedGroupId:null,
+};
+
+function dcInit(){
+  // 페이지 진입 시 항상 목록뷰로 복귀
+  const listV = $('dc-list-view'), detailV = $('dc-detail-view');
+  if(listV && detailV){
+    listV.style.display = 'flex';
+    detailV.style.display = 'none';
+  }
+  // 자원그룹 옵션 채우기 (hidden select, 호환성 유지)
+  const gSel = $('dc-group');
+  if(gSel){
+    const current = dcState.groupId || 'all';
+    gSel.innerHTML = '<option value="all">전체</option>' +
+      store.groups.filter(g=>g.status==='active').map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    gSel.value = current;
+  }
+  $('dc-range').value = dcState.range;
+  dcApplyRange(false);
+  dcRender();
+}
+
+function dcApplyRange(doRender){
+  const v = $('dc-range').value;
+  dcState.range = v;
+  const fromEl = $('dc-from'), toEl = $('dc-to');
+  const today = new Date();
+  const pad = n=>String(n).padStart(2,'0');
+  const ymd = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  let from, to;
+  if(v==='today'){ from = to = new Date(today); }
+  else if(v==='yesterday'){ const y = new Date(today); y.setDate(y.getDate()-1); from = to = y; }
+  else if(v==='7d'){ to = new Date(today); from = new Date(today); from.setDate(from.getDate()-6); }
+  else if(v==='30d'){ to = new Date(today); from = new Date(today); from.setDate(from.getDate()-29); }
+  else { // custom
+    fromEl.style.display = 'inline-block';
+    toEl.style.display = 'inline-block';
+    if(!fromEl.value){ const d = new Date(today); d.setDate(d.getDate()-6); fromEl.value = ymd(d); }
+    if(!toEl.value) toEl.value = ymd(today);
+    dcState.from = fromEl.value; dcState.to = toEl.value;
+    if(doRender!==false) dcRender();
+    return;
+  }
+  fromEl.style.display = 'none';
+  toEl.style.display = 'none';
+  dcState.from = ymd(from);
+  dcState.to   = ymd(to);
+  if(doRender!==false) dcRender();
+}
+
+/* 자원그룹 × 기간 집계 */
+function dcAggregateGroup(g){
+  const from = new Date(dcState.from), to = new Date(dcState.to);
+  const custs = (g.customerIds||[]).map(id=>custById(id)).filter(Boolean);
+  let totalSlots = 0, missTotal = 0, impTotal = 0;
+  const perCust = custs.map(c=>{
+    const days = pcDmGenerateData(c, from, to);
+    let ts=0, ms=0, is=0;
+    days.forEach(d=>{ ts += d.slots.length; ms += d.missCnt; is += (d.imputedCnt||0); });
+    totalSlots += ts; missTotal += ms; impTotal += is;
+    const rxRate = ts ? (ts-ms)/ts : 0;
+    const rawRate = ts ? (ts-ms-is)/ts : 0;
+    const state = ms>3 ? 'risk' : ms>0 ? 'warn' : is/Math.max(ts,1)>=0.05 ? 'imp' : 'ok';
+    return { cust:c, totalSlots:ts, missCnt:ms, impCnt:is, rxRate, rawRate, state };
+  });
+  const rxRate = totalSlots ? (totalSlots-missTotal)/totalSlots : 0;
+  const rawRate = totalSlots ? (totalSlots-missTotal-impTotal)/totalSlots : 0;
+  const riskCnt = perCust.filter(p=>p.state==='risk').length;
+  const warnCnt = perCust.filter(p=>p.state==='warn').length;
+  const impCustCnt = perCust.filter(p=>p.state==='imp').length;
+  return { group:g, perCust, totalSlots, missTotal, impTotal, rxRate, rawRate, riskCnt, warnCnt, impCustCnt };
+}
+
+function dcFilteredGroups(){
+  const q = ($('dc-q')?.value||'').trim();
+  dcState.q = q;
+  dcState.groupId = $('dc-group').value;
+  dcState.status = $('dc-status').value;
+  const activeGroups = store.groups.filter(g=>g.status==='active');
+  let targets = activeGroups;
+  if(dcState.groupId !== 'all') targets = targets.filter(g=>g.id===dcState.groupId);
+  return targets.map(dcAggregateGroup);
+}
+
+function dcRender(){
+  const aggs = dcFilteredGroups();
+  $('dc-range-info').textContent = `${dcState.from} ~ ${dcState.to} · ${aggs.length}개 그룹`;
+
+  // KPI 합산 (자원 전체 지표)
+  const sum = aggs.reduce((a,g)=>{
+    a.total += g.totalSlots; a.miss += g.missTotal; a.imp += g.impTotal;
+    a.risk += g.riskCnt; a.warn += g.warnCnt; a.impCust += g.impCustCnt;
+    return a;
+  }, {total:0, miss:0, imp:0, risk:0, warn:0, impCust:0});
+
+  // 총괄 KPI 카드 갱신
+  const rxPct = sum.total ? Math.round((sum.total-sum.miss)/sum.total*1000)/10 : 0;
+  const rxColor = rxPct>=99?'var(--green)':rxPct>=95?'var(--amber)':'var(--red)';
+  const riskGroups = aggs.filter(a=>a.riskCnt>0).length;
+  const allActive = store.groups.filter(g=>g.status==='active').length;
+
+  if($('dc-kpi-groups')) $('dc-kpi-groups').textContent = aggs.length;
+  if($('dc-kpi-groups-sub')) $('dc-kpi-groups-sub').textContent = `전체 ${allActive}개 중 조회`;
+  if($('dc-kpi-rx')){
+    $('dc-kpi-rx').textContent = sum.total ? rxPct+'%' : '—';
+    $('dc-kpi-rx').style.color = rxColor;
+  }
+  if($('dc-kpi-miss')){
+    $('dc-kpi-miss').textContent = sum.miss.toLocaleString();
+    $('dc-kpi-miss').style.color = sum.miss>0 ? 'var(--red)' : 'var(--text)';
+  }
+  if($('dc-kpi-imp')) $('dc-kpi-imp').textContent = sum.imp.toLocaleString();
+  if($('dc-kpi-risk')){
+    $('dc-kpi-risk').textContent = riskGroups + '개';
+    $('dc-kpi-risk').style.color = riskGroups>0 ? 'var(--red)' : 'var(--text)';
+  }
+
+  dcRenderTabGroups(aggs);
+
+  // 사이드바 뱃지 (이상 자원그룹 수)
+  const dcBadge = $('sb-dc-badge');
+  if(dcBadge){
+    if(riskGroups>0){
+      dcBadge.textContent = String(riskGroups);
+      dcBadge.style.background = 'var(--red)';
+      dcBadge.style.display = 'inline-block';
+      dcBadge.title = `수집 이상 자원그룹 ${riskGroups}개`;
+    } else {
+      dcBadge.style.display = 'none';
+    }
+  }
+}
+
+/* ────────────────────────────────────────
+   목록: 자원그룹별 요약 (수신률·피크·평균·최근수신 + 상세 버튼)
+   ──────────────────────────────────────── */
+function dcRenderTabGroups(aggs){
+  const filtered = aggs.filter(a=>{
+    if(dcState.status==='all') return true;
+    const groupState = a.riskCnt>0 ? 'risk' : a.warnCnt>0 ? 'warn' : a.impCustCnt>0 ? 'imp' : 'ok';
+    return groupState===dcState.status;
+  });
+  if(!filtered.length){
+    $('dc-tab-groups').innerHTML = `<div class="empty" style="padding:60px 20px;">조회 조건에 해당하는 자원그룹이 없습니다.</div>`;
+    return;
+  }
+
+  const rows = filtered.map(a=>{
+    const g = a.group;
+    const groupKey = String(g.id);
+    const expanded = String(dcState.expandedGroupId)===groupKey;
+    const rxPct = Math.round(a.rxRate*1000)/10;
+    const rxColor = rxPct>=99?'var(--green)':rxPct>=95?'var(--amber)':'var(--red)';
+    const totalCust = a.perCust.length;
+
+    // 추가 지표: 기간 내 평균 · 피크 · 최근수신
+    let totalKw = 0, kwCount = 0, peakKw = 0, lastSlot = null;
+    const from = new Date(dcState.from), to = new Date(dcState.to);
+    a.perCust.forEach(p=>{
+      const days = pcDmGenerateData(p.cust, from, to);
+      days.forEach(d=>{
+        d.slots.forEach(s=>{
+          if(s.kw!=null){
+            totalKw += s.kw; kwCount++;
+            if(s.kw > peakKw) peakKw = s.kw;
+            if(!s.missing && (!lastSlot || (d.date+s.time) > lastSlot)) lastSlot = d.date+' '+s.time;
+          }
+        });
+      });
+    });
+    const avgKw = kwCount ? Math.round(totalKw/kwCount) : 0;
+    const peakFmt = peakKw>=1000 ? (peakKw/1000).toFixed(2)+' MW' : Math.round(peakKw)+' kW';
+    const avgFmt = avgKw>=1000 ? (avgKw/1000).toFixed(2)+' MW' : avgKw+' kW';
+
+    // 상태 뱃지
+    const stateBadges = [];
+    if(a.riskCnt>0) stateBadges.push(`<span class="badge badge-fail" style="font-size:10px;">이상 ${a.riskCnt}</span>`);
+    if(a.warnCnt>0) stateBadges.push(`<span class="badge badge-pending" style="font-size:10px;">일부 결측 ${a.warnCnt}</span>`);
+    if(a.impCustCnt>0) stateBadges.push(`<span class="dm-imp-badge">보정 다수 ${a.impCustCnt}</span>`);
+    if(!stateBadges.length) stateBadges.push(`<span class="badge badge-done" style="font-size:10px;">정상</span>`);
+    const customerRows = [...a.perCust].sort((x,y)=>{
+      const prio = {risk:0, warn:1, imp:2, ok:3};
+      return (prio[x.state] ?? 9) - (prio[y.state] ?? 9);
+    }).map(p=>{
+      const stateMeta = {
+        risk:{label:'이상', cls:'badge-fail'},
+        warn:{label:'일부 결측', cls:'badge-pending'},
+        imp:{label:'보정 다수', cls:'badge-progress'},
+        ok:{label:'정상', cls:'badge-done'}
+      }[p.state] || {label:'정상', cls:'badge-done'};
+      const rx = Math.round(p.rxRate*1000)/10;
+      return `<button class="dc-customer-jump" onclick='dcOpenCustomerDetail(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)})'>
+        <span>
+          <div class="dc-customer-jump-name">${p.cust.name}</div>
+          <div class="dc-customer-jump-meta">${p.cust.id} · 계약전력 ${p.cust.power ? p.cust.power.toLocaleString() : '-'} kW</div>
+        </span>
+        <span class="dc-customer-jump-val">${rx}%</span>
+        <span class="dc-customer-jump-val" style="color:${p.missCnt>0?'var(--red)':'var(--text-hint)'};">${p.missCnt}</span>
+        <span class="dc-customer-jump-val">${p.impCnt}</span>
+        <span class="dc-customer-jump-state"><span class="badge ${stateMeta.cls}" style="font-size:10px;">${stateMeta.label}</span></span>
+      </button>`;
+    }).join('');
+    const expandRow = expanded ? `<tr class="dc-expand-row">
+      <td colspan="8">
+        <div class="dc-expand-inner">
+          <div class="dc-expand-head">
+            <span>소속 참여고객 ${totalCust}명 · 고객을 클릭하면 해당 고객 상세 모니터링으로 바로 이동합니다.</span>
+            <span>컬럼: 수신률 / 미수신 / 보정</span>
+          </div>
+          <div class="dc-expand-list">${customerRows}</div>
+        </div>
+      </td>
+    </tr>` : '';
+
+    return `<tr>
+      <td style="padding:12px;text-align:left;padding-left:14px;">
+        <button class="dc-group-toggle" onclick="dcToggleGroupCustomers(${JSON.stringify(g.id)})">
+          <span class="dc-group-chevron">${expanded?'−':'+'}</span>
+          <span>
+            <div class="dc-group-name">${g.name}</div>
+            <div class="dc-group-meta">${g.type||''} · ${g.id} · ${totalCust}명 참여</div>
+          </span>
+        </button>
+      </td>
+      <td style="padding:12px;text-align:right;font-weight:700;color:${rxColor};font-variant-numeric:tabular-nums;">${rxPct}%</td>
+      <td style="padding:12px;text-align:right;color:${a.missTotal>0?'var(--red)':'var(--text-hint)'};font-weight:${a.missTotal>0?'600':'normal'};font-variant-numeric:tabular-nums;">${a.missTotal.toLocaleString()}</td>
+      <td style="padding:12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--blue);font-weight:600;">${peakFmt}</td>
+      <td style="padding:12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-sub);">${avgFmt}</td>
+      <td style="padding:12px;text-align:center;font-variant-numeric:tabular-nums;font-size:11px;color:var(--text-sub);">${lastSlot||'—'}</td>
+      <td style="padding:12px;text-align:left;"><div style="display:flex;flex-wrap:wrap;gap:3px;">${stateBadges.join('')}</div></td>
+      <td style="padding:12px;text-align:center;">
+        <button class="btn btn-sm btn-primary" onclick="dcOpenDetail(${JSON.stringify(g.id)})">상세</button>
+      </td>
+    </tr>${expandRow}`;
+  }).join('');
+
+  $('dc-tab-groups').innerHTML = `
+    <div style="font-size:11px;color:var(--text-hint);margin-bottom:8px;">
+      * <b>자원그룹명 클릭</b> 시 소속 참여고객이 펼쳐지며, 고객 클릭 시 해당 고객 상세 모니터링으로 바로 이동합니다. · <b>수신률</b> = (정상+보정) / 전체 슬롯
+    </div>
+    <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:#fff;">
+      <table class="dc-summary-table">
+        <thead>
+          <tr>
+            <th style="padding:10px 14px;text-align:left;">자원그룹</th>
+            <th style="padding:10px 14px;text-align:right;">수신률</th>
+            <th style="padding:10px 14px;text-align:right;">미수신</th>
+            <th style="padding:10px 14px;text-align:right;">피크</th>
+            <th style="padding:10px 14px;text-align:right;">평균</th>
+            <th style="padding:10px 14px;text-align:center;">최근 수신</th>
+            <th style="padding:10px 14px;text-align:left;">상태</th>
+            <th style="padding:10px 14px;text-align:center;width:80px;">관리</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ────────────────────────────────────────
+   상세 화면 — 페이지 전환형
+   ──────────────────────────────────────── */
+const dcDState = {
+  groupId: null,
+  from: null,
+  to: null,
+  customerId: 'all', // 'all' | customer.id
+  custSearchQuery: '',
+};
+
+function dcOpenDetail(groupId){
+  const g = store.groups.find(x=>String(x.id)===String(groupId));
+  if(!g){ showToast('자원그룹을 찾을 수 없습니다.'); return; }
+  dcDState.groupId = g.id;
+  dcDState.customerId = 'all';
+  dcDState.custSearchQuery = '';
+  // 상세 기간 기본값 = 목록 조회 기간 동기화
+  dcDState.from = dcState.from;
+  dcDState.to   = dcState.to;
+  // 뷰 전환
+  $('dc-list-view').style.display = 'none';
+  $('dc-detail-view').style.display = 'flex';
+  // 헤더 반영
+  $('dc-d-title').textContent = g.name;
+  $('dc-d-crumb').textContent = g.name;
+  $('dc-d-type').textContent = g.type || '—';
+  // 입력 필드 초기화
+  $('dc-d-from').value = dcDState.from;
+  $('dc-d-to').value = dcDState.to;
+  $('dc-d-cust-search').value = '';
+  // 고객 드롭다운 채우기
+  dcDFillCustomerSelect(g);
+  dcDQuery();
+}
+function dcOpenCustomerDetail(groupId, customerId){
+  const g = store.groups.find(x=>String(x.id)===String(groupId));
+  const c = custById(customerId);
+  if(!g || !c){ showToast('참여고객 정보를 찾을 수 없습니다.'); return; }
+  dcOpenDetail(groupId);
+  dcDState.customerId = customerId;
+  dcDFillCustomerSelect(g);
+  dcDQuery();
+}
+function dcToggleGroupCustomers(groupId){
+  const next = String(groupId);
+  dcState.expandedGroupId = String(dcState.expandedGroupId)===next ? null : next;
+  dcRender();
+}
+function dcGotoList(){
+  $('dc-detail-view').style.display = 'none';
+  $('dc-list-view').style.display = 'flex';
+  dcDState.groupId = null;
+}
+function dcDSetPreset(days){
+  const today = new Date();
+  const pad = n=>String(n).padStart(2,'0');
+  const ymd = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const from = new Date(today); from.setDate(from.getDate() - (days-1));
+  $('dc-d-from').value = ymd(from);
+  $('dc-d-to').value = ymd(today);
+  dcDState.from = ymd(from);
+  dcDState.to = ymd(today);
+  dcDQuery();
+}
+function dcDFillCustomerSelect(g){
+  const sel = $('dc-d-cust');
+  const custs = (g.customerIds||[]).map(id=>custById(id)).filter(Boolean);
+  const q = (dcDState.custSearchQuery||'').toLowerCase();
+  const filtered = q
+    ? custs.filter(c => (c.name+c.id).toLowerCase().includes(q))
+    : custs;
+  sel.innerHTML = `<option value="all">전체 참여고객 (${custs.length}명 합산)</option>`
+    + filtered.map(c=>`<option value="${c.id}" ${dcDState.customerId===c.id?'selected':''}>${c.name} (${c.id}) · ${c.power||'-'}kW</option>`).join('');
+  sel.onchange = ()=>{ dcDState.customerId = sel.value; dcDQuery(); };
+}
+function dcDFilterCustomers(){
+  dcDState.custSearchQuery = $('dc-d-cust-search').value;
+  const g = store.groups.find(x=>String(x.id)===String(dcDState.groupId));
+  if(g) dcDFillCustomerSelect(g);
+}
+function dcDQuery(){
+  const g = store.groups.find(x=>String(x.id)===String(dcDState.groupId));
+  if(!g) return;
+  dcDState.from = $('dc-d-from').value;
+  dcDState.to   = $('dc-d-to').value;
+  if(!dcDState.from || !dcDState.to){ showToast('조회 기간을 선택하세요.'); return; }
+  if(new Date(dcDState.from) > new Date(dcDState.to)){ showToast('시작일이 종료일보다 클 수 없습니다.'); return; }
+  const days = Math.floor((new Date(dcDState.to)-new Date(dcDState.from))/86400000)+1;
+  if(days > 90){ showToast('한 번에 조회 가능한 기간은 최대 90일입니다.'); return; }
+
+  const targets = (dcDState.customerId==='all')
+    ? (g.customerIds||[]).map(id=>custById(id)).filter(Boolean)
+    : [custById(dcDState.customerId)].filter(Boolean);
+
+  dcDRender(g, targets, days);
+}
+
+/* 상세 렌더: 요약 지표 + 전체 그래프 + 고객별 15분 단위 상세 차트 + 테이블 */
+function dcDRender(g, customers, dayCount){
+  const body = $('dc-detail-body');
+  if(!customers.length){
+    body.innerHTML = `<div class="empty" style="padding:60px 20px;">조회 대상 참여고객이 없습니다.</div>`;
+    return;
+  }
+  const from = new Date(dcDState.from), to = new Date(dcDState.to);
+
+  // 1) 전체 집계: 고객×일자 합산
+  const allDays = customers.map(c => ({cust:c, days: pcDmGenerateData(c, from, to)}));
+
+  // 2) 요약 지표
+  let tSlots=0, tMiss=0, tImp=0, totalKw=0, kwCount=0, peakKw=0;
+  allDays.forEach(ad=>{
+    ad.days.forEach(d=>{
+      tSlots += d.slots.length;
+      tMiss += d.missCnt;
+      tImp += (d.imputedCnt||0);
+      d.slots.forEach(s=>{
+        if(s.kw!=null){
+          totalKw += s.kw; kwCount++;
+          if(s.kw > peakKw) peakKw = s.kw;
+        }
+      });
+    });
+  });
+  const rxPct = tSlots ? Math.round((tSlots-tMiss)/tSlots*1000)/10 : 0;
+  const avgKw = kwCount ? Math.round(totalKw/kwCount) : 0;
+  const rxColor = rxPct>=99?'var(--green)':rxPct>=95?'var(--amber)':'var(--red)';
+  const isMW = peakKw>=1000;
+  const peakFmt = isMW ? (peakKw/1000).toFixed(2)+' MW' : Math.round(peakKw)+' kW';
+  const avgFmt = avgKw>=1000 ? (avgKw/1000).toFixed(2)+' MW' : avgKw+' kW';
+
+  const scopeLabel = dcDState.customerId==='all'
+    ? `자원그룹 전체 (${customers.length}명 합산)`
+    : `${customers[0].name} (${customers[0].id})`;
+
+  const summaryHtml = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div>
+          <div style="font-size:12px;color:var(--text-hint);">조회 대상</div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-top:2px;">${scopeLabel}</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-hint);font-variant-numeric:tabular-nums;">
+          ${dcDState.from} ~ ${dcDState.to} · ${dayCount}일
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div style="background:var(--bg);border-radius:var(--radius);padding:12px;">
+          <div style="font-size:10px;color:var(--text-hint);">수신률 (보정 포함)</div>
+          <div style="font-size:20px;font-weight:700;color:${rxColor};margin-top:3px;font-variant-numeric:tabular-nums;">${rxPct}%</div>
+          <div style="font-size:10px;color:var(--text-hint);margin-top:3px;">총 ${tSlots.toLocaleString()}슬롯 중 ${(tSlots-tMiss).toLocaleString()}슬롯 수신</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius);padding:12px;">
+          <div style="font-size:10px;color:var(--text-hint);">미수신 / 보정</div>
+          <div style="font-size:20px;font-weight:700;color:${tMiss>0?'var(--red)':'var(--text)'};margin-top:3px;font-variant-numeric:tabular-nums;">${tMiss.toLocaleString()} <span style="font-size:12px;color:var(--text-hint);">/ ${tImp.toLocaleString()}</span></div>
+          <div style="font-size:10px;color:var(--text-hint);margin-top:3px;">정산 제외 / 자동 보정 슬롯</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius);padding:12px;">
+          <div style="font-size:10px;color:var(--text-hint);">피크 사용량</div>
+          <div style="font-size:20px;font-weight:700;color:var(--blue);margin-top:3px;font-variant-numeric:tabular-nums;">${peakFmt}</div>
+          <div style="font-size:10px;color:var(--text-hint);margin-top:3px;">15분 단위 기준 최댓값</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius);padding:12px;">
+          <div style="font-size:10px;color:var(--text-hint);">평균 사용량</div>
+          <div style="font-size:20px;font-weight:700;color:var(--text);margin-top:3px;font-variant-numeric:tabular-nums;">${avgFmt}</div>
+          <div style="font-size:10px;color:var(--text-hint);margin-top:3px;">수신 슬롯 전체 평균</div>
+        </div>
+      </div>
+    </div>`;
+
+  // 3) 전체 그래프 (일자별 집계) — 사전검증 데이터모니터링과 유사 구성
+  let chartHtml = '';
+  if(dcDState.customerId === 'all'){
+    // 자원그룹 합산 — 일자별 합계 라인
+    const dailyMap = {};
+    allDays.forEach(ad=>{
+      ad.days.forEach(d=>{
+        if(!dailyMap[d.date]) dailyMap[d.date] = { date:d.date, total:0, miss:0, imp:0, sumKw:0, peak:0 };
+        d.slots.forEach(s=>{
+          dailyMap[d.date].total++;
+          if(s.missing) dailyMap[d.date].miss++;
+          if(s.imputed) dailyMap[d.date].imp++;
+          if(s.kw!=null){
+            dailyMap[d.date].sumKw += s.kw;
+            if(s.kw > dailyMap[d.date].peak) dailyMap[d.date].peak = s.kw;
+          }
+        });
+      });
+    });
+    const daily = Object.values(dailyMap).sort((x,y)=>x.date.localeCompare(y.date));
+    chartHtml = dcRenderAggregateChart(daily, isMW);
+  } else {
+    // 개별 고객 — 사전검증의 15분 단위 그래프 재활용
+    const c = customers[0];
+    const days = pcDmGenerateData(c, from, to);
+    chartHtml = `
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);">📈 15분 단위 수집 데이터 추이</div>
+          <div style="font-size:11px;color:var(--text-hint);">${c.name} · CBL (기준부하) · 실제 사용량 · 수집 실패 표기</div>
+        </div>
+        ${pcDmRenderChart(days)}
+      </div>`;
+  }
+
+  // 4) 상세 테이블 — 고객별 OR 고객별 15분 테이블
+  let tableHtml = '';
+  if(dcDState.customerId === 'all'){
+    // 자원그룹 합산 — 고객별 요약 테이블
+    const custRows = allDays.map(ad=>{
+      const c = ad.cust;
+      let ts=0, ms=0, is=0, pk=0, sumk=0, cnt=0;
+      ad.days.forEach(d=>{
+        ts += d.slots.length; ms += d.missCnt; is += (d.imputedCnt||0);
+        d.slots.forEach(s=>{ if(s.kw!=null){ sumk += s.kw; cnt++; if(s.kw>pk) pk=s.kw; } });
+      });
+      const rx = ts ? Math.round((ts-ms)/ts*1000)/10 : 0;
+      const rxClr = rx>=99?'var(--green)':rx>=95?'var(--amber)':'var(--red)';
+      const avg = cnt ? Math.round(sumk/cnt) : 0;
+      const state = ms>3 ? 'risk' : ms>0 ? 'warn' : is/Math.max(ts,1)>=0.05 ? 'imp' : 'ok';
+      const stMeta = {risk:{l:'이상',cls:'badge-fail'},warn:{l:'일부 결측',cls:'badge-pending'},imp:{l:'보정 다수',cls:'badge-progress'},ok:{l:'정상',cls:'badge-done'}}[state];
+      return `<tr>
+        <td style="padding:9px 12px;font-weight:500;">${c.name} <span style="font-size:10px;color:var(--text-hint);">${c.id}</span></td>
+        <td style="padding:9px 12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-sub);">${c.power?c.power.toLocaleString():'-'} kW</td>
+        <td style="padding:9px 12px;text-align:right;font-weight:600;color:${rxClr};font-variant-numeric:tabular-nums;">${rx}%</td>
+        <td style="padding:9px 12px;text-align:right;color:${ms>0?'var(--red)':'var(--text-hint)'};font-variant-numeric:tabular-nums;">${ms}</td>
+        <td style="padding:9px 12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-sub);">${is}</td>
+        <td style="padding:9px 12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--blue);">${Math.round(pk)} kW</td>
+        <td style="padding:9px 12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-sub);">${avg} kW</td>
+        <td style="padding:9px 12px;text-align:center;"><span class="badge ${stMeta.cls}" style="font-size:10px;">${stMeta.l}</span></td>
+        <td style="padding:9px 12px;text-align:center;">
+          <button class="btn btn-xs btn-secondary" onclick="dcDSelectCustomer('${c.id}')">고객 상세</button>
+        </td>
+      </tr>`;
+    }).join('');
+    tableHtml = `
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy);background:#f8f9fc;">
+          👥 참여고객별 수집 상세 (${customers.length}명)
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead style="background:#fafbfe;">
+            <tr>
+              <th style="padding:9px 12px;text-align:left;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">고객</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">계약전력</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">수신률</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">미수신</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">보정</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">피크</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">평균</th>
+              <th style="padding:9px 12px;text-align:center;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">상태</th>
+              <th style="padding:9px 12px;text-align:center;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);width:90px;">관리</th>
+            </tr>
+          </thead>
+          <tbody>${custRows}</tbody>
+        </table>
+      </div>`;
+  } else {
+    // 개별 고객 — 사전검증의 15분 테이블 재활용
+    const c = customers[0];
+    const days = pcDmGenerateData(c, from, to);
+    tableHtml = `
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy);background:#f8f9fc;">
+          📋 ${c.name} · 15분 단위 수집 상세
+        </div>
+        <div style="padding:12px 16px;">${pcDmRenderTable(days)}</div>
+      </div>`;
+  }
+
+  body.innerHTML = summaryHtml + chartHtml + tableHtml;
+}
+
+/* 자원그룹 합산 — 일자별 집계 그래프 (스택 막대 + 피크 라인) */
+function dcRenderAggregateChart(daily, isMW){
+  if(!daily.length) return '';
+  const W = 820, H = 240, P = {l:50, r:12, t:20, b:34};
+  const iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const unitDiv = isMW ? 1000 : 1;
+  const unitLabel = isMW ? 'MW' : 'kW';
+  const peakMax = Math.max(1, ...daily.map(d=>d.peak)) / unitDiv;
+  const yMax = peakMax * 1.15;
+  const x = i => P.l + (daily.length===1 ? iw/2 : (i/(daily.length-1))*iw);
+  const y = v => P.t + ih - (v/yMax)*ih;
+  const barW = Math.min(26, Math.max(4, iw/Math.max(daily.length,1) - 4));
+
+  // 일자별 막대 (피크값) + 수신률 색상
+  const bars = daily.map((d,i)=>{
+    const peak = d.peak/unitDiv;
+    const rx = d.total ? (d.total-d.miss)/d.total : 0;
+    const color = rx>=0.99?'#86c9a9':rx>=0.95?'#f6d89a':'#f4a8a8';
+    const bh = Math.max(0, ih - (y(peak) - P.t));
+    return `<rect x="${(x(i)-barW/2).toFixed(1)}" y="${y(peak).toFixed(1)}" width="${barW}" height="${bh.toFixed(1)}" fill="${color}" stroke="${rx>=0.99?'var(--green)':rx>=0.95?'var(--amber)':'var(--red)'}" stroke-width="1">
+      <title>${d.date} · 피크 ${peak.toFixed(isMW?2:0)} ${unitLabel} · 수신률 ${(rx*100).toFixed(1)}%</title>
+    </rect>`;
+  }).join('');
+
+  // 피크 라인 (연결)
+  const linePath = daily.map((d,i)=>`${i===0?'M':'L'}${x(i).toFixed(1)},${y(d.peak/unitDiv).toFixed(1)}`).join(' ');
+
+  // Y축 눈금
+  const yTicks = Array.from({length:5},(_,i)=>{
+    const v = yMax*(i/4);
+    return {y:y(v), label: isMW ? v.toFixed(2) : Math.round(v).toLocaleString()};
+  });
+
+  // X축 날짜 라벨 (최대 10개 표시)
+  const step = Math.max(1, Math.ceil(daily.length/10));
+  const xLabels = daily.map((d,i)=> (i%step===0 || i===daily.length-1)
+    ? `<text x="${x(i)}" y="${H-12}" font-size="9" fill="var(--text-sub)" text-anchor="middle">${d.date.substring(5)}</text>`
+    : '').join('');
+
+  return `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;color:var(--navy);">📊 일자별 수집 현황 (${daily.length}일)</div>
+        <div style="display:flex;gap:10px;font-size:10px;color:var(--text-sub);">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#86c9a9;border:1px solid var(--green);border-radius:2px;vertical-align:middle;margin-right:3px;"></span>정상 (≥99%)</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#f6d89a;border:1px solid var(--amber);border-radius:2px;vertical-align:middle;margin-right:3px;"></span>주의 (≥95%)</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#f4a8a8;border:1px solid var(--red);border-radius:2px;vertical-align:middle;margin-right:3px;"></span>위험 (&lt;95%)</span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:var(--blue);vertical-align:middle;margin-right:3px;"></span>피크 추이</span>
+        </div>
+      </div>
+      <svg width="100%" viewBox="0 0 ${W} ${H}" style="background:#fafbfd;border-radius:6px;">
+        ${yTicks.map(t=>`<line x1="${P.l}" y1="${t.y}" x2="${W-P.r}" y2="${t.y}" stroke="var(--border)" stroke-dasharray="2,3"/>
+                         <text x="${P.l-6}" y="${t.y+3}" font-size="9" fill="var(--text-hint)" text-anchor="end">${t.label}</text>`).join('')}
+        <text x="${P.l-6}" y="${P.t-4}" font-size="9" fill="var(--text-sub)" text-anchor="end">${unitLabel}</text>
+        ${bars}
+        <path d="${linePath}" fill="none" stroke="var(--blue)" stroke-width="1.8" stroke-linejoin="round"/>
+        ${daily.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d.peak/unitDiv)}" r="2.5" fill="var(--blue)"/>`).join('')}
+        ${xLabels}
+      </svg>
+      <div style="font-size:10px;color:var(--text-hint);margin-top:6px;">* 막대 색상 = 일자별 수신률 등급 · 파란 선 = 자원그룹 합산 피크 사용량 추이</div>
+    </div>`;
+}
+
+function dcDSelectCustomer(cid){
+  dcDState.customerId = cid;
+  const g = store.groups.find(x=>String(x.id)===String(dcDState.groupId));
+  if(g){ dcDFillCustomerSelect(g); dcDQuery(); }
+}
+
+/* 상세 화면 CSV */
+function dcExportDetailCsv(){
+  const g = store.groups.find(x=>String(x.id)===String(dcDState.groupId));
+  if(!g){ showToast('상세 화면이 아닙니다.'); return; }
+  const from = new Date(dcDState.from), to = new Date(dcDState.to);
+  const targets = (dcDState.customerId==='all')
+    ? (g.customerIds||[]).map(id=>custById(id)).filter(Boolean)
+    : [custById(dcDState.customerId)].filter(Boolean);
+  const rows = [['date','group','customerId','customer','time','cbl_kw','kw','missing','imputed']];
+  targets.forEach(c=>{
+    const days = pcDmGenerateData(c, from, to);
+    days.forEach(d=>{
+      d.slots.forEach(s=>{
+        rows.push([d.date, g.name, c.id, c.name, s.time, s.cbl, s.missing?'':s.kw, s.missing?1:0, s.imputed?1:0]);
+      });
+    });
+  });
+  const csv = rows.map(r=>r.map(v=>{
+    const s = String(v??'');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const scope = dcDState.customerId==='all' ? g.name : (custById(dcDState.customerId)?.name||'cust');
+  a.href = url; a.download = `dc_${scope}_${dcDState.from}_${dcDState.to}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('CSV 파일을 다운로드했습니다.');
+}
+
+
+/* CSV 내보내기 */
+function dcExportCsv(){
+  const aggs = dcFilteredGroups();
+  const from = new Date(dcState.from), to = new Date(dcState.to);
+  const rows = [['date','group','customerId','customer','time','cbl_kw','kw','missing','imputed','impute_rule']];
+  aggs.forEach(a=>{
+    a.perCust.forEach(p=>{
+      const days = pcDmGenerateData(p.cust, from, to);
+      days.forEach(d=>{
+        d.slots.forEach(s=>{
+          rows.push([d.date, a.group.name, p.cust.id, p.cust.name, s.time,
+            s.cbl, s.missing?'':s.kw, s.missing?1:0, s.imputed?1:0, s.imputeRule||'']);
+        });
+      });
+    });
+  });
+  const csv = rows.map(r=>r.map(v=>{
+    const s = String(v??'');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `dc_${dcState.from}_${dcState.to}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* 재수집 요청 (시뮬레이션 토스트) */
+function dcRerun(){
+  alert(`${dcState.from} ~ ${dcState.to} 범위 재수집 요청이 ${dcState.groupId==='all'?'전체 그룹':dcState.groupId}(으)로 전송되었습니다.\n(시뮬레이션)`);
+}
+
+/* ════════════════════════════════════════════════════════════
+   ★ PART 8 — 고객 소통 (COM) · 입찰 관리 (BID) · 시스템 관리 (SYS)
+   v3 확장: 부재 TOP 10 중 🔴 1·2·3 및 🟡 7·8 반영
+════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────
+   COM · 시드 데이터
+───────────────────────────────────────────── */
