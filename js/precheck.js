@@ -193,12 +193,84 @@ function pcShowDetail(id){
   pcRenderMemo(c);
   pcRenderDetailLog(c);
   pcUpdateContractBtn(c);
+  // 사업장 탭: 사업장 2개 이상일 때만 표시
+  const sitesTabBtn = $('pc-tab-sites-btn');
+  if(sitesTabBtn){
+    if(Array.isArray(c.sites) && c.sites.length >= 2){
+      sitesTabBtn.style.display = '';
+      sitesTabBtn.textContent = `사업장 (${c.sites.length})`;
+      pcRenderSitesTab(c);
+    } else {
+      sitesTabBtn.style.display = 'none';
+    }
+  }
   pcSwitchTab('info');
 }
 function pcSwitchTab(tab){
   $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
   $('pc-tab-info').style.display = tab==='info'?'grid':'none';
-  $('pc-tab-log').style.display = tab==='log'?'grid':'none';
+  $('pc-tab-log').style.display  = tab==='log' ?'grid':'none';
+  const sitesTab = $('pc-tab-sites');
+  if(sitesTab) sitesTab.style.display = tab==='sites'?'grid':'none';
+}
+
+// 사업장 탭 렌더링: 좌측 리스트 + 첫 사업장 자동 선택
+function pcRenderSitesTab(c){
+  const list = $('pc-sites-list'); list.innerHTML = '';
+  if(!Array.isArray(c.sites) || c.sites.length===0) return;
+  $('pc-sites-count').textContent = `총 ${c.sites.length}사업장`;
+  c.sites.forEach((s, idx) => {
+    const done = Array.isArray(s.steps) ? s.steps.filter(x=>x===2).length : 0;
+    const isDone = done===6;
+    const item = document.createElement('div');
+    item.className = 'site-list-item';
+    item.dataset.siteId = s.id;
+    item.style.cssText = 'padding:10px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:#fff;transition:all .15s ease;';
+    item.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="font-weight:600;font-size:13px;color:var(--navy);">${s.siteName}</div>
+        <span class="badge ${isDone?'badge-done':'badge-progress'}" style="font-size:10px;">${done}/6</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:3px;font-family:monospace;">KEPCO ${s.kepco}</div>
+    `;
+    item.onclick = () => pcSelectSite(c.id, s.id);
+    list.appendChild(item);
+  });
+  // 첫 사업장 자동 선택
+  pcSelectSite(c.id, c.sites[0].id);
+}
+
+function pcSelectSite(bizId, siteId){
+  const c = custById(bizId); if(!c) return;
+  const s = (c.sites||[]).find(x=>x.id===siteId); if(!s) return;
+  // active 스타일 토글
+  document.querySelectorAll('.site-list-item').forEach(el => {
+    const isActive = el.dataset.siteId === siteId;
+    el.style.background = isActive ? 'var(--blue-light)' : '#fff';
+    el.style.borderColor = isActive ? 'var(--blue)' : 'var(--border)';
+  });
+  // 우측 상세 렌더
+  const done = Array.isArray(s.steps) ? s.steps.filter(x=>x===2).length : 0;
+  $('pc-site-detail').innerHTML = `
+    <div class="r-card">
+      <div class="r-card-header"><div class="r-card-title">${s.siteName}</div></div>
+      <div class="r-card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><td>사업장 책임자</td><td>${s.manager||'—'}</td></tr>
+            <tr><td>현장 연락처</td><td>${s.tel||'—'}</td></tr>
+            <tr><td>주소</td><td>${s.addr||'—'}</td></tr>
+            <tr><td>KEPCO 고객번호</td><td style="font-family:monospace;">${s.kepco}</td></tr>
+            <tr><td>계약전력</td><td>${s.power||'—'} kW</td></tr>
+            <tr><td>등록일</td><td>${s.date||'—'}</td></tr>
+            <tr><td>검증 진행</td><td><b>${done} / 6 단계</b></td></tr>
+            <tr><td>검증 상태</td><td><span class="badge ${done===6?'badge-done':'badge-progress'}">${s.verifyStatus||'—'}</span></td></tr>
+            <tr><td>데이터 수집</td><td>${s.dataStatus||'—'}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
 
 function pcRenderSteps(c){

@@ -391,6 +391,7 @@
 
     <div class="tab-bar">
       <div class="tab active" data-tab="info" onclick="pcSwitchTab('info')">기본정보</div>
+      <div class="tab" data-tab="sites" onclick="pcSwitchTab('sites')" id="pc-tab-sites-btn" style="display:none;">사업장</div>
       <div class="tab" data-tab="log" onclick="pcSwitchTab('log')">검증 로그</div>
     </div>
 
@@ -466,6 +467,28 @@
         <div class="r-card">
           <div class="r-card-header"><div class="r-card-title">검증 로그</div></div>
           <div id="pc-log-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사업장 탭 (사업장 2개 이상일 때만 활성) -->
+    <div class="detail-body" id="pc-tab-sites" style="display:none;">
+      <!-- LEFT: 사업장 리스트 -->
+      <div class="detail-left">
+        <div class="info-section">
+          <div style="font-size:14px;font-weight:700;color:var(--navy);">사업장 목록</div>
+          <div style="font-size:11px;color:var(--text-hint);margin-top:2px;" id="pc-sites-count">-</div>
+          <div id="pc-sites-list" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+      <!-- RIGHT: 선택된 사업장 상세 -->
+      <div class="detail-right">
+        <div id="pc-site-detail">
+          <div class="r-card">
+            <div class="r-card-body" style="text-align:center;color:var(--text-hint);padding:40px;">
+              왼쪽 목록에서 사업장을 선택하세요.
+            </div>
+          </div>
         </div>
       </div>
     </div>
