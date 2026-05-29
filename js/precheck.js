@@ -114,13 +114,13 @@ function pcRenderTable(){
     tr.className = 'business-row' + (hasSites ? ' has-children' : '');
     tr.dataset.bizId = c.id;
     const accordionIcon = hasSites
-      ? `<span class="accordion-icon" style="display:inline-block;width:12px;color:var(--text-hint);font-size:10px;cursor:pointer;" onclick="event.stopPropagation();pcToggleBusiness('${c.id}')">▶</span> `
+      ? `<span class="accordion-icon" style="display:inline-block;width:12px;color:var(--text-hint);font-size:10px;">▶</span> `
       : '<span style="display:inline-block;width:12px;"></span> ';
     const siteCountBadge = hasSites
       ? ` <span style="color:var(--text-hint);font-size:11px;font-weight:400;">· ${c.sites.length}사업장</span>`
       : '';
     tr.innerHTML = `
-      <td>${accordionIcon}<span class="company-name" ${hasSites?`onclick="event.stopPropagation();pcToggleBusiness('${c.id}')" style="cursor:pointer;"`:''}>${c.name}</span>${siteCountBadge}</td>
+      <td><span class="company-name">${accordionIcon}${c.name}${siteCountBadge}</span></td>
       <td>${c.ceo}</td>
       <td>${c.tel}</td>
       <td>${c.addr}</td>
@@ -130,7 +130,14 @@ function pcRenderTable(){
       <td style="text-align:center;">${hasSites ? pcBusinessBarHtml(c.sites) : pcStepBarHtml(c.steps)}</td>
       <td style="text-align:center;font-variant-numeric:tabular-nums;">${c.date}</td>
       <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pcShowDetail('${c.id}')">상세</button></td>`;
-    tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON' && e.target.tagName!=='SPAN') pcShowDetail(c.id); };
+    // 사업장 다수 → 행 클릭 = 아코디언 토글 (상세는 [상세] 버튼으로만)
+    // 사업장 단일 → 행 클릭 = 상세 이동 (기존 동작)
+    tr.style.cursor = 'pointer';
+    if(hasSites){
+      tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON') pcToggleBusiness(c.id); };
+    } else {
+      tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON') pcShowDetail(c.id); };
+    }
     tbody.appendChild(tr);
     // ───── 사업장 자식 행들 (기본 숨김) ─────
     if(hasSites){
@@ -152,7 +159,7 @@ function pcRenderTable(){
           <td style="text-align:center;color:var(--text-hint);">—</td>
           <td style="text-align:center;">${pcStepBarHtml(s.steps)}</td>
           <td style="text-align:center;font-variant-numeric:tabular-nums;color:var(--grey700);">${s.date}</td>
-          <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();pcShowDetail('${c.id}')">상세</button></td>`;
+          <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();pcShowDetailWithSite('${c.id}','${s.id}')">상세</button></td>`;
         tbody.appendChild(trSite);
       });
     }
@@ -206,6 +213,13 @@ function pcShowDetail(id){
   }
   pcSwitchTab('info');
 }
+// 사업장 행 [상세]: 사업자 상세 진입 → 사업장 탭 → 해당 사업장 선택
+function pcShowDetailWithSite(bizId, siteId){
+  pcShowDetail(bizId);
+  pcSwitchTab('sites');
+  pcSelectSite(bizId, siteId);
+}
+
 function pcSwitchTab(tab){
   $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
   $('pc-tab-info').style.display = tab==='info'?'grid':'none';
