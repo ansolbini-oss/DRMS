@@ -12,26 +12,26 @@ const store = {
     // 계약완료 상태 (자원 풀에 이미 등록되어 자원관리에서 매핑 가능)
     {id:'C011',name:'삼성전자',         ceo:'이재용',tel:'02-2255-0114',addr:'경기 수원시',recno:'DR-2024-0101',date:'2024-07-05',power:1000,kepco:'10011001',drType:'표준DR',       status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'950kW',reduction:500,rrmseVal:'7%',infraS:'완료',
      sites:[
-       {id:'C011-S1', siteName:'수원사업장',     kepco:'10011001', addr:'경기 수원시 영통구',  power:400, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-05'},
-       {id:'C011-S2', siteName:'평택공장',       kepco:'10011002', addr:'경기 평택시',         power:350, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-06'},
-       {id:'C011-S3', siteName:'화성반도체',     kepco:'10011003', addr:'경기 화성시',         power:250, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-07'}
+       {id:'C011-S1', siteName:'수원사업장',     kepco:'10011001', addr:'경기 수원시 영통구',  power:400, tel:'031-200-1111', manager:'박수원', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-05'},
+       {id:'C011-S2', siteName:'평택공장',       kepco:'10011002', addr:'경기 평택시',         power:350, tel:'031-680-2222', manager:'최평택', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-06'},
+       {id:'C011-S3', siteName:'화성반도체',     kepco:'10011003', addr:'경기 화성시',         power:250, tel:'031-209-3333', manager:'정화성', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-07'}
      ]},
     {id:'C012',name:'LG전자',           ceo:'조주완',tel:'02-3777-1114',addr:'서울 영등포구',recno:'DR-2024-0102',date:'2024-07-08',power:900, kepco:'10012002',drType:'표준DR',       status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'860kW',reduction:450,rrmseVal:'6%',infraS:'완료',
      sites:[
-       {id:'C012-S1', siteName:'영등포 본사',    kepco:'10012002', addr:'서울 영등포구',       power:500, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-08'},
-       {id:'C012-S2', siteName:'평택 LG공장',    kepco:'10012003', addr:'경기 평택시',         power:400, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-09'}
+       {id:'C012-S1', siteName:'영등포 본사',    kepco:'10012002', addr:'서울 영등포구',       power:500, tel:'02-3777-1115', manager:'김영등', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-08'},
+       {id:'C012-S2', siteName:'평택 LG공장',    kepco:'10012003', addr:'경기 평택시',         power:400, tel:'031-680-4444', manager:'이평택', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-09'}
      ]},
     {id:'C013',name:'현대제철',         ceo:'안동일',tel:'031-230-6114',addr:'경기 당진시',  recno:'DR-2024-0103',date:'2024-07-12',power:800, kepco:'10013003',drType:'표준DR',       status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'760kW',reduction:380,rrmseVal:'9%',infraS:'완료',
      sites:[
-       {id:'C013-S1', siteName:'당진제철소',     kepco:'10013003', addr:'경기 당진시',         power:800, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-12'},
-       {id:'C013-S2', siteName:'인천공장',       kepco:'10013004', addr:'인천 남동구',         power:650, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-13'},
-       {id:'C013-S3', siteName:'포항공장',       kepco:'10013005', addr:'경북 포항시',         power:720, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-14'},
-       {id:'C013-S4', siteName:'광양공장',       kepco:'10013006', addr:'전남 광양시',         power:580, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-15'}
+       {id:'C013-S1', siteName:'당진제철소',     kepco:'10013003', addr:'경기 당진시',         power:800, tel:'041-680-5555', manager:'송당진', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-12'},
+       {id:'C013-S2', siteName:'인천공장',       kepco:'10013004', addr:'인천 남동구',         power:650, tel:'032-880-6666', manager:'한인천', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-13'},
+       {id:'C013-S3', siteName:'포항공장',       kepco:'10013005', addr:'경북 포항시',         power:720, tel:'054-220-7777', manager:'임포항', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-14'},
+       {id:'C013-S4', siteName:'광양공장',       kepco:'10013006', addr:'전남 광양시',         power:580, tel:'061-790-8888', manager:'오광양', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-15'}
      ]},
     {id:'C015',name:'SK하이닉스',       ceo:'곽노정',tel:'031-630-4114',addr:'경기 이천시',  recno:'DR-2024-0104',date:'2024-07-18',power:750, kepco:'10015005',drType:'표준DR',       status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'710kW',reduction:370,rrmseVal:'8%',infraS:'완료',
      sites:[
-       {id:'C015-S1', siteName:'이천공장',       kepco:'10015005', addr:'경기 이천시',         power:400, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-18'},
-       {id:'C015-S2', siteName:'청주공장',       kepco:'10015006', addr:'충북 청주시',         power:350, steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-19'}
+       {id:'C015-S1', siteName:'이천공장',       kepco:'10015005', addr:'경기 이천시',         power:400, tel:'031-630-4115', manager:'배이천', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-18'},
+       {id:'C015-S2', siteName:'청주공장',       kepco:'10015006', addr:'충북 청주시',         power:350, tel:'043-270-9999', manager:'서청주', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-19'}
      ]},
     {id:'C016',name:'롯데백화점',       ceo:'정준호',tel:'02-2118-2114',addr:'서울 중구',    recno:'DR-2024-0105',date:'2024-09-25',power:500, kepco:'10016006',drType:'중소형DR',     status:'계약완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'480kW',reduction:260,rrmseVal:'10%',infraS:'완료'},
     {id:'C017',name:'신세계',           ceo:'손영식',tel:'02-1588-1234',addr:'서울 중구',    recno:'DR-2024-0106',date:'2024-09-28',power:450, kepco:'10017007',drType:'중소형DR',     status:'계약완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'430kW',reduction:240,rrmseVal:'11%',infraS:'완료'},

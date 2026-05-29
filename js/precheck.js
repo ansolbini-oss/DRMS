@@ -83,13 +83,22 @@ function pcToggleBusiness(bizId){
   }
 }
 
-// 6단계 검증 진행률 progress bar HTML
+// 6단계 검증 진행률 progress bar HTML (사업장 단위 또는 단일 사업자)
 function pcStepBarHtml(steps){
   const done = steps.filter(s=>s===2).length;
   const total = 6;
   const pct = Math.round(done/total*100);
   const barColor = done===total ? 'var(--green)' : done===0 ? 'var(--border-dark)' : 'var(--blue)';
   return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total}</span></div>`;
+}
+
+// 사업자 단위 검증 진행 — "X/N 사업장 완료" (사업장 다수 사업자에서 사용)
+function pcBusinessBarHtml(sites){
+  const total = sites.length;
+  const done = sites.filter(s => Array.isArray(s.steps) && s.steps.every(x => x===2)).length;
+  const pct = total>0 ? Math.round(done/total*100) : 0;
+  const barColor = done===total ? 'var(--green)' : done===0 ? 'var(--border-dark)' : 'var(--blue)';
+  return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total} 사업장</span></div>`;
 }
 
 function pcRenderTable(){
@@ -118,7 +127,7 @@ function pcRenderTable(){
       <td style="font-family:monospace;font-size:11px;">${c.recno}</td>
       <td style="text-align:center;"><span class="badge badge-gray">${c.drType}</span></td>
       <td style="text-align:center;">${c.inflow==='사이트'?'<span class="badge badge-progress">사이트</span>':'<span class="badge badge-purple">영업</span>'}</td>
-      <td style="text-align:center;">${pcStepBarHtml(c.steps)}</td>
+      <td style="text-align:center;">${hasSites ? pcBusinessBarHtml(c.sites) : pcStepBarHtml(c.steps)}</td>
       <td style="text-align:center;font-variant-numeric:tabular-nums;">${c.date}</td>
       <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pcShowDetail('${c.id}')">상세</button></td>`;
     tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON' && e.target.tagName!=='SPAN') pcShowDetail(c.id); };
@@ -135,8 +144,8 @@ function pcRenderTable(){
           <td style="padding-left:32px;color:var(--grey700);">
             <span style="color:var(--text-hint);">└</span> ${s.siteName}
           </td>
-          <td style="color:var(--text-hint);">—</td>
-          <td style="color:var(--text-hint);">—</td>
+          <td style="color:var(--grey700);">${s.manager||'—'}</td>
+          <td style="color:var(--grey700);">${s.tel||'—'}</td>
           <td style="color:var(--grey700);">${s.addr}</td>
           <td style="font-family:monospace;font-size:11px;color:var(--grey700);">KEPCO ${s.kepco}</td>
           <td style="text-align:center;color:var(--text-hint);">—</td>
