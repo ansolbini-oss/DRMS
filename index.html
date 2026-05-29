@@ -396,7 +396,7 @@
     </div>
 
     <div class="detail-body" id="pc-tab-info">
-      <!-- LEFT -->
+      <!-- LEFT: 사업자 정보 -->
       <div class="detail-left">
         <div class="info-section">
           <div style="font-size:14px;font-weight:700;color:var(--navy);" id="pc-d-name">-</div>
@@ -410,42 +410,20 @@
             <tr><td>DR 유형</td><td id="pc-d-drtype">-</td></tr>
           </tbody></table>
         </div>
-        <div>
-          <div class="step-progress-header">
-            <span style="font-size:11px;color:var(--text-sub);font-weight:500;">검증 단계 진행</span>
-            <span style="font-size:11px;font-weight:700;color:var(--blue);" id="pc-step-count">0 / 6</span>
-          </div>
-          <div class="steps-list" id="pc-steps-list"></div>
+        <div style="margin-top:14px;padding:10px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;color:var(--blue);font-size:11px;line-height:1.6;">
+          ※ 검증 절차·산정 결과·외부데이터 검증 결과는<br>
+          <b>[사업장]</b> 탭에서 사업장별로 확인할 수 있습니다.
         </div>
       </div>
 
-      <!-- RIGHT -->
+      <!-- RIGHT: 사업자 요약 + 운영자 메모 -->
       <div class="detail-right">
         <div class="r-card">
           <div class="r-card-header">
-            <div class="r-card-title">산정 결과 요약</div>
+            <div class="r-card-title">사업자 요약</div>
           </div>
-          <div class="r-card-body">
-            <div class="result-grid">
-              <div class="result-item"><div class="result-item-label">CBL 유형</div><div class="result-item-val" id="pc-r-cbl-type">-</div></div>
-              <div class="result-item"><div class="result-item-label">CBL 평균</div><div class="result-item-val" id="pc-r-cbl-avg">-</div></div>
-              <div class="result-item"><div class="result-item-label">RRMSE</div><div class="result-item-val" id="pc-r-rrmse">-</div></div>
-              <div class="result-item"><div class="result-item-label">인프라 검증</div><div class="result-item-val" id="pc-r-infra">-</div></div>
-              <div class="result-item"><div class="result-item-label">예상 감축용량</div><div class="result-item-val" id="pc-r-reduction">-</div></div>
-              <div class="result-item"><div class="result-item-label">외부데이터</div><div class="result-item-val" id="pc-r-ext">-</div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="r-card">
-          <div class="r-card-header">
-            <div class="r-card-title">외부데이터 검증 결과</div>
-          </div>
-          <div class="r-card-body">
-            <div class="check-item-line"><span>한전 데이터 연동</span><span class="badge badge-done">통과</span></div>
-            <div class="check-item-line"><span>파워플래너 데이터</span><span class="badge badge-done">통과</span></div>
-            <div class="check-item-line"><span>데이터 완결성</span><span class="badge badge-done" id="pc-r-complete">99.2%</span></div>
-            <div class="check-item-line"><span>이상치 검출</span><span class="badge badge-gray">없음</span></div>
+          <div class="r-card-body" id="pc-business-summary">
+            <!-- pcRenderBusinessSummary() 가 채움 -->
           </div>
         </div>
 

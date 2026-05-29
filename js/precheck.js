@@ -190,28 +190,62 @@ function pcShowDetail(id){
   $('pc-d-date').textContent = c.date;
   $('pc-d-power').textContent = (c.power||'-') + ' kW';
   $('pc-d-drtype').textContent = c.drType;
-  $('pc-r-cbl-type').textContent = c.cblType||'-';
-  $('pc-r-cbl-avg').textContent = c.cblAvg||'-';
-  $('pc-r-rrmse').textContent = c.rrmseVal||'-';
-  $('pc-r-infra').textContent = c.infraS||'-';
-  $('pc-r-reduction').textContent = c.reduction? c.reduction+' kW':'-';
-  $('pc-r-ext').textContent = c.extS||'-';
-  pcRenderSteps(c);
+  // 검증 절차·산정 결과·외부데이터 검증 결과는 [사업장] 탭으로 이동됨 (Phase 5-D)
   pcRenderMemo(c);
   pcRenderDetailLog(c);
   pcUpdateContractBtn(c);
-  // 사업장 탭: 사업장 2개 이상일 때만 표시
+  pcRenderBusinessSummary(c);
+  // 사업장 탭: 항상 표시 (사업장 1개여도 동일하게 UI 구분)
   const sitesTabBtn = $('pc-tab-sites-btn');
   if(sitesTabBtn){
-    if(Array.isArray(c.sites) && c.sites.length >= 2){
-      sitesTabBtn.style.display = '';
-      sitesTabBtn.textContent = `사업장 (${c.sites.length})`;
-      pcRenderSitesTab(c);
-    } else {
-      sitesTabBtn.style.display = 'none';
-    }
+    const sites = pcGetSites(c);
+    sitesTabBtn.style.display = '';
+    sitesTabBtn.textContent = `사업장 (${sites.length})`;
+    pcRenderSitesTab(c);
   }
   pcSwitchTab('info');
+}
+
+// 사업자 → 사업장 배열 정규화. sites 없으면 customer 자체를 단일 사업장으로 변환
+function pcGetSites(c){
+  if(Array.isArray(c.sites) && c.sites.length > 0) return c.sites;
+  return [{
+    id: c.id + '-S1',
+    siteName: c.name + ' 본사',
+    kepco: c.kepco,
+    addr: c.addr,
+    power: c.power,
+    tel: c.tel,
+    manager: c.ceo,
+    steps: c.steps,
+    dataStatus: c.dataStatus,
+    verifyStatus: (c.status === '검증완료' || c.status === '계약완료') ? '검증완료' : c.status,
+    date: c.date,
+    cblType: c.cblType,
+    cblAvg: c.cblAvg,
+    rrmseVal: c.rrmseVal,
+    infraS: c.infraS,
+    extS: c.extS,
+    reduction: c.reduction,
+    _isVirtual: true   // customer에서 자동 매핑된 가상 site임을 표시
+  }];
+}
+
+// 기본정보 탭 우측의 사업자 요약 카드 렌더링
+function pcRenderBusinessSummary(c){
+  const el = $('pc-business-summary'); if(!el) return;
+  const sites = pcGetSites(c);
+  const total = sites.length;
+  const done = sites.filter(s => Array.isArray(s.steps) && s.steps.every(x => x===2)).length;
+  const totalPower = sites.reduce((sum, s) => sum + (Number(s.power)||0), 0);
+  el.innerHTML = `
+    <div class="result-grid">
+      <div class="result-item"><div class="result-item-label">사업장 수</div><div class="result-item-val">${total}</div></div>
+      <div class="result-item"><div class="result-item-label">검증 완료</div><div class="result-item-val">${done} / ${total}</div></div>
+      <div class="result-item"><div class="result-item-label">총 계약전력</div><div class="result-item-val">${totalPower.toLocaleString()} kW</div></div>
+      <div class="result-item"><div class="result-item-label">DR 유형</div><div class="result-item-val">${c.drType}</div></div>
+    </div>
+  `;
 }
 // 사업장 행 [상세]: 사업자 상세 진입 → 사업장 탭 → 해당 사업장 선택
 function pcShowDetailWithSite(bizId, siteId){
@@ -231,9 +265,10 @@ function pcSwitchTab(tab){
 // 사업장 탭 렌더링: 좌측 리스트 + 첫 사업장 자동 선택
 function pcRenderSitesTab(c){
   const list = $('pc-sites-list'); list.innerHTML = '';
-  if(!Array.isArray(c.sites) || c.sites.length===0) return;
-  $('pc-sites-count').textContent = `총 ${c.sites.length}사업장`;
-  c.sites.forEach((s, idx) => {
+  const sites = pcGetSites(c);
+  if(sites.length===0) return;
+  $('pc-sites-count').textContent = `총 ${sites.length}사업장`;
+  sites.forEach((s, idx) => {
     const done = Array.isArray(s.steps) ? s.steps.filter(x=>x===2).length : 0;
     const isDone = done===6;
     const item = document.createElement('div');
@@ -251,21 +286,51 @@ function pcRenderSitesTab(c){
     list.appendChild(item);
   });
   // 첫 사업장 자동 선택
-  pcSelectSite(c.id, c.sites[0].id);
+  pcSelectSite(c.id, sites[0].id);
 }
 
 function pcSelectSite(bizId, siteId){
   const c = custById(bizId); if(!c) return;
-  const s = (c.sites||[]).find(x=>x.id===siteId); if(!s) return;
+  const sites = pcGetSites(c);
+  const s = sites.find(x=>x.id===siteId); if(!s) return;
   // active 스타일 토글
   document.querySelectorAll('.site-list-item').forEach(el => {
     const isActive = el.dataset.siteId === siteId;
     el.style.background = isActive ? 'var(--blue-light)' : '#fff';
     el.style.borderColor = isActive ? 'var(--blue)' : 'var(--border)';
   });
-  // 우측 상세 렌더
-  const done = Array.isArray(s.steps) ? s.steps.filter(x=>x===2).length : 0;
+  // 우측 상세 렌더 — 사업장 기본정보 + 검증 절차 + 산정 결과 + 외부데이터 검증 결과
+  const steps = Array.isArray(s.steps) ? s.steps : [1,1,1,1,1,1];
+  const done = steps.filter(x=>x===2).length;
+  // 사업장 단위 산정 결과: 사업장에 값이 있으면 우선, 없으면 사업자 customer 값 fallback
+  const cblType   = s.cblType   ?? c.cblType   ?? '-';
+  const cblAvg    = s.cblAvg    ?? c.cblAvg    ?? '-';
+  const rrmseVal  = s.rrmseVal  ?? c.rrmseVal  ?? '-';
+  const infraS    = s.infraS    ?? c.infraS    ?? '-';
+  const extS      = s.extS      ?? c.extS      ?? '-';
+  const reduction = s.reduction ?? c.reduction ?? null;
+
+  // 검증 단계 6개 박스 (읽기 전용)
+  const stepsHtml = pcStepDefs.map((def, i) => {
+    const st = steps[i];
+    const stateText = st===2 ? '완료' : st===3 ? '진행중' : st===0 ? '실패' : '대기';
+    const stateCls  = st===2 ? 'badge-done' : st===3 ? 'badge-progress' : st===0 ? 'badge-reject' : 'badge-gray';
+    return `
+      <div class="step-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;background:#fff;">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <div style="width:22px;height:22px;border-radius:50%;background:${st===2?'var(--green-light)':st===3?'var(--blue-light)':'var(--grey100)'};color:${st===2?'var(--green)':st===3?'var(--blue)':'var(--text-hint)'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+          <div style="min-width:0;">
+            <div style="font-weight:600;font-size:12px;color:var(--navy);">${def.name}</div>
+            <div style="font-size:10px;color:var(--text-hint);margin-top:1px;">${def.desc}</div>
+          </div>
+        </div>
+        <span class="badge ${stateCls}" style="font-size:10px;flex-shrink:0;">${stateText}</span>
+      </div>
+    `;
+  }).join('');
+
   $('pc-site-detail').innerHTML = `
+    <!-- 사업장 기본 정보 -->
     <div class="r-card">
       <div class="r-card-header"><div class="r-card-title">${s.siteName}</div></div>
       <div class="r-card-body">
@@ -277,11 +342,46 @@ function pcSelectSite(bizId, siteId){
             <tr><td>KEPCO 고객번호</td><td style="font-family:monospace;">${s.kepco}</td></tr>
             <tr><td>계약전력</td><td>${s.power||'—'} kW</td></tr>
             <tr><td>등록일</td><td>${s.date||'—'}</td></tr>
-            <tr><td>검증 진행</td><td><b>${done} / 6 단계</b></td></tr>
-            <tr><td>검증 상태</td><td><span class="badge ${done===6?'badge-done':'badge-progress'}">${s.verifyStatus||'—'}</span></td></tr>
             <tr><td>데이터 수집</td><td>${s.dataStatus||'—'}</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- 검증 단계 진행 -->
+    <div class="r-card">
+      <div class="r-card-header">
+        <div class="r-card-title">검증 단계 진행</div>
+        <span style="font-size:11px;font-weight:700;color:var(--blue);">${done} / 6</span>
+      </div>
+      <div class="r-card-body">
+        ${stepsHtml}
+      </div>
+    </div>
+
+    <!-- 산정 결과 요약 -->
+    <div class="r-card">
+      <div class="r-card-header"><div class="r-card-title">산정 결과 요약</div></div>
+      <div class="r-card-body">
+        <div class="result-grid">
+          <div class="result-item"><div class="result-item-label">CBL 유형</div><div class="result-item-val">${cblType}</div></div>
+          <div class="result-item"><div class="result-item-label">CBL 평균</div><div class="result-item-val">${cblAvg}</div></div>
+          <div class="result-item"><div class="result-item-label">RRMSE</div><div class="result-item-val">${rrmseVal}</div></div>
+          <div class="result-item"><div class="result-item-label">인프라 검증</div><div class="result-item-val">${infraS}</div></div>
+          <div class="result-item"><div class="result-item-label">예상 감축용량</div><div class="result-item-val">${reduction!==null && reduction!==undefined ? reduction+' kW' : '-'}</div></div>
+          <div class="result-item"><div class="result-item-label">외부데이터</div><div class="result-item-val">${extS}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 외부데이터 검증 결과 -->
+    <div class="r-card">
+      <div class="r-card-header"><div class="r-card-title">외부데이터 검증 결과</div></div>
+      <div class="r-card-body">
+        <div class="check-item-line"><span>한전 데이터 연동</span><span class="badge badge-done">통과</span></div>
+        <div class="check-item-line"><span>파워플래너 데이터</span><span class="badge badge-done">통과</span></div>
+        <div class="check-item-line"><span>데이터 완결성</span><span class="badge badge-done">99.2%</span></div>
+        <div class="check-item-line"><span>이상치 검출</span><span class="badge badge-gray">없음</span></div>
       </div>
     </div>
   `;
