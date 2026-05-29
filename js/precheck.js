@@ -59,39 +59,96 @@ function pcFilteredList(){
     }
     if(tF && c.drType!==tF) return false;
     if(q){
-      const hay = `${c.name} ${c.ceo} ${c.recno}`.toLowerCase();
-      if(!hay.includes(q)) return false;
+      // 사업자명·대표자·접수번호 + 사업장명·KEPCO 다중 검색
+      let hay = `${c.name} ${c.ceo} ${c.recno} ${c.kepco||''}`;
+      if(Array.isArray(c.sites)){
+        c.sites.forEach(s => { hay += ` ${s.siteName||''} ${s.kepco||''}`; });
+      }
+      if(!hay.toLowerCase().includes(q)) return false;
     }
     return true;
   });
+}
+
+// 사업자 행 ▶/▼ 토글: 같은 데이터의 사업장 행들을 펴거나 접음
+function pcToggleBusiness(bizId){
+  const rows = document.querySelectorAll(`tr.site-row[data-parent-id="${bizId}"]`);
+  if(rows.length===0) return;
+  const isHidden = rows[0].style.display === 'none';
+  rows.forEach(tr => { tr.style.display = isHidden ? '' : 'none'; });
+  const bizRow = document.querySelector(`tr.business-row[data-biz-id="${bizId}"]`);
+  if(bizRow){
+    const icon = bizRow.querySelector('.accordion-icon');
+    if(icon) icon.textContent = isHidden ? '▼' : '▶';
+  }
+}
+
+// 6단계 검증 진행률 progress bar HTML
+function pcStepBarHtml(steps){
+  const done = steps.filter(s=>s===2).length;
+  const total = 6;
+  const pct = Math.round(done/total*100);
+  const barColor = done===total ? 'var(--green)' : done===0 ? 'var(--border-dark)' : 'var(--blue)';
+  return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total}</span></div>`;
 }
 
 function pcRenderTable(){
   pcRefreshCards();
   const list = pcFilteredList();
   const tbody = $('pc-tbody'); tbody.innerHTML = '';
+  let siteTotal = 0;
   list.forEach(c=>{
-    const done = c.steps.filter(s=>s===2).length;
-    const total = 6;
-    const pct = Math.round(done/total*100);
-    const barColor = done===total?'var(--green)':done===0?'var(--border-dark)':'var(--blue)';
-    const stepHtml = `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total}</span></div>`;
+    const hasSites = Array.isArray(c.sites) && c.sites.length > 0;
+    siteTotal += hasSites ? c.sites.length : 1;
+    // ───── 사업자 행 ─────
     const tr = document.createElement('tr');
+    tr.className = 'business-row' + (hasSites ? ' has-children' : '');
+    tr.dataset.bizId = c.id;
+    const accordionIcon = hasSites
+      ? `<span class="accordion-icon" style="display:inline-block;width:12px;color:var(--text-hint);font-size:10px;cursor:pointer;" onclick="event.stopPropagation();pcToggleBusiness('${c.id}')">▶</span> `
+      : '<span style="display:inline-block;width:12px;"></span> ';
+    const siteCountBadge = hasSites
+      ? ` <span style="color:var(--text-hint);font-size:11px;font-weight:400;">· ${c.sites.length}사업장</span>`
+      : '';
     tr.innerHTML = `
-      <td><span class="company-name">${c.name}</span></td>
+      <td>${accordionIcon}<span class="company-name" ${hasSites?`onclick="event.stopPropagation();pcToggleBusiness('${c.id}')" style="cursor:pointer;"`:''}>${c.name}</span>${siteCountBadge}</td>
       <td>${c.ceo}</td>
       <td>${c.tel}</td>
       <td>${c.addr}</td>
       <td style="font-family:monospace;font-size:11px;">${c.recno}</td>
       <td style="text-align:center;"><span class="badge badge-gray">${c.drType}</span></td>
       <td style="text-align:center;">${c.inflow==='사이트'?'<span class="badge badge-progress">사이트</span>':'<span class="badge badge-purple">영업</span>'}</td>
-      <td style="text-align:center;">${stepHtml}</td>
+      <td style="text-align:center;">${pcStepBarHtml(c.steps)}</td>
       <td style="text-align:center;font-variant-numeric:tabular-nums;">${c.date}</td>
       <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pcShowDetail('${c.id}')">상세</button></td>`;
-    tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON') pcShowDetail(c.id); };
+    tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON' && e.target.tagName!=='SPAN') pcShowDetail(c.id); };
     tbody.appendChild(tr);
+    // ───── 사업장 자식 행들 (기본 숨김) ─────
+    if(hasSites){
+      c.sites.forEach(s=>{
+        const trSite = document.createElement('tr');
+        trSite.className = 'site-row';
+        trSite.dataset.parentId = c.id;
+        trSite.style.display = 'none';
+        trSite.style.background = 'var(--grey50)';
+        trSite.innerHTML = `
+          <td style="padding-left:32px;color:var(--grey700);">
+            <span style="color:var(--text-hint);">└</span> ${s.siteName}
+          </td>
+          <td style="color:var(--text-hint);">—</td>
+          <td style="color:var(--text-hint);">—</td>
+          <td style="color:var(--grey700);">${s.addr}</td>
+          <td style="font-family:monospace;font-size:11px;color:var(--grey700);">KEPCO ${s.kepco}</td>
+          <td style="text-align:center;color:var(--text-hint);">—</td>
+          <td style="text-align:center;color:var(--text-hint);">—</td>
+          <td style="text-align:center;">${pcStepBarHtml(s.steps)}</td>
+          <td style="text-align:center;font-variant-numeric:tabular-nums;color:var(--grey700);">${s.date}</td>
+          <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();pcShowDetail('${c.id}')">상세</button></td>`;
+        tbody.appendChild(trSite);
+      });
+    }
   });
-  $('pc-rowcount').textContent = `총 ${list.length}건`;
+  $('pc-rowcount').textContent = `총 ${list.length}사업자 · ${siteTotal}사업장`;
 }
 
 function pcGotoList(){
