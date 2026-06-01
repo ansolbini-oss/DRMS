@@ -1211,7 +1211,8 @@ function ctOpenDetail(id){
   ctEnsureCustomerMeta(c);
   ctCurrentId = id;
   $('ct-d-title').textContent = c.name;
-  $('ct-d-sub').innerHTML = `${c.recno} · ${c.drType} · <span class="badge ${ctStageBadge(ctGetStage(c))}">${ctGetStage(c)}</span>`;
+  // 모달 헤더 부정보: 식별자(접수번호) + 계약 상태 배지만 — DR 유형/계약 정보는 탭 안에서 확인
+  $('ct-d-sub').innerHTML = `${c.recno} · <span class="badge ${ctStageBadge(ctGetStage(c))}">${ctGetStage(c)}</span>`;
   $('ct-tab-basic').style.display = '';
   $('ct-tab-docs').style.display = 'none';
   $('ct-tab-history').style.display = 'none';
