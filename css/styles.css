@@ -2619,20 +2619,23 @@ html body{
 
 /* Contract detail: title + bordered table sections */
 #ctDetailPanel #ct-tab-basic{
-  display:flex !important;
-  flex-direction:column !important;
-  gap:28px !important;
-  padding:8px 0 16px !important;
+  flex-direction:column;
+  gap:28px;
+  padding:8px 0 16px;
+}
+/* display 속성은 !important 없이 — JS의 ctSwitchTab style.display='none'가 동작해야 함 */
+#ctDetailPanel #ct-tab-basic:not([style*="display: none"]){
+  display:flex;
 }
 #ctDetailPanel .ct-basic-table-wrap{
-  display:flex !important;
-  flex-direction:column !important;
-  gap:28px !important;
+  display:flex;
+  flex-direction:column;
+  gap:28px;
 }
 #ctDetailPanel .ct-basic-section{
-  display:flex !important;
-  flex-direction:column !important;
-  gap:12px !important;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
 }
 #ctDetailPanel .ct-basic-section-title{
   font-size:15px !important;
