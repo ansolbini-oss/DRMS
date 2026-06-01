@@ -620,6 +620,7 @@ table.dm-matrix tbody td.dm-mx-cust{position:sticky;left:0;background:#f8f9fc;fo
 .mon-status-pill.completed{background:var(--green-light);color:var(--green);}
 .mon-health-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;}
 .mon-health-badge.good{background:var(--green-light);color:var(--green);}
+.mon-health-badge.warn{background:#FFF4DC;color:#b46c00;}
 .mon-health-badge.bad{background:var(--red-light);color:var(--red);}
 .mon-health-badge.neutral{background:var(--gray-light);color:var(--gray);}
 .mon-table-empty{padding:28px 20px;text-align:center;color:var(--text-hint);font-size:12px;background:#fff;}

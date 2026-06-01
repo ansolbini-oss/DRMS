@@ -7,9 +7,10 @@ const monState = { eventType:'reduction', category:'all', status:'all', currentE
 var monDmState = { groupId:null, eventId:null, customerId:null, queryDate:null, view:'summary' };
 
 function monAllowedCategories(type){
+  // FIX-02: 의무감축·자발적 별도 표시 정책
   return type==='plus'
     ? ['all']
-    : ['all','reduction','test'];
+    : ['all','mandatory','voluntary','test'];
 }
 function monEventStatusKey(ev){
   if(ev?.live) return 'live';
@@ -21,7 +22,9 @@ function monEventStatusLabel(key){
 }
 function monEventTypeKey(ev){
   if(!ev) return 'all';
-  if(ev.dispatch_type==='MANDATORY_REDUCTION' || ev.dispatch_type==='VOLUNTARY_REDUCTION') return 'reduction';
+  // FIX-02: 의무감축(mandatory) / 자발적(voluntary) 분리
+  if(ev.dispatch_type==='MANDATORY_REDUCTION') return 'mandatory';
+  if(ev.dispatch_type==='VOLUNTARY_REDUCTION') return 'voluntary';
   if(ev.dispatch_type==='REGISTRATION_TEST') return 'test';
   if(ev.dispatch_type==='VOLUNTARY_INCREASE' || ev.dispatch_type==='REALTIME_INCREASE_REQUEST') return 'increase';
   return 'all';
@@ -138,13 +141,18 @@ function monOpenDetailModal(eventId){
 }
 
 /* dispatch_type → 사용자 표시 라벨 + 뱃지 클래스 (설계서 §5 + 등록시험 확장) */
+// FIX-04: 이행률 색상 3단계 — ≥90% 파랑(good) / 70~90% 주황(warn) / <70% 빨강(bad)
 function monRateCls(r){
   if(r==null) return '';
-  return r>=0.9 ? 'good' : 'bad';
+  if(r>=0.9) return 'good';
+  if(r>=0.7) return 'warn';
+  return 'bad';
 }
 function monRateColor(r){
   if(r==null) return 'var(--text-hint)';
-  return r>=0.9 ? 'var(--green)' : 'var(--red)';
+  if(r>=0.9) return 'var(--blue)';
+  if(r>=0.7) return '#f59e0b';   // 주황 (Tailwind amber-500 톤)
+  return 'var(--red)';
 }
 function monDotCls(s){
   if(s==='FAILED' || s==='DELAYED') return 'dot-red';
@@ -167,21 +175,30 @@ function monEventSummary(ev){
   const rate = (!ev.scheduled && hasActual && totalOrd>0) ? totalAct / totalOrd : null;
   return {totalOrd, totalAct, rate, targetCount:ev.resources.length};
 }
+// FIX-06: 4단계 상태값 — 대기(neutral) / 정상(good ≥90%) / 주의(warn 70~90%) / 이상(bad <70%)
 function monEventHealth(ev){
   if(ev.scheduled){
-    return {tone:'neutral', label:'대기', abnormalCount:0};
+    return {tone:'neutral', label:'대기', abnormalCount:0, warnCount:0};
   }
-  let abnormalCount = 0;
+  let abnormalCount = 0;   // <70% 또는 데이터 불량
+  let warnCount = 0;       // 70~90%
   ev.resources.forEach(r=>{
     const rate = (r.actual!=null && r.ordered>0) ? (r.actual / r.ordered) : 1;
     const dataBad = r.status==='FAILED' || r.status==='DELAYED';
-    if(dataBad || rate < 0.9) abnormalCount += 1;
+    if(dataBad || rate < 0.7) abnormalCount += 1;
+    else if(rate < 0.9) warnCount += 1;
   });
   const summary = monEventSummary(ev);
-  if(abnormalCount>0 || (summary.rate!=null && summary.rate < 0.9)){
-    return {tone:'bad', label:`이상 ${Math.max(abnormalCount, 1)}개`, abnormalCount:Math.max(abnormalCount, 1)};
+  const sumRate = summary.rate;
+  // 이벤트 종합 판정: 이상 자원 존재 또는 종합 이행률 70% 미만 → 이상
+  if(abnormalCount>0 || (sumRate!=null && sumRate < 0.7)){
+    return {tone:'bad', label:`이상 ${Math.max(abnormalCount, 1)}개`, abnormalCount:Math.max(abnormalCount, 1), warnCount};
   }
-  return {tone:'good', label:'정상', abnormalCount:0};
+  // 주의: 70~90% 자원 존재 또는 종합 이행률 70~90%
+  if(warnCount>0 || (sumRate!=null && sumRate < 0.9)){
+    return {tone:'warn', label:`주의 ${Math.max(warnCount, 1)}개`, abnormalCount:0, warnCount:Math.max(warnCount, 1)};
+  }
+  return {tone:'good', label:'정상', abnormalCount:0, warnCount:0};
 }
 function monStatusPillHtml(statusKey){
   return `<span class="mon-status-pill ${statusKey}">${monEventStatusLabel(statusKey)}</span>`;
@@ -310,7 +327,10 @@ function monRenderKPI(ev){
   const summary = monEventSummary(ev);
   const health = monEventHealth(ev);
   const rateColor = summary.rate!=null ? monRateColor(summary.rate) : 'var(--text-sub)';
-  const abnormalText = health.abnormalCount>0 ? `${health.abnormalCount}개 자원` : '없음';
+  // FIX-06: 이상(bad) / 주의(warn) / 정상(good) 케이스 분기 표시
+  const abnormalText = health.tone==='bad' ? `${health.abnormalCount}개 자원`
+                     : health.tone==='warn' ? `${health.warnCount}개 자원`
+                     : '없음';
   if(ev.scheduled){
     bar.innerHTML = `
       <div class="kpi-card accent"><div class="kpi-label">대상 자원</div><div class="kpi-value blue">${summary.targetCount}개</div><div class="kpi-sub">감축 지시 대상</div></div>
@@ -325,8 +345,8 @@ function monRenderKPI(ev){
     <div class="kpi-card accent"><div class="kpi-label">대상 자원</div><div class="kpi-value blue">${summary.targetCount}개</div><div class="kpi-sub">감축 지시 대상</div></div>
     <div class="kpi-card"><div class="kpi-label">지시용량</div><div class="kpi-value">${summary.totalOrd.toLocaleString()}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div></div>
     <div class="kpi-card"><div class="kpi-label">${resultLabel}</div><div class="kpi-value" style="color:${rateColor};">${(summary.totalAct||0).toLocaleString()}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div></div>
-    <div class="kpi-card"><div class="kpi-label">종합 이행률</div><div class="kpi-value" style="color:${rateColor};">${summary.rate!=null?`${Math.round(summary.rate*100)}%`:'—'}</div><div class="kpi-sub">목표: 100%</div></div>
-    <div class="kpi-card ${health.tone==='bad'?'warn':''}"><div class="kpi-label">이상 자원</div><div class="kpi-value" style="color:${health.tone==='bad'?'var(--red)':'var(--green)'};">${abnormalText}</div><div class="kpi-sub">${health.tone==='bad'?'데이터 누락 또는 이행률 저조':'정상 운영'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">종합 이행률</div><div class="kpi-value" style="color:${rateColor};">${summary.rate!=null?`${Math.round(summary.rate*100)}%`:'—'}</div><div class="kpi-sub">목표 100% · 달성기준 97% 이상</div></div>
+    <div class="kpi-card ${health.tone==='bad'?'warn':health.tone==='warn'?'warn':''}"><div class="kpi-label">이상 자원</div><div class="kpi-value" style="color:${health.tone==='bad'?'var(--red)':health.tone==='warn'?'#f59e0b':'var(--green)'};">${abnormalText}</div><div class="kpi-sub">${health.tone==='bad'?'이행률 70% 미만 또는 데이터 미수신':health.tone==='warn'?'이행률 70~90% (주의)':'정상 운영'}</div></div>
     <div class="kpi-card ${ev.live?'warn':''}"><div class="kpi-label">${ev.live?'잔여 시간':'종료'}</div>
       <div class="kpi-value" style="font-size:14px;color:${ev.live?'var(--blue)':'var(--text-sub)'};">${ev.live?`${ev.remainingMinutes}분`:'완료됨'}</div>
       <div class="kpi-sub">${ev.date} ${ev.timeRange}</div></div>`;
