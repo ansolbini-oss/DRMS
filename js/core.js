@@ -3,6 +3,45 @@
    원본 index.html의 해당 prefix 함수/상수를 모음
 ════════════════════════════════════════════════════════════ */
 
+/* ════════════════════════════════════════════════════════════
+   AUDIT LOG — 통합 감사 로그 (Phase 7)
+   모든 객체(계약·이벤트·자원그룹·사용자 등)의 변경 이력 SSOT
+   페이지별 상태이력 탭 = filtered 조회, 이력관리 페이지 = 전체 조회
+════════════════════════════════════════════════════════════ */
+function logAudit({objectType, objectId, action, title, desc, actor, tone}){
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const entry = {
+    id: 'L-' + Date.now() + '-' + Math.floor(Math.random()*999),
+    ts, objectType, objectId,
+    action: action || 'updated',
+    title: title || '(이벤트)',
+    desc: desc || '',
+    actor: actor || '시스템',
+    tone: tone || 'info'
+  };
+  store.auditLogs.push(entry);
+  return entry;
+}
+
+// 객체별 감사 로그 조회 (시간 역순, 최신 우선). limit 없으면 전체.
+function getAuditLogs(objectType, objectId, limit){
+  const all = store.auditLogs
+    .filter(l => l.objectType === objectType && l.objectId === objectId)
+    .sort((a,b) => b.ts.localeCompare(a.ts));
+  return typeof limit === 'number' ? all.slice(0, limit) : all;
+}
+
+// "전체 이력 보기" 임시 핸들러 — 이력관리 페이지가 만들어지면 그쪽으로 라우팅
+function showFullAuditLogs(objectType, objectId){
+  if(typeof showToast==='function'){
+    showToast(`이력관리 페이지에서 전체 이력 보기 (${objectType} · ${objectId}) — 추후 구현 예정`);
+  } else {
+    alert(`전체 이력 보기 (${objectType} · ${objectId}) — 이력관리 페이지 추후 구현`);
+  }
+}
+
 
 /* 초기 로그 시드 */
 (function seedLogs(){

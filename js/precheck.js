@@ -1125,12 +1125,14 @@ function ctEnsureCustomerMeta(c){
     }));
   }
   if(!c.contractHistory){
-    c.contractHistory = [{
-      time: `${ctTodayStr()} 09:00`,
-      title: '계약관리 대상 생성',
-      desc: c.status==='계약완료' ? '사전검증 완료 후 계약완료 고객으로 이관됨' : '사전검증 완료/반려 고객 기준으로 계약관리 대상화',
-      tone: c.status==='반려' ? 'fail' : 'done'
-    }];
+    const seedTitle = '계약관리 대상 생성';
+    const seedDesc = c.status==='계약완료' ? '사전검증 완료 후 계약완료 고객으로 이관됨' : '사전검증 완료/반려 고객 기준으로 계약관리 대상화';
+    const seedTone = c.status==='반려' ? 'fail' : 'done';
+    c.contractHistory = [{ time: `${ctTodayStr()} 09:00`, title: seedTitle, desc: seedDesc, tone: seedTone }];
+    // 통합 감사 로그에도 시드 마이그레이션 (Phase 7)
+    if(typeof logAudit === 'function'){
+      logAudit({objectType:'contract', objectId:c.id, action:'created', title:seedTitle, desc:seedDesc, actor:'시스템', tone:seedTone});
+    }
   }
 }
 function ctGetStage(c){
@@ -1215,6 +1217,7 @@ function ctOpenDetail(id){
   $('ct-tab-history').style.display = 'none';
   $$('#ctDetailPanel [data-ct-tab]').forEach((el,i)=>el.classList.toggle('active', i===0));
 
+  // ───── 기본정보 탭: 고객 기본정보만 ─────
   $('ct-tab-basic').innerHTML = `
     <div class="ct-basic-table-wrap">
       <div class="ct-basic-section">
@@ -1236,31 +1239,28 @@ function ctOpenDetail(id){
           </table>
         </div>
       </div>
-      <div class="ct-basic-section">
-        <div class="ct-basic-section-title">계약 검토정보</div>
-        <div class="ct-spec-frame">
-          <table class="ct-spec-table">
-            <colgroup>
-              <col class="label">
-              <col>
-            </colgroup>
-            <tbody>
-              <tr><td class="label">계약 상태</td><td><span class="badge ${ctStageBadge(ctGetStage(c))}">${ctGetStage(c)}</span></td></tr>
-              <tr><td class="label">계약전력</td><td class="num">${(c.power||0).toLocaleString()} kW</td></tr>
-              <tr><td class="label">예상 감축량</td><td class="num">${(c.reduction||0).toLocaleString()} kW</td></tr>
-              <tr><td class="label">수수료율</td><td class="num">${c.contractInfo.feeRate}%</td></tr>
-              <tr><td class="label">의무감축용량</td><td class="num">${c.contractInfo.mandatoryCapacity.toLocaleString()} kW</td></tr>
-              <tr><td class="label">계약기간</td><td class="mono">${c.contractInfo.startDate} ~ ${c.contractInfo.endDate}</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>`;
+
+  // ───── 계약정보 및 서류 탭: 계약 감축용량·계약기간·계약서류 ─────
   $('ct-tab-docs').innerHTML = `
     <div class="r-card ct-doc-card" style="margin-bottom:12px;">
       <div class="r-card-header"><div class="r-card-title">계약 조건</div></div>
       <div class="r-card-body">
-        <div class="ct-doc-edit">
+        <div class="ct-doc-edit" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-row" style="margin:0;">
+            <label class="form-label">계약 감축용량 (의무)</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input class="form-input" type="number" min="0" step="10" id="ct-mandatory-capacity" value="${c.contractInfo.mandatoryCapacity}">
+              <span style="font-size:12px;color:var(--text-hint);">kW</span>
+            </div>
+          </div>
+          <div class="form-row" style="margin:0;">
+            <label class="form-label">수수료율</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input class="form-input" type="number" min="0" max="100" step="0.1" id="ct-fee-rate" value="${c.contractInfo.feeRate}">
+              <span style="font-size:12px;color:var(--text-hint);">%</span>
+            </div>
+          </div>
           <div class="form-row" style="margin:0;">
             <label class="form-label">계약 시작일</label>
             <input class="form-input" type="date" id="ct-contract-start" value="${c.contractInfo.startDate}">
@@ -1269,32 +1269,56 @@ function ctOpenDetail(id){
             <label class="form-label">계약 종료일</label>
             <input class="form-input" type="date" id="ct-contract-end" value="${c.contractInfo.endDate}">
           </div>
-          <button class="btn btn-primary" onclick="ctSaveContractPeriod('${c.id}')">저장</button>
+          <div style="grid-column:1/-1;display:flex;justify-content:flex-end;">
+            <button class="btn btn-primary" onclick="ctSaveContractPeriod('${c.id}')">저장</button>
+          </div>
         </div>
       </div>
     </div>
     <div class="r-card ct-doc-card">
-      <div class="r-card-header"><div class="r-card-title">계약 서류</div></div>
+      <div class="r-card-header">
+        <div class="r-card-title">계약 서류</div>
+        <span style="font-size:11px;color:var(--text-hint);">총 ${c.contractDocs.length}건</span>
+      </div>
       <div class="r-card-body">
         <table class="ct-doc-table">
-          <thead><tr><th>서류명</th><th>필수</th><th>파일</th><th>상태</th></tr></thead>
+          <thead><tr><th>서류명</th><th>필수</th><th>파일</th><th>상태</th><th style="text-align:center;">동작</th></tr></thead>
           <tbody>
-            ${c.contractDocs.map(d=>`<tr>
+            ${c.contractDocs.map((d, idx)=>`<tr>
               <td>${d.name}</td>
               <td>${d.required ? '<span style="color:var(--red);font-weight:600;">필수</span>' : '선택'}</td>
               <td>${d.fileName || '<span style="color:var(--text-hint);font-style:italic;">— 미제출</span>'}</td>
               <td><span class="badge ${d.status==='승인'?'badge-done':d.status==='제출완료'?'badge-progress':'badge-gray'}">${d.status}</span></td>
+              <td style="text-align:center;">
+                ${d.fileName
+                  ? `<button class="btn btn-secondary btn-sm" onclick="ctDownloadDoc('${c.id}', ${idx})">다운로드</button>`
+                  : `<button class="btn btn-primary btn-sm" onclick="ctUploadDoc('${c.id}', ${idx})">업로드</button>`}
+              </td>
             </tr>`).join('')}
           </tbody>
         </table>
       </div>
     </div>`;
-  $('ct-tab-history').innerHTML = c.contractHistory.map(h=>`
-    <div class="ct-history-item">
-      <div class="ct-history-dot" style="background:${h.tone==='fail'?'var(--red)':h.tone==='wait'?'var(--amber)':'var(--blue)'};"></div>
-      <div class="ct-history-time">${h.time}</div>
-      <div class="ct-history-body">${h.title}<div class="ct-history-sub">${h.desc||''}</div></div>
-    </div>`).join('');
+
+  // ───── 상태이력 탭: store.auditLogs 기반 시간순 + "전체 이력 보기" 링크 ─────
+  const logs = (typeof getAuditLogs==='function') ? getAuditLogs('contract', c.id, 20) : [];
+  const totalLogs = store.auditLogs ? store.auditLogs.filter(l => l.objectType==='contract' && l.objectId===c.id).length : 0;
+  $('ct-tab-history').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 4px;">
+      <div style="font-size:12px;color:var(--text-hint);">
+        최근 ${logs.length}건 표시${totalLogs > logs.length ? ` (전체 ${totalLogs}건)` : ''}
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="showFullAuditLogs('contract','${c.id}')">전체 이력 보기 →</button>
+    </div>
+    ${logs.length===0
+      ? '<div style="padding:30px;text-align:center;color:var(--text-hint);">기록된 이력이 없습니다.</div>'
+      : logs.map(h=>`
+        <div class="ct-history-item">
+          <div class="ct-history-dot" style="background:${h.tone==='fail'?'var(--red)':h.tone==='wait'?'var(--amber)':h.tone==='info'?'var(--text-hint)':'var(--blue)'};"></div>
+          <div class="ct-history-time">${h.ts}<div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${h.actor||''}</div></div>
+          <div class="ct-history-body">${h.title}<div class="ct-history-sub">${h.desc||''}</div></div>
+        </div>`).join('')
+    }`;
 
   const stage = ctGetStage(c);
   $('ct-d-footer').innerHTML = `
@@ -1377,18 +1401,64 @@ function ctSaveContractPeriod(id){
   const c = store.customers.find(x=>x.id===id); if(!c || !c.contractInfo) return;
   const startDate = $('ct-contract-start')?.value;
   const endDate = $('ct-contract-end')?.value;
+  const mandatory = parseInt($('ct-mandatory-capacity')?.value, 10);
+  const feeRate = parseFloat($('ct-fee-rate')?.value);
   if(!startDate || !endDate){ showToast('계약 시작일과 종료일을 입력하세요.'); return; }
   if(startDate > endDate){ showToast('계약 종료일은 시작일 이후여야 합니다.'); return; }
+  if(!Number.isFinite(mandatory) || mandatory<=0){ showToast('계약 감축용량을 정확히 입력하세요.'); return; }
+  if(!Number.isFinite(feeRate) || feeRate<0 || feeRate>100){ showToast('수수료율은 0~100% 범위로 입력하세요.'); return; }
+
+  // 변경 감지 — 무엇이 바뀌었는지 추적
+  const changes = [];
+  if(c.contractInfo.startDate !== startDate || c.contractInfo.endDate !== endDate){
+    changes.push(`계약기간 ${c.contractInfo.startDate}~${c.contractInfo.endDate} → ${startDate}~${endDate}`);
+  }
+  if(c.contractInfo.mandatoryCapacity !== mandatory){
+    changes.push(`감축용량 ${c.contractInfo.mandatoryCapacity}kW → ${mandatory}kW`);
+  }
+  if(c.contractInfo.feeRate !== feeRate){
+    changes.push(`수수료율 ${c.contractInfo.feeRate}% → ${feeRate}%`);
+  }
   c.contractInfo.startDate = startDate;
   c.contractInfo.endDate = endDate;
-  ctAddHistory(c, '계약기간 수정', `${startDate} ~ ${endDate}`, 'done');
-  ctAfterChange('계약기간이 저장되었습니다.');
+  c.contractInfo.mandatoryCapacity = mandatory;
+  c.contractInfo.feeRate = feeRate;
+
+  if(changes.length>0){
+    ctAddHistory(c, '계약 조건 수정', changes.join(' · '), 'done');
+  }
+  ctAfterChange('계약 조건이 저장되었습니다.');
   ctOpenDetail(id);
   ctSwitchTab('docs', document.querySelector('#ctDetailPanel [data-ct-tab="docs"]'));
+}
+
+// 계약 서류 업로드 (목업 — 실제 파일 입력 없이 즉시 등록 처리)
+function ctUploadDoc(id, docIdx){
+  const c = store.customers.find(x=>x.id===id); if(!c) return;
+  const doc = c.contractDocs?.[docIdx]; if(!doc) return;
+  doc.fileName = `${doc.name.replaceAll(' ','_')}_${c.id}_${docIdx+1}.pdf`;
+  doc.status = '제출완료';
+  ctAddHistory(c, '계약 서류 업로드', `${doc.name} — ${doc.fileName}`, 'done');
+  ctAfterChange(`${doc.name} 서류가 업로드되었습니다.`);
+  ctOpenDetail(id);
+  ctSwitchTab('docs', document.querySelector('#ctDetailPanel [data-ct-tab="docs"]'));
+}
+
+// 계약 서류 다운로드 (목업 — 토스트만)
+function ctDownloadDoc(id, docIdx){
+  const c = store.customers.find(x=>x.id===id); if(!c) return;
+  const doc = c.contractDocs?.[docIdx]; if(!doc?.fileName) return;
+  showToast(`${doc.fileName} 다운로드 시작 (목업)`);
+  ctAddHistory(c, '계약 서류 다운로드', `${doc.name} — ${doc.fileName}`, 'info');
 }
 function ctAddHistory(c, title, desc='', tone='done'){
   ctEnsureCustomerMeta(c);
   c.contractHistory.unshift({ time: `${ctTodayStr()} 14:00`, title, desc, tone });
+  // 통합 감사 로그에도 기록 (Phase 7)
+  if(typeof logAudit === 'function'){
+    const action = tone==='fail' ? 'rejected' : tone==='wait' ? 'review_started' : 'updated';
+    logAudit({objectType:'contract', objectId:c.id, action, title, desc, actor:'운영자', tone});
+  }
 }
 function ctMoveToReview(id){
   const c = store.customers.find(x=>x.id===id); if(!c) return;

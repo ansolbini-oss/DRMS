@@ -291,6 +291,11 @@ const store = {
 
   verifyLogs: [],
   memos: {},
+  // 통합 감사 로그 — 모든 객체(계약·이벤트·자원그룹·사용자 등)의 변경 이력 SSOT
+  // 각 항목: {id, ts, objectType, objectId, action, title, desc, actor, tone}
+  // tone: 'done' | 'fail' | 'wait' | 'info'
+  // 페이지별 상태이력 탭 = objectType/objectId 필터링, 이력관리 페이지 = 전체 + 필터
+  auditLogs: [],
 
   /* 매핑 가능 DR유형 (자원그룹 typeKey → 고객 drType 허용) */
   custTypeMap: {
