@@ -1158,11 +1158,29 @@ function ctFilteredCustomers(){
   const stage = $('ct-filter-status')?.value || '';
   return ctEligibleCustomers().filter(c=>{
     const s = ctGetStage(c);
-    const matchQ = !q || [c.name,c.recno,c.kepco,c.id,c.addr].join(' ').toLowerCase().includes(q);
+    // 사업자 + 사업장 정보 모두 검색 hay에 포함 (Phase 8)
+    const hayParts = [c.name, c.recno, c.kepco, c.id, c.addr];
+    if(Array.isArray(c.sites)){
+      c.sites.forEach(site => hayParts.push(site.siteName||'', site.kepco||''));
+    }
+    const matchQ = !q || hayParts.join(' ').toLowerCase().includes(q);
     const matchType = !type || c.drType===type;
     const matchStage = !stage || s===stage;
     return matchQ && matchType && matchStage;
   });
+}
+
+// 계약관리 사업자 행 ▶/▼ 토글 (사전검증의 pcToggleBusiness와 동일 패턴)
+function ctToggleBusiness(bizId){
+  const rows = document.querySelectorAll(`tr.ct-site-row[data-parent-id="${bizId}"]`);
+  if(rows.length===0) return;
+  const isHidden = rows[0].style.display === 'none';
+  rows.forEach(tr => { tr.style.display = isHidden ? '' : 'none'; });
+  const bizRow = document.querySelector(`tr.ct-business-row[data-biz-id="${bizId}"]`);
+  if(bizRow){
+    const icon = bizRow.querySelector('.accordion-icon');
+    if(icon) icon.textContent = isHidden ? '▼' : '▶';
+  }
 }
 function ctInit(){
   ctRenderSummary();
@@ -1181,12 +1199,22 @@ function ctRenderTable(){
   const rows = ctFilteredCustomers();
   const tbody = $('ct-tbody');
   const empty = $('ct-empty');
+  let siteTotal = 0;
   tbody.innerHTML = rows.map(c=>{
     const stage = ctGetStage(c);
     const ci = c.contractInfo || {};
-    return `<tr onclick="ctOpenDetail('${c.id}')">
+    const hasSites = Array.isArray(c.sites) && c.sites.length > 0;
+    siteTotal += hasSites ? c.sites.length : 1;
+    const accordionIcon = hasSites
+      ? `<span class="accordion-icon" style="display:inline-block;width:12px;color:var(--text-hint);font-size:10px;">▶</span> `
+      : `<span style="display:inline-block;width:12px;"></span> `;
+    const siteCountBadge = hasSites
+      ? ` <span style="color:var(--text-hint);font-size:11px;font-weight:400;">· ${c.sites.length}사업장</span>`
+      : '';
+    // ───── 사업자 행 ─────
+    const bizRow = `<tr class="ct-business-row" data-biz-id="${c.id}" style="cursor:pointer;">
       <td>
-        <div class="ct-name">${c.name}</div>
+        <div class="ct-name">${accordionIcon}${c.name}${siteCountBadge}</div>
         <div class="ct-sub">${c.recno} · 고객번호 ${c.kepco||'-'}</div>
       </td>
       <td>${c.drType}</td>
@@ -1196,9 +1224,43 @@ function ctRenderTable(){
       <td>${ci.startDate||'-'} ~ ${ci.endDate||'-'}</td>
       <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
     </tr>`;
+    // ───── 사업장 자식 행들 (기본 숨김) ─────
+    const siteRows = hasSites ? c.sites.map(s=>{
+      const stepsDone = Array.isArray(s.steps) ? s.steps.filter(x=>x===2).length : 0;
+      const verifyLabel = stepsDone===6 ? '검증완료' : (stepsDone===0 ? '검증대기' : `검증중 (${stepsDone}/6)`);
+      const verifyCls = stepsDone===6 ? 'badge-done' : (stepsDone===0 ? 'badge-gray' : 'badge-progress');
+      return `<tr class="ct-site-row" data-parent-id="${c.id}" style="display:none;background:var(--grey50);">
+        <td style="padding-left:32px;">
+          <div class="ct-name" style="color:var(--grey700);font-weight:500;">
+            <span style="color:var(--text-hint);">└</span> ${s.siteName}
+          </div>
+          <div class="ct-sub" style="color:var(--text-hint);">KEPCO ${s.kepco} · ${s.addr||''}</div>
+        </td>
+        <td style="color:var(--text-hint);">—</td>
+        <td><span class="badge ${verifyCls}">${verifyLabel}</span></td>
+        <td style="color:var(--text-hint);">—</td>
+        <td style="color:var(--text-hint);">—</td>
+        <td style="color:var(--text-hint);">—</td>
+        <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
+      </tr>`;
+    }).join('') : '';
+    return bizRow + siteRows;
   }).join('');
+
+  // 행 클릭 이벤트: 사업장 다수 → 아코디언 토글, 단일 → 모달 오픈
+  tbody.querySelectorAll('tr.ct-business-row').forEach(tr=>{
+    const bizId = tr.dataset.bizId;
+    const c = store.customers.find(x=>x.id===bizId);
+    const hasSites = c && Array.isArray(c.sites) && c.sites.length > 0;
+    tr.onclick = (e)=>{
+      if(e.target.tagName==='BUTTON') return;
+      if(hasSites) ctToggleBusiness(bizId);
+      else ctOpenDetail(bizId);
+    };
+  });
+
   empty.style.display = rows.length ? 'none' : 'block';
-  $('ct-row-count').textContent = `총 ${rows.length}건`;
+  $('ct-row-count').textContent = `총 ${rows.length}사업자 · ${siteTotal}사업장`;
 }
 function ctResetFilters(){
   $('ct-search').value = '';
