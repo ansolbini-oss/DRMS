@@ -1241,7 +1241,7 @@ function ctRenderTable(){
         <td style="color:var(--text-hint);">—</td>
         <td style="color:var(--text-hint);">—</td>
         <td style="color:var(--text-hint);">—</td>
-        <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
+        <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}','${s.id}')">상세보기</button></td>
       </tr>`;
     }).join('') : '';
     return bizRow + siteRows;
@@ -1268,11 +1268,13 @@ function ctResetFilters(){
   $('ct-filter-status').value = '';
   ctRenderTable();
 }
-function ctOpenDetail(id){
+function ctOpenDetail(id, siteId){
   const c = store.customers.find(x=>x.id===id); if(!c) return;
   ctEnsureCustomerMeta(c);
   ctCurrentId = id;
-  $('ct-d-title').textContent = c.name;
+  // 사업장 진입 시 — 헤더에 사업자명 - 사업장명 표시 (컨텍스트 명시)
+  const site = siteId && Array.isArray(c.sites) ? c.sites.find(s=>s.id===siteId) : null;
+  $('ct-d-title').textContent = site ? `${c.name} - ${site.siteName}` : c.name;
   // 모달 헤더 부정보: 식별자(접수번호) + 계약 상태 배지만 — DR 유형/계약 정보는 탭 안에서 확인
   $('ct-d-sub').innerHTML = `${c.recno} · <span class="badge ${ctStageBadge(ctGetStage(c))}">${ctGetStage(c)}</span>`;
   $('ct-tab-basic').style.display = '';
