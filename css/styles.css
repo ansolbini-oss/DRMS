@@ -930,12 +930,56 @@ table.dm-matrix tbody td.dm-mx-cust{position:sticky;left:0;background:#f8f9fc;fo
 #page-contract .ct-doc-card .r-card-header{padding:18px 20px 0;}
 #page-contract .ct-doc-card .r-card-title{font-size:16px;font-weight:600;color:#191f28;}
 #page-contract .ct-doc-card .r-card-body{padding:16px 20px 20px;}
-#page-contract .ct-history-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
-#page-contract .ct-history-item:last-child{border-bottom:none;}
-#page-contract .ct-history-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;background:var(--blue);}
-#page-contract .ct-history-time{font-size:10px;color:var(--text-hint);width:98px;flex-shrink:0;font-family:monospace;}
-#page-contract .ct-history-body{font-size:12px;color:var(--text);}
-#page-contract .ct-history-sub{font-size:11px;color:var(--text-sub);margin-top:2px;}
+/* 상태이력 행 — page-contract 와 ctDetailPanel 둘 다 적용 (모달이 page 밖에 있음) */
+#page-contract .ct-history-item,
+#ctDetailPanel .ct-history-item{
+  display:flex;
+  gap:14px;
+  padding:12px 0;
+  border-bottom:1px solid var(--border);
+  align-items:flex-start;
+}
+#page-contract .ct-history-item:last-child,
+#ctDetailPanel .ct-history-item:last-child{border-bottom:none;}
+#page-contract .ct-history-dot,
+#ctDetailPanel .ct-history-dot{
+  width:8px;height:8px;border-radius:50%;
+  margin-top:6px;flex-shrink:0;background:var(--blue);
+}
+/* 일시 컬럼 — 'YYYY-MM-DD HH:MM:SS' + actor 보조줄까지 한 컬럼에서 잘 보이도록 폭 확장 */
+#page-contract .ct-history-time,
+#ctDetailPanel .ct-history-time{
+  font-size:11px;
+  color:var(--text-sub);
+  width:150px;
+  flex-shrink:0;
+  font-family:monospace;
+  line-height:1.5;
+}
+#page-contract .ct-history-time > div,
+#ctDetailPanel .ct-history-time > div{
+  font-size:10px;
+  color:var(--text-hint);
+  font-family:inherit;
+  margin-top:2px;
+}
+#page-contract .ct-history-body,
+#ctDetailPanel .ct-history-body{
+  font-size:12px;
+  color:var(--text);
+  flex:1;
+  min-width:0;
+  line-height:1.5;
+  font-weight:600;
+}
+#page-contract .ct-history-sub,
+#ctDetailPanel .ct-history-sub{
+  font-size:11px;
+  color:var(--text-sub);
+  margin-top:3px;
+  font-weight:400;
+  line-height:1.5;
+}
 @media (max-width: 900px){
   #page-contract .ct-basic-table-wrap{grid-template-columns:1fr;}
   #page-contract .ct-doc-edit{grid-template-columns:1fr;}
