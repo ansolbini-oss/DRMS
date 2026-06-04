@@ -622,9 +622,7 @@ function rpOpenSettlement(eventId){
     $('stl-stg3').className = 'stg-section done';
   }
 
-  // 단계 헤더 툴팁 주입
-  $('stl-stg1-tip').innerHTML = tip('stl-stage1');
-  $('stl-stg3-tip').innerHTML = tip('stl-stage3');
+  // Phase 9-D: 정산 관련 체크리스트 툴팁 제거 (운영실적확정 책임 외 항목이라 혼란 유발)
 
   // ── 단계 1 body: KPX 데이터 대사 ──
   const ev_ordered = a.ordered, ev_actual = a.actual;
@@ -728,9 +726,9 @@ function rpOpenSettlement(eventId){
         <td><span class="badge ${stateBadgeCls}">${stateTxt}</span></td>
       </tr>`;
     }).join('');
-    const lockTag = s.status==='awaiting' ? '<span style="font-size:10px;color:var(--text-hint);">(확정 전 — 가변)</span>' : '<span style="font-size:10px;color:var(--green);">🔒 확정 후 잠금</span>';
+    // Phase 9-D: '확정 후 잠금' 표기 제거 (감축모니터링에서 자동 수집된 데이터라 의미 없는 표현)
     $('stl-stg3-body').innerHTML = `
-      <div style="font-size:11px;color:var(--text-hint);margin-bottom:8px;">참여 자원(그룹) 단위 확정 실적 ${lockTag}</div>
+      <div style="font-size:11px;color:var(--text-hint);margin-bottom:8px;">자원그룹 단위 이행 실적 (감축모니터링 메터링 데이터)</div>
       <table class="rp-table" style="margin-top:0;">
         <thead><tr>
           <th>자원그룹</th>
