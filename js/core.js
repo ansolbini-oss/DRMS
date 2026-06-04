@@ -143,6 +143,12 @@ function showFullAuditLogs(objectType, objectId){
 (function seedReport(){
   // 과거 완료된 운영 이벤트 추가 (지난 3개월 분포)
   const past = [
+    // 2026-04 (이번 달 ~ 전월) — 입금 진행 단계 시연용
+    {id:'EVM20260410-01', dt:'MANDATORY_REDUCTION', date:'2026-04-10', tr:'15:00~16:00', resources:[
+      {groupId:1, ordered:2500, actual:2375, status:'NORMAL'},
+      {groupId:2, ordered:1050, actual:1020, status:'NORMAL'},
+      {groupId:5, ordered:900,  actual:820,  status:'NORMAL'},
+    ]},
     // 2026-03 (전월)
     {id:'EVM20260318-01', dt:'MANDATORY_REDUCTION', date:'2026-03-18', tr:'14:00~15:00', resources:[
       {groupId:1, ordered:2400, actual:2280, status:'NORMAL'},
