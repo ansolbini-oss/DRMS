@@ -81,13 +81,13 @@ function rpStlBadge(status){
 function rpStlLabel(status){
   return {awaiting:'KPX 데이터 대기', received:'정산 대기', in_progress:'정산 이관 (진행중)', completed:'정산 완료'}[status] || '-';
 }
-// 이벤트 목록에서 액션 버튼 라벨 — 상태별 행동 명확화
+// 이벤트 목록에서 액션 버튼 라벨 — 상태별 행동 명확화 (Phase 9-A: B안 완전 분리)
 function rpActionLabel(status){
   return {
     awaiting:    '확정 데이터 입력',
-    received:    '정합성 검토',
+    received:    '확정 이력 확인',
     in_progress: '→ 정산관리로 이동',
-    completed:   '이력 확인'
+    completed:   '→ 정산관리로 이동'
   }[status] || '확인';
 }
 /* 정산 소요일 계산 (이벤트 종료일 → 완료일 또는 현재) */
@@ -160,7 +160,7 @@ function rpRenderEventsTab(evs){
       <td class="num">${amount.toLocaleString()}</td>
       <td class="num ${daysCls}">${days}일</td>
       <td>${
-        e.settlement.status==='in_progress'
+        (e.settlement.status==='in_progress' || e.settlement.status==='completed')
           ? `<button class="link" onclick="event.stopPropagation();navigate('settlement');setTimeout(()=>stmOpenDetail('${e.id}'),150);">${rpActionLabel(e.settlement.status)}</button>`
           : `<button class="link" onclick="event.stopPropagation();rpOpenSettlement('${e.id}')">${rpActionLabel(e.settlement.status)}</button>`
       }</td>
@@ -686,18 +686,21 @@ function rpOpenSettlement(eventId){
     },0);
   }
 
-  // ── 단계 2 body: 정산 대기 · 정산관리 이관 안내 (운영실적확정 책임 끝) ──
+  // ── 단계 2 body: 정산 대기 안내 (운영실적확정 책임 끝) — Phase 9-A: 정산 진행 정보 완전 제거
   if(s.status==='awaiting'){
-    $('stl-stg2-body').innerHTML = `<div style="font-size:11px;color:var(--text-hint);padding:4px 0;">① 단계의 정합성 검증 완료 후 자동으로 정산 대기 상태가 됩니다.</div>`;
+    $('stl-stg2-body').innerHTML = `<div style="font-size:11px;color:var(--text-hint);padding:4px 0;">① 단계의 정합성 검증 완료 후 자동으로 <b>정산 대기</b> 상태가 됩니다.</div>`;
   } else {
-    const recvTxt = s.receivedFromKpx ? `${s.receivedFromKpx.amount.toLocaleString()} KRW (${s.receivedFromKpx.receivedAt})` : '미입금';
+    // 운영실적확정 도메인 책임은 여기서 끝. 정산 진행 상황(수금·배분)은 정산관리만 표시.
     $('stl-stg2-body').innerHTML = `
-      <div style="padding:10px;background:#f8faff;border-radius:6px;font-size:11px;line-height:1.6;">
-        <b>정산 대기 상태로 이관 완료</b>. 정산금 수금·참여고객 배분은 <strong>[고객정산관리]</strong> 페이지에서 처리됩니다.<br>
-        <span style="color:var(--text-hint);">현재 수금: ${recvTxt}</span>
+      <div style="padding:12px 14px;background:#f8faff;border-radius:6px;font-size:11px;line-height:1.7;">
+        <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:4px;">✓ 정산관리 이관 완료</div>
+        <div style="color:var(--text-sub);">
+          확정 데이터가 정산관리 큐에 등록되었습니다.<br>
+          <b>정산금 수금·참여고객 배분 등 정산 진행 정보는 [고객정산관리]</b> 페이지에서 확인하세요.
+        </div>
       </div>
-      <div style="margin-top:8px;">
-        <button class="btn btn-primary btn-sm" onclick="rpGoToSettlement()">정산관리에서 열기 →</button>
+      <div style="margin-top:10px;">
+        <button class="btn btn-primary btn-sm" onclick="rpGoToSettlement()">→ 정산관리에서 확인하기</button>
       </div>
     `;
   }
