@@ -151,7 +151,7 @@
       </button>
       <button class="sidebar-item" data-page="report" onclick="navigate('report')">
         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-        운영실적확정
+        운영리포트
         <span class="sidebar-badge" id="sb-report-pending" style="display: inline-block; background: var(--amber);" title="대사/이의제기 단계 2건">2</span>
       </button>
       <button class="sidebar-item" data-page="settlement" onclick="navigate('settlement')">
@@ -246,10 +246,10 @@
     <div class="dash-grid">
       
       <!-- 3. 참여고객 · 사전검증 현황 -->
-      <div class="dash-card">
+      <div class="dash-card" style="cursor:pointer;" onclick="navigate('precheck')">
         <div class="dash-card-head">
           <div class="dash-card-title">참여고객 현황</div>
-          <button class="dash-card-link" onclick="navigate('precheck')">사전검증 →</button>
+          <button class="dash-card-link" onclick="event.stopPropagation();navigate('precheck')">사전검증 →</button>
         </div>
         <div class="cust-grid">
           <div class="cust-stat">
@@ -270,10 +270,11 @@
       </div>
     </div>
 
-    <!-- 4. 정산 현황 (간이) -->
-    <div class="dash-card">
+    <!-- 4. 정산 현황 (간이) — 운영리포트로 라우팅 -->
+    <div class="dash-card" style="cursor:pointer;" onclick="navigate('report')">
       <div class="dash-card-head">
         <div class="dash-card-title">정산 현황 <span id="dashSettleMonth" style="font-weight:500;color:var(--text-sub);margin-left:4px;">— 이번 달</span></div>
+        <button class="dash-card-link" onclick="event.stopPropagation();navigate('report')">운영리포트 →</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
         <div class="stl-block">
@@ -499,20 +500,7 @@
     <div class="summary-card active" id="rm-card-all" onclick="rmFilterByCard('all')">
       <div class="summary-label">전체 자원</div>
       <div class="summary-val blue" id="rm-cnt-all">9</div>
-      <div class="rm-status-chips" id="rm-sub-all" onclick="event.stopPropagation()">
-        <button class="rm-status-chip" data-status="waiting" onclick="rmToggleStatusChip('waiting')">
-          <span class="rm-status-chip-label">승인대기</span>
-          <span class="rm-status-chip-cnt" id="rm-chip-waiting">3</span>
-        </button>
-        <button class="rm-status-chip" data-status="active" onclick="rmToggleStatusChip('active')">
-          <span class="rm-status-chip-label">활성</span>
-          <span class="rm-status-chip-cnt" id="rm-chip-active">6</span>
-        </button>
-        <button class="rm-status-chip" data-status="suspended" onclick="rmToggleStatusChip('suspended')" id="rm-chip-suspended-btn" style="display:none;">
-          <span class="rm-status-chip-label">중지</span>
-          <span class="rm-status-chip-cnt" id="rm-chip-suspended">0</span>
-        </button>
-      </div>
+      <!-- Phase 10: 승인대기/활성/중지 chip 제거 — '승인대기'가 시험대기와 의미 중복 -->
     </div>
     <div class="summary-card" id="rm-card-trial" onclick="rmFilterByCard('trial')" style="border-color:var(--amber-border);background:#fffbf0;">
       <div class="summary-label" style="color:var(--amber);">시험 대기</div>
@@ -848,9 +836,9 @@
 ══════════════════════════════════════ -->
 <div class="page" id="page-report">
   <div class="page-header">
-    <div class="breadcrumb"><span>이벤트 관리</span> › 운영실적확정</div>
+    <div class="breadcrumb"><span>이벤트 관리</span> › 운영리포트</div>
     <div class="page-title-row">
-      <div class="page-title">운영실적확정 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">RPT-01</span><span id="rp-page-tip"></span></div>
+      <div class="page-title">운영리포트 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">RPT-01</span><span id="rp-page-tip"></span></div>
       <div class="page-actions"><span class="page-purpose-chip">이벤트 종료 후 KPX 확정 데이터 입력 → 정산 대기 이관</span></div>
     </div>
   </div>

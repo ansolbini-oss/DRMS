@@ -81,14 +81,9 @@ function rpStlBadge(status){
 function rpStlLabel(status){
   return {awaiting:'KPX 데이터 대기', received:'정산 대기', in_progress:'정산 이관 (진행중)', completed:'정산 완료'}[status] || '-';
 }
-// 이벤트 목록에서 액션 버튼 라벨 — 상태별 행동 명확화 (Phase 9-A: B안 완전 분리)
+// 이벤트 목록 액션 라벨 — Phase 10: 모든 상태에서 '상세'로 통일 (운영자 인지 단순화)
 function rpActionLabel(status){
-  return {
-    awaiting:    '확정 데이터 입력',
-    received:    '확정 이력 확인',
-    in_progress: '→ 정산관리로 이동',
-    completed:   '→ 정산관리로 이동'
-  }[status] || '확인';
+  return '상세';
 }
 /* 정산 소요일 계산 (이벤트 종료일 → 완료일 또는 현재) */
 function rpSettlementDays(ev){
@@ -161,8 +156,8 @@ function rpRenderEventsTab(evs){
       <td class="num ${daysCls}">${days}일</td>
       <td>${
         (e.settlement.status==='in_progress' || e.settlement.status==='completed')
-          ? `<button class="link" onclick="event.stopPropagation();navigate('settlement');setTimeout(()=>stmOpenDetail('${e.id}'),150);">${rpActionLabel(e.settlement.status)}</button>`
-          : `<button class="link" onclick="event.stopPropagation();rpOpenSettlement('${e.id}')">${rpActionLabel(e.settlement.status)}</button>`
+          ? `<button class="link" onclick="event.stopPropagation();navigate('settlement');setTimeout(()=>stmOpenDetail('${e.id}'),150);">상세</button>`
+          : `<button class="link" onclick="event.stopPropagation();rpOpenSettlement('${e.id}')">상세</button>`
       }</td>
     </tr>`;
   }).join('');
