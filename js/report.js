@@ -849,15 +849,21 @@ function rpOpenAmendData(){
     return;
   }
   $('cm-title').textContent = 'KPX 확정 데이터 정정';
-  $('cm-sub').textContent   = `${eventDisplayName(ev)} · ${ev.id} — 정정 시 정산 대기 상태가 해제되고 KPX 데이터 대기로 되돌아갑니다.`;
+  $('cm-sub').textContent   = `${eventDisplayName(ev)} · ${ev.id}`;
   $('cm-body').innerHTML = `
     <div class="form-row">
       <label class="form-label">정정 사유 <span style="color:var(--red);">*</span></label>
       <textarea class="form-input" id="rp-amend-reason" rows="4"
         placeholder="예) KPX가 감축인정량 정정 통보 (15:30 미터 누락 보정 / 2024-09-15)"></textarea>
-      <div style="font-size:11px;color:var(--text-hint);margin-top:6px;line-height:1.6;">
-        ※ 이 작업은 감사 로그에 기록됩니다. 사유는 명확히 기재하세요.<br>
-        ※ 정정 후 KPX 데이터를 다시 입력해야 정산 대기 상태로 진입합니다.
+    </div>
+    <div style="margin-top:14px;padding:12px 14px;background:#fff5f5;border:1px solid #ffd6d6;border-radius:8px;display:flex;align-items:flex-start;gap:10px;">
+      <span style="font-size:16px;line-height:1;color:var(--red);flex-shrink:0;">⚠️</span>
+      <div style="font-size:12px;color:var(--red);line-height:1.7;">
+        <b>정정 시 진행 중인 정산은 초기화 됩니다.</b><br>
+        <span style="color:var(--text-sub);font-weight:400;">
+          현재 입력된 KPX 데이터·정산 대기 상태가 모두 해제되고
+          'KPX 데이터 대기' 상태로 되돌아갑니다. 이 작업은 감사 로그에 기록됩니다.
+        </span>
       </div>
     </div>
   `;
