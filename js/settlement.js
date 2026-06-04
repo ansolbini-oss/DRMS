@@ -9,9 +9,24 @@ const stmState = {
   statusFilter: 'all',
   typeFilter: 'all',
   search: '',
+  searchScope: 'all',  // Phase 11-A: 검색 범위 초기값 명시
   selectedEventId: null,
   penaltyTargetCustomerId: null,
 };
+
+// Phase 11-B: KPI 카드 클릭 → 해당 상태 필터링 (status 필터 선택 + 리스트 영역으로 스크롤)
+function stmFilterByStatus(status){
+  stmState.statusFilter = status || 'all';
+  if($('stm-status-filter')) $('stm-status-filter').value = stmState.statusFilter;
+  stmRender();
+  // 리스트 영역으로 스크롤 — KPI를 위로 올린 만큼 리스트가 화면 아래에 있어서
+  setTimeout(()=>{
+    const body = document.getElementById('stm-list-body');
+    if(body && typeof body.scrollIntoView==='function'){
+      body.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  }, 50);
+}
 
 function stmInit(){
   stmApplyPeriodRange();
