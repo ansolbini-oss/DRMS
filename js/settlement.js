@@ -188,8 +188,18 @@ function stmDays(ev){
 }
 
 function stmRender(){
-  stmSyncFilters();
-  const evs = stmFilteredEvents();
+  try {
+    stmSyncFilters();
+  } catch(err){ console.error('[stmRender] stmSyncFilters 실패:', err); }
+  let evs = [];
+  try {
+    evs = stmFilteredEvents();
+  } catch(err){
+    console.error('[stmRender] stmFilteredEvents 실패:', err);
+    const body = document.getElementById('stm-list-body');
+    if(body) body.innerHTML = `<div class="empty" style="padding:40px;text-align:center;color:var(--red);">데이터 조회 중 오류가 발생했습니다. 브라우저 콘솔을 확인해 주세요.</div>`;
+    return;
+  }
 
   // KPI — Phase 11 4단계 (정산대기 / 세금계산서 / 입금 진행 / 정산완료)
   const total = evs.length;
@@ -216,28 +226,41 @@ function stmRender(){
     return;
   }
 
-  const rows = evs.map(e=>{
-    const s = e.settlement;
-    const dispLabel = e.dispatch_type==='MANDATORY_REDUCTION' ? '의무감축' : '자발적감축';
-    const custs = s.customerDistribution||[];
-    const totalCust = custs.length || stmEventCustomers(e).length;
-    const transferred = custs.filter(d=>d.transferredAt).length;
-    const custProgress = totalCust ? `${transferred}/${totalCust}` : '-';
-    const recv = s.receivedFromKpx?.amount;
-    const recvCell = recv ? `${recv.toLocaleString()}` : `<span style="color:var(--text-hint);">미입금</span>`;
-    const days = stmDays(e);
-    const daysCls = days>90 ? 'stg-diff-bad' : days>60 ? 'stg-diff-warn' : '';
-    return `<tr class="clickable" onclick="stmOpenDetail('${e.id}')">
-      <td><strong>${eventDisplayName(e)}</strong><div style="font-size:10px;color:var(--text-hint);margin-top:2px;">STL-${e.id} · ${e.date} ${e.timeRange}</div></td>
-      <td>${dispLabel}</td>
-      <td>${stmStatusBadge(s.status)}</td>
-      <td class="num">${(s.finalAmount||0).toLocaleString()}</td>
-      <td class="num">${recvCell}</td>
-      <td class="num">${custProgress}</td>
-      <td class="num ${daysCls}">${days}일</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();stmOpenDetail('${e.id}')">상세</button></td>
-    </tr>`;
-  }).join('');
+  // Phase 11-E: 행별 try/catch로 한 이벤트 에러가 전체 렌더링을 멈추지 않게 격리
+  const rowsArr = [];
+  evs.forEach(e=>{
+    try {
+      const s = e.settlement || {};
+      const dispLabel = e.dispatch_type==='MANDATORY_REDUCTION' ? '의무감축' : '자발적감축';
+      const custs = Array.isArray(s.customerDistribution) ? s.customerDistribution : [];
+      let totalCust = custs.length;
+      if(!totalCust){
+        try { totalCust = (stmEventCustomers(e)||[]).length; } catch(err){ totalCust = 0; }
+      }
+      const transferred = custs.filter(d=>d.transferredAt).length;
+      const custProgress = totalCust ? `${transferred}/${totalCust}` : '-';
+      const recv = s.receivedFromKpx && s.receivedFromKpx.amount;
+      const recvCell = recv ? `${Number(recv).toLocaleString()}` : `<span style="color:var(--text-hint);">미입금</span>`;
+      let days = 0;
+      try { days = stmDays(e) || 0; } catch(err){ days = 0; }
+      const daysCls = days>90 ? 'stg-diff-bad' : days>60 ? 'stg-diff-warn' : '';
+      let titleHtml = e.id;
+      try { titleHtml = eventDisplayName(e); } catch(err){ /* fallback to id */ }
+      rowsArr.push(`<tr class="clickable" onclick="stmOpenDetail('${e.id}')">
+        <td><strong>${titleHtml}</strong><div style="font-size:10px;color:var(--text-hint);margin-top:2px;">STL-${e.id} · ${e.date||''} ${e.timeRange||''}</div></td>
+        <td>${dispLabel}</td>
+        <td>${stmStatusBadge(s.status)}</td>
+        <td class="num">${Number(s.finalAmount||0).toLocaleString()}</td>
+        <td class="num">${recvCell}</td>
+        <td class="num">${custProgress}</td>
+        <td class="num ${daysCls}">${days}일</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();stmOpenDetail('${e.id}')">상세</button></td>
+      </tr>`);
+    } catch(err){
+      console.error('[stmRender] 행 렌더 실패:', e?.id, err);
+      rowsArr.push(`<tr><td colspan="8" style="color:var(--red);font-size:11px;padding:8px 12px;">[렌더 오류] ${e?.id||'-'} — 콘솔 참조</td></tr>`);
+    }
+  });
 
   body.innerHTML = `
     <table class="rp-table">
@@ -251,7 +274,7 @@ function stmRender(){
         <th style="text-align:right;">소요일</th>
         <th>액션</th>
       </tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rowsArr.join('')}</tbody>
     </table>
   `;
 }
