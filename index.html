@@ -930,9 +930,10 @@
     <label style="margin-left:10px;">상태</label>
     <select class="filter-select" id="stm-status-filter" onchange="stmRender()">
       <option value="all">전체</option>
-      <option value="received">입금 대기</option>
-      <option value="in_progress">배분 진행중</option>
-      <option value="completed">정산 완료</option>
+      <option value="received">정산대기</option>
+      <option value="invoiced">세금계산서 발행</option>
+      <option value="in_progress">입금 진행</option>
+      <option value="completed">정산완료</option>
     </select>
 
     <label style="margin-left:10px;">DR유형</label>
@@ -951,11 +952,12 @@
 
   <!-- KPI -->
   <div class="rp-kpi-grid">
+    <!-- Phase 11: 4단계 lifecycle KPI -->
     <div class="rp-kpi"><div class="rp-kpi-label">정산 대상 이벤트</div><div class="rp-kpi-val blue" id="stm-kpi-total">0</div><div class="rp-kpi-sub">확정 데이터 기준</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">수금 / 확정 대기</div><div class="rp-kpi-val amber" id="stm-kpi-pending">0</div><div class="rp-kpi-sub">고객 배분 전 단계</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">고객 배분 진행중</div><div class="rp-kpi-val blue" id="stm-kpi-inprog">0</div><div class="rp-kpi-sub">고객별 금액 산정/확정</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">지급 완료</div><div class="rp-kpi-val green" id="stm-kpi-done">0</div><div class="rp-kpi-sub">고객 지급 종료</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">확정 배분 기준 금액</div><div class="rp-kpi-val" id="stm-kpi-amt">0</div><div class="rp-kpi-sub">KRW</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">정산대기</div><div class="rp-kpi-val amber" id="stm-kpi-pending">0</div><div class="rp-kpi-sub">확정데이터 기입 완료</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">세금계산서 발행</div><div class="rp-kpi-val" id="stm-kpi-invoiced">0</div><div class="rp-kpi-sub">참여고객 정산금 확정</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">입금 진행</div><div class="rp-kpi-val blue" id="stm-kpi-inprog">0</div><div class="rp-kpi-sub">세금계산서 금액 입금 중</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">정산완료</div><div class="rp-kpi-val green" id="stm-kpi-done">0</div><div class="rp-kpi-sub">모든 참여고객 입금 완료</div></div>
   </div>
 
   <div id="stm-list-body"></div>

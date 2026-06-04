@@ -73,12 +73,17 @@ function stmResetFilters(){
   stmChangePeriod('3m');
 }
 
-/* 정산관리에 노출되는 이벤트: 정합성 확정(received) 이후만 */
+/* 정산관리에 노출되는 이벤트: 정합성 확정(received) 이후만
+   Phase 11 — 4단계 lifecycle:
+   received   = 정산대기         (확정데이터 기입 상태)
+   invoiced   = 세금계산서 발행   (참여고객들과 최종 정산금 확인·확정)
+   in_progress= 입금 진행         (세금계산서 금액을 통장으로 입금 중)
+   completed  = 정산완료         (모든 참여고객에게 입금 완료) */
 function stmEligibleEvents(){
   return store.events.reduction.filter(e=>{
     if(!e.settlement) return false;
     const st = e.settlement.status;
-    return st==='received' || st==='in_progress' || st==='completed';
+    return st==='received' || st==='invoiced' || st==='in_progress' || st==='completed';
   });
 }
 
@@ -121,15 +126,19 @@ function stmEventCustomers(ev){
   return list;
 }
 
-/* 배분 상태 라벨 */
+/* 배분 상태 라벨 — Phase 11 4단계 lifecycle */
 function stmStatusBadge(status){
   const map = {
-    received:    ['stl-requested', '입금 대기'],
-    in_progress: ['stl-received',  '배분 진행중'],
-    completed:   ['stl-completed', '정산 완료']
+    received:    ['stl-pending',   '정산대기'],
+    invoiced:    ['stl-requested', '세금계산서 발행'],
+    in_progress: ['stl-received',  '입금 진행'],
+    completed:   ['stl-completed', '정산완료']
   };
   const [cls,label] = map[status] || ['stl-pending','-'];
   return `<span class="stl-badge ${cls}">${label}</span>`;
+}
+function stmStatusLabel(status){
+  return ({received:'정산대기', invoiced:'세금계산서 발행', in_progress:'입금 진행', completed:'정산완료'})[status] || '-';
 }
 
 /* 소요일 */
@@ -144,14 +153,16 @@ function stmRender(){
   stmSyncFilters();
   const evs = stmFilteredEvents();
 
-  // KPI
+  // KPI — Phase 11 4단계 (정산대기 / 세금계산서 / 입금 진행 / 정산완료)
   const total = evs.length;
   const pending = evs.filter(e=>e.settlement.status==='received').length;
+  const invoiced = evs.filter(e=>e.settlement.status==='invoiced').length;
   const inprog = evs.filter(e=>e.settlement.status==='in_progress').length;
   const done = evs.filter(e=>e.settlement.status==='completed').length;
   const amtSum = evs.reduce((s,e)=>s+(e.settlement.finalAmount||0),0);
   $('stm-kpi-total').textContent = total;
   $('stm-kpi-pending').textContent = pending;
+  if($('stm-kpi-invoiced')) $('stm-kpi-invoiced').textContent = invoiced;
   $('stm-kpi-inprog').textContent = inprog;
   $('stm-kpi-done').textContent = done;
   $('stm-kpi-amt').textContent = amtSum.toLocaleString();
@@ -225,8 +236,8 @@ function stmOpenDetail(eventId){
   $('stmd-sub').textContent = `STL-${ev.id} · ${dispLabel} · ${ev.date} ${ev.timeRange}`;
 
   // 플로우
-  const steps = ['received','in_progress','completed'];
-  const labels = {received:'입금 대기', in_progress:'배분 진행', completed:'완료'};
+  const steps = ['received','invoiced','in_progress','completed'];
+  const labels = {received:'정산대기', invoiced:'세금계산서 발행', in_progress:'입금 진행', completed:'정산완료'};
   const curIdx = steps.indexOf(s.status);
   $('stmd-flow').innerHTML = steps.map((st,i)=>{
     const cls = i<curIdx?'done':i===curIdx?'current':'';
