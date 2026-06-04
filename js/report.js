@@ -670,7 +670,7 @@ function rpOpenSettlement(eventId){
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-secondary btn-sm" onclick="rpSaveKpxDataPatch()">대사 · 이의 · 확정금액 저장</button>
         ${s.status==='awaiting' ? `<button class="btn btn-primary btn-sm" onclick="rpConfirmAndGoSettlement()">정합성 검증 완료 → 정산 대기 (자동 전환)</button>` : ''}
-        ${s.status==='received' ? `<button class="btn btn-ghost btn-sm" onclick="rpResetKpxData()">KPX 데이터 삭제 · 대기로 복귀</button>` : ''}
+        ${s.status==='received' ? `<button class="btn btn-ghost btn-sm" onclick="rpOpenAmendData()">KPX 데이터 정정 (사유 입력)</button>` : ''}
       </div>
     `;
     // 라디오 change
@@ -839,22 +839,73 @@ function rpGoToSettlement(){
   setTimeout(()=>stmOpenDetail(ev.id), 200);
 }
 
-function rpResetKpxData(){
+// Phase 9-E: 정정 정책 — 사유 입력 다이얼로그 (received 상태에서만 가능)
+function rpOpenAmendData(){
   const ev = store.events.reduction.find(e=>e.id===rpState.selectedEventId);
   if(!ev?.settlement) return;
-  if(!confirm('KPX 데이터를 삭제하고 "데이터 대기" 상태로 되돌리시겠습니까?')) return;
+  // 정산관리 진행 중/완료된 건 운영실적확정에서 정정 불가
+  if(ev.settlement.status !== 'received'){
+    showToast('정산관리 진행 또는 완료된 건은 운영실적확정에서 정정할 수 없습니다.');
+    return;
+  }
+  $('cm-title').textContent = 'KPX 확정 데이터 정정';
+  $('cm-sub').textContent   = `${eventDisplayName(ev)} · ${ev.id} — 정정 시 정산 대기 상태가 해제되고 KPX 데이터 대기로 되돌아갑니다.`;
+  $('cm-body').innerHTML = `
+    <div class="form-row">
+      <label class="form-label">정정 사유 <span style="color:var(--red);">*</span></label>
+      <textarea class="form-input" id="rp-amend-reason" rows="4"
+        placeholder="예) KPX가 감축인정량 정정 통보 (15:30 미터 누락 보정 / 2024-09-15)"></textarea>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:6px;line-height:1.6;">
+        ※ 이 작업은 감사 로그에 기록됩니다. 사유는 명확히 기재하세요.<br>
+        ※ 정정 후 KPX 데이터를 다시 입력해야 정산 대기 상태로 진입합니다.
+      </div>
+    </div>
+  `;
+  $('cm-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-danger" onclick="rpConfirmAmendData()">정정 확정</button>
+  `;
+  openModal('commonModal');
+}
+
+function rpConfirmAmendData(){
+  const ev = store.events.reduction.find(e=>e.id===rpState.selectedEventId);
+  if(!ev?.settlement) return;
+  if(ev.settlement.status !== 'received'){
+    showToast('정정 가능한 상태가 아닙니다.');
+    closeModal('commonModal');
+    return;
+  }
+  const reason = ($('rp-amend-reason')?.value || '').trim();
+  if(!reason){ showToast('정정 사유를 입력하세요.'); return; }
   const prev = ev.settlement.status;
   ev.settlement.kpxData = null;
   ev.settlement.finalAmount = null;
   ev.settlement.confirmedAt = null;
   ev.settlement.confirmedBy = '';
   ev.settlement.status = 'awaiting';
-  ev.settlement.history.push({at:nowStr(), user:'현진영', fromStatus:prev, toStatus:'awaiting', note:'KPX 데이터 삭제 · 데이터 대기 상태로 복귀'});
+  ev.settlement.history.push({at:nowStr(), user:'현진영', fromStatus:prev, toStatus:'awaiting', note:`KPX 데이터 정정 · 사유: ${reason}`});
+  // 통합 감사 로그(audit logs)에도 기록
+  if(typeof logAudit === 'function'){
+    logAudit({
+      objectType:'settlement',
+      objectId: ev.id,
+      action:'data_amended',
+      title:'KPX 확정 데이터 정정',
+      desc: reason,
+      actor:'현진영',
+      tone:'wait'
+    });
+  }
+  closeModal('commonModal');
   rpOpenSettlement(ev.id);
   refreshSidebarBadges();
   rpRender();
-  showToast('데이터 대기 상태로 복귀');
+  showToast('정정 처리 완료 · KPX 데이터 대기 상태로 되돌아갔습니다.');
 }
+
+// 구버전 호환 — 외부 onclick에서 rpResetKpxData를 직접 호출하던 코드가 있다면 새 흐름으로 라우팅
+function rpResetKpxData(){ rpOpenAmendData(); }
 
 /* ════════════════════════════════════════════════════════════
    ★ PAGE: 정산관리 (이벤트 단위 정산)
