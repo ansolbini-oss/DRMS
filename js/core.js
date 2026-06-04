@@ -257,6 +257,47 @@ function showFullAuditLogs(objectType, objectId){
     ]
   });
   // EVM20260318-01 / EVM20260410-01 는 기본 awaiting 유지 (KPX 데이터 미수신)
+
+  // Phase 11-C: 정산관리 4단계 lifecycle 시연용 시드
+  // (받침: received → invoiced → in_progress → completed 흐름을 운영자가 시각적으로 확인)
+  setStl('EVM20260318-01', {
+    // ② 세금계산서 발행 (invoiced) — KPX 데이터 등록 + 참여고객 정산금 확정 + 세금계산서 발행 완료
+    status:'invoiced',
+    kpxData:{
+      receivedAt:'2026-05-08', kpxReductionKw: 4140, kpxPerformanceRate: 0.96,
+      kpxAmount: 496800, ourReductionKw: 4150, discrepancyKw: -10, discrepancyPct: -0.24,
+      objection:{raised:false, reason:'', finalAmount: 496800}
+    },
+    finalAmount: 496800,
+    invoice:{ number:'2026-0318-01', issuedAt:'2026-05-20', supplyAmount: 451636, vat: 45164, totalAmount: 496800 },
+    note:'2026-03월 의무감축 — 세금계산서 발행 완료, 입금 대기',
+    history:[
+      {at:'2026-03-18 16:00', user:'system', fromStatus:null, toStatus:'awaiting', note:'감축 이벤트 종료'},
+      {at:'2026-05-08 11:00', user:'현진영', fromStatus:'awaiting', toStatus:'received', note:'KPX 정산기준 데이터 수신·등록'},
+      {at:'2026-05-09 14:00', user:'현진영', fromStatus:'received', toStatus:'received', note:'운영리포트 대사 완료 — 정합성 검증 통과'},
+      {at:'2026-05-20 10:00', user:'박정산', fromStatus:'received', toStatus:'invoiced', note:'세금계산서 발행 (2026-0318-01) — 496,800 KRW'},
+    ]
+  });
+  setStl('EVM20260410-01', {
+    // ③ 입금 진행 (in_progress) — 세금계산서 발행 후 통장 입금 진행 중
+    status:'in_progress',
+    kpxData:{
+      receivedAt:'2026-05-22', kpxReductionKw: 4215, kpxPerformanceRate: 0.95,
+      kpxAmount: 505800, ourReductionKw: 4215, discrepancyKw: 0, discrepancyPct: 0,
+      objection:{raised:false, reason:'', finalAmount: 505800}
+    },
+    finalAmount: 505800,
+    invoice:{ number:'2026-0410-01', issuedAt:'2026-05-28', supplyAmount: 459818, vat: 45982, totalAmount: 505800 },
+    receivedFromKpx:{amount: 505800, receivedAt:'2026-06-02', paymentRef:'2026-06 정산'},
+    note:'2026-04월 의무감축 — 세금계산서 발행·KPX 수금 완료, 참여고객 배분 진행 중',
+    history:[
+      {at:'2026-04-10 16:00', user:'system', fromStatus:null, toStatus:'awaiting', note:'감축 이벤트 종료'},
+      {at:'2026-05-22 09:30', user:'현진영', fromStatus:'awaiting', toStatus:'received', note:'KPX 정산기준 데이터 수신·등록'},
+      {at:'2026-05-23 11:00', user:'현진영', fromStatus:'received', toStatus:'received', note:'정합성 검증 완료 — 0% 차이'},
+      {at:'2026-05-28 15:00', user:'박정산', fromStatus:'received', toStatus:'invoiced', note:'세금계산서 발행 (2026-0410-01)'},
+      {at:'2026-06-02 16:30', user:'박정산', fromStatus:'invoiced', toStatus:'in_progress', note:'KPX 수금 확인 · 505,800 KRW — 참여고객 입금 진행 시작'},
+    ]
+  });
 })();
 
 /* 정산관리 — 이벤트 단위 정산 시드
