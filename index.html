@@ -851,11 +851,11 @@
     <div class="breadcrumb"><span>이벤트 관리</span> › 운영실적확정</div>
     <div class="page-title-row">
       <div class="page-title">운영실적확정 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">RPT-01</span><span id="rp-page-tip"></span></div>
-      <div class="page-actions"><span class="page-purpose-chip">이벤트 종료 후 실적 검증 · 확정</span></div>
+      <div class="page-actions"><span class="page-purpose-chip">이벤트 종료 후 KPX 확정 데이터 입력 → 정산 대기 이관</span></div>
     </div>
   </div>
 
-  <div class="wf-note">이 화면은 단순 조회용 리포트가 아니라, 이벤트 사후 검증과 정산 기준 확정을 위한 운영 화면입니다.</div>
+  <div class="wf-note">이 화면은 종료된 이벤트의 우리 측 수집 실적과 KPX 확정 데이터를 정리해 <b>정산관리로 이관</b>하는 운영 화면입니다. 정산금 수금·참여고객 배분은 [고객정산관리]에서 진행됩니다.</div>
 
   <!-- 필터 바 -->
   <div class="rp-filter-bar">
@@ -873,12 +873,12 @@
       <option value="제주DR">제주DR</option>
     </select>
 
-    <label style="margin-left:10px;">정산 상태</label>
+    <label style="margin-left:10px;">확정 상태</label>
     <select class="filter-select" id="rp-stl" onchange="rpRender()">
       <option value="all">전체</option>
-      <option value="awaiting">데이터 대기</option>
-      <option value="received">정산 시작(접수)</option>
-      <option value="in_progress">정산 중</option>
+      <option value="awaiting">KPX 데이터 대기</option>
+      <option value="received">정산 대기</option>
+      <option value="in_progress">정산 이관 (정산관리 진행중)</option>
       <option value="completed">정산 완료</option>
     </select>
 
@@ -887,10 +887,10 @@
 
   <!-- KPI 요약 — MVP 4단계 -->
   <div class="rp-kpi-grid">
-    <div class="rp-kpi"><div class="rp-kpi-label">검증 대상 이벤트</div><div class="rp-kpi-val blue" id="rp-kpi-events">0</div><div class="rp-kpi-sub">종료 후 추적 대상</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">확정 대상 감축량</div><div class="rp-kpi-val" id="rp-kpi-reduction">0</div><div class="rp-kpi-sub">MWh (우리 수집 실적 기준)</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">검증 대기</div><div class="rp-kpi-val" id="rp-kpi-awaiting">0</div><div class="rp-kpi-sub">KPX 기준 데이터 미수신</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">정합성 확정</div><div class="rp-kpi-val amber" id="rp-kpi-received">0</div><div class="rp-kpi-sub">대사 완료 · 정산 이관 대기</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">종료 이벤트 (집계 대상)</div><div class="rp-kpi-val blue" id="rp-kpi-events">0</div><div class="rp-kpi-sub">이벤트 종료 후 추적</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">수집 실적 합계</div><div class="rp-kpi-val" id="rp-kpi-reduction">0</div><div class="rp-kpi-sub">MWh (우리 측 메터링)</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">KPX 데이터 대기</div><div class="rp-kpi-val" id="rp-kpi-awaiting">0</div><div class="rp-kpi-sub">확정 데이터 입력 필요</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">정산 대기 (확정 완료)</div><div class="rp-kpi-val amber" id="rp-kpi-received">0</div><div class="rp-kpi-sub">정산관리 이관 대기</div></div>
     <div class="rp-kpi"><div class="rp-kpi-label">정산 이관 완료</div><div class="rp-kpi-val blue" id="rp-kpi-inprogress">0</div><div class="rp-kpi-sub">고객정산관리 후속 처리중</div></div>
   </div>
 
@@ -1792,21 +1792,21 @@
     <!-- 메타 요약 -->
     <div class="stg-meta" id="stl-meta" style="margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);"></div>
 
-    <!-- 단계 ①: 정산 시작(접수) — KPX 데이터 수신 · 대사 · 이의제기 -->
+    <!-- 단계 ①: KPX 확정 데이터 입력 — 정합성 검증 → 정산 대기로 자동 전환 -->
     <div class="stg-section" id="stl-stg1">
-      <div class="stg-head"><span class="stg-num"><span>1</span></span> 정산 시작 · 접수<span id="stl-stg1-tip"></span></div>
+      <div class="stg-head"><span class="stg-num"><span>1</span></span> KPX 확정 데이터 입력<span id="stl-stg1-tip"></span></div>
       <div id="stl-stg1-body"></div>
     </div>
 
-    <!-- 단계 ②: 정산 중 — KPX 수금 -->
+    <!-- 단계 ②: 정산 대기 (정산관리 이관 안내) -->
     <div class="stg-section" id="stl-stg2">
-      <div class="stg-head"><span class="stg-num"><span>2</span></span> 정산 중 · 수금<span id="stl-stg2-tip"></span></div>
+      <div class="stg-head"><span class="stg-num"><span>2</span></span> 정산 대기 · 정산관리 이관<span id="stl-stg2-tip"></span></div>
       <div id="stl-stg2-body"></div>
     </div>
 
-    <!-- 단계 ③: 정산 완료 — 참여고객 배분 -->
+    <!-- 단계 ③: 참여고객 실적 (확정 후 잠금) -->
     <div class="stg-section" id="stl-stg3">
-      <div class="stg-head"><span class="stg-num"><span>3</span></span> 정산 완료 · 참여고객 배분<span id="stl-stg3-tip"></span></div>
+      <div class="stg-head"><span class="stg-num"><span>3</span></span> 참여고객 실적 (확정 후 잠금)<span id="stl-stg3-tip"></span></div>
       <div id="stl-stg3-body"></div>
     </div>
 

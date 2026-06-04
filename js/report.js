@@ -67,18 +67,28 @@ function rpEventAgg(ev){
 }
 
 /* 정산 상태 배지 HTML — MVP 4단계 모델 */
+// Phase 9: 라벨 정정 — 운영실적확정 책임 범위(데이터 입력→정산 대기 이관)에 맞춘 표현
 function rpStlBadge(status){
   const map = {
-    awaiting:    ['stl-pending',   '데이터 대기'],
-    received:    ['stl-requested', '정산 시작(접수)'],
-    in_progress: ['stl-received',  '정산 중'],
+    awaiting:    ['stl-pending',   'KPX 데이터 대기'],
+    received:    ['stl-requested', '정산 대기'],
+    in_progress: ['stl-received',  '정산 이관 (진행중)'],
     completed:   ['stl-completed', '정산 완료']
   };
   const [cls,label] = map[status] || ['stl-pending','-'];
   return `<span class="stl-badge ${cls}">${label}</span>`;
 }
 function rpStlLabel(status){
-  return {awaiting:'데이터 대기', received:'정산 시작(접수)', in_progress:'정산 중', completed:'정산 완료'}[status] || '-';
+  return {awaiting:'KPX 데이터 대기', received:'정산 대기', in_progress:'정산 이관 (진행중)', completed:'정산 완료'}[status] || '-';
+}
+// 이벤트 목록에서 액션 버튼 라벨 — 상태별 행동 명확화
+function rpActionLabel(status){
+  return {
+    awaiting:    '확정 데이터 입력',
+    received:    '정합성 검토',
+    in_progress: '→ 정산관리로 이동',
+    completed:   '이력 확인'
+  }[status] || '확인';
 }
 /* 정산 소요일 계산 (이벤트 종료일 → 완료일 또는 현재) */
 function rpSettlementDays(ev){
@@ -149,7 +159,11 @@ function rpRenderEventsTab(evs){
       <td>${batchCell}</td>
       <td class="num">${amount.toLocaleString()}</td>
       <td class="num ${daysCls}">${days}일</td>
-      <td><button class="link" onclick="event.stopPropagation();rpOpenSettlement('${e.id}')">정산 관리</button></td>
+      <td>${
+        e.settlement.status==='in_progress'
+          ? `<button class="link" onclick="event.stopPropagation();navigate('settlement');setTimeout(()=>stmOpenDetail('${e.id}'),150);">${rpActionLabel(e.settlement.status)}</button>`
+          : `<button class="link" onclick="event.stopPropagation();rpOpenSettlement('${e.id}')">${rpActionLabel(e.settlement.status)}</button>`
+      }</td>
     </tr>`;
   }).join('');
   box.innerHTML = `<table class="rp-table">
@@ -291,7 +305,7 @@ function rpRenderMonthlyTab(evs){
           <div style="font-size:18px;font-weight:700;color:#374151;margin-top:4px;">${awaitAmt.toLocaleString()} <span style="font-size:10px;font-weight:400;">KRW</span></div>
         </div>
         <div style="padding:14px;background:#dbeafe;border-radius:var(--radius);">
-          <div style="font-size:11px;color:#1e40af;">정산 시작(접수)</div>
+          <div style="font-size:11px;color:#1e40af;">정산 대기</div>
           <div style="font-size:18px;font-weight:700;color:#1e40af;margin-top:4px;">${recvAmt.toLocaleString()} <span style="font-size:10px;font-weight:400;">KRW</span></div>
         </div>
         <div style="padding:14px;background:#fef3c7;border-radius:var(--radius);">
@@ -566,12 +580,13 @@ function rpOpenSettlement(eventId){
   rpState.selectedEventId = eventId;
   const s = ev.settlement;
   const a = rpEventAgg(ev);
-  $('stl-title').innerHTML = `정산 관리 — ${ev.id}`;
+  // Phase 9: 모달 제목·라벨 정정 (운영실적 확정 책임 명시)
+  $('stl-title').innerHTML = `운영실적 확정 — ${ev.id}`;
   $('stl-sub').textContent = `${ev.date} ${ev.timeRange} · ${ev.dispatch_type==='MANDATORY_REDUCTION'?'의무감축':'자발적감축'} · 소요 ${rpSettlementDays(ev)}일`;
 
-  // 플로우 표시 (운영리포트 관점: 대조 → 정합성 확정까지)
+  // 플로우 — 운영실적확정 책임 범위(KPX 데이터 입력 → 정산 대기) + 정산관리 이관 후
   const steps = ['awaiting','received','in_progress','completed'];
-  const labels = {awaiting:'데이터 대기', received:'정합성 확정', in_progress:'정산 중(→정산관리)', completed:'완료'};
+  const labels = {awaiting:'KPX 데이터 대기', received:'정산 대기', in_progress:'정산관리 진행', completed:'정산 완료'};
   const curIdx = steps.indexOf(s.status);
   $('stl-flow').innerHTML = steps.map((st,i)=>{
     const cls = i<curIdx?'done':i===curIdx?'current':'';
@@ -619,7 +634,8 @@ function rpOpenSettlement(eventId){
         <div><label class="form-label">KPX 성능률 (%)</label><input class="form-input" id="stl-k-perf" type="number" step="0.1" placeholder="${Math.round(a.rate*100)}"></div>
         <div><label class="form-label">KPX 산정 정산금 (KRW)</label><input class="form-input" id="stl-k-amt" type="number" placeholder="${s.ourAmount||0}"></div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="rpRegisterKpxData()">KPX 정산기준 데이터 등록 → 정산 시작</button>
+      <button class="btn btn-primary btn-sm" onclick="rpRegisterKpxData()">확정 데이터 저장 → 정합성 검토</button>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-hint);">※ 저장 후 정합성 검증을 거치면 자동으로 <b>정산 대기</b> 상태로 전환됩니다.</div>
     `;
   } else {
     const k = s.kpxData;
@@ -654,7 +670,7 @@ function rpOpenSettlement(eventId){
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-secondary btn-sm" onclick="rpSaveKpxDataPatch()">대사 · 이의 · 확정금액 저장</button>
-        ${s.status==='awaiting' ? `<button class="btn btn-primary btn-sm" onclick="rpConfirmAndGoSettlement()">정합성 검증 완료 → 정산관리</button>` : ''}
+        ${s.status==='awaiting' ? `<button class="btn btn-primary btn-sm" onclick="rpConfirmAndGoSettlement()">정합성 검증 완료 → 정산 대기 (자동 전환)</button>` : ''}
         ${s.status==='received' ? `<button class="btn btn-ghost btn-sm" onclick="rpResetKpxData()">KPX 데이터 삭제 · 대기로 복귀</button>` : ''}
       </div>
     `;
@@ -670,14 +686,14 @@ function rpOpenSettlement(eventId){
     },0);
   }
 
-  // ── 단계 2 body: 정산관리 이관 안내 ──
+  // ── 단계 2 body: 정산 대기 · 정산관리 이관 안내 (운영실적확정 책임 끝) ──
   if(s.status==='awaiting'){
-    $('stl-stg2-body').innerHTML = `<div style="font-size:11px;color:var(--text-hint);padding:4px 0;">① 정합성 검증 완료 후 정산관리에서 진행됩니다.</div>`;
+    $('stl-stg2-body').innerHTML = `<div style="font-size:11px;color:var(--text-hint);padding:4px 0;">① 단계의 정합성 검증 완료 후 자동으로 정산 대기 상태가 됩니다.</div>`;
   } else {
     const recvTxt = s.receivedFromKpx ? `${s.receivedFromKpx.amount.toLocaleString()} KRW (${s.receivedFromKpx.receivedAt})` : '미입금';
     $('stl-stg2-body').innerHTML = `
-      <div style="padding:10px;background:#f8faff;border-radius:6px;font-size:11px;">
-        수금 등록 및 참여고객 배분은 <strong>정산관리</strong>에서 처리합니다.<br>
+      <div style="padding:10px;background:#f8faff;border-radius:6px;font-size:11px;line-height:1.6;">
+        <b>정산 대기 상태로 이관 완료</b>. 정산금 수금·참여고객 배분은 <strong>[고객정산관리]</strong> 페이지에서 처리됩니다.<br>
         <span style="color:var(--text-hint);">현재 수금: ${recvTxt}</span>
       </div>
       <div style="margin-top:8px;">
@@ -686,17 +702,52 @@ function rpOpenSettlement(eventId){
     `;
   }
 
-  // ── 단계 3 body: 정산관리 이관 안내 ──
-  if(s.status==='awaiting'){
-    $('stl-stg3-body').innerHTML = `<div style="font-size:11px;color:var(--text-hint);padding:4px 0;">정산관리 단계에서 진행됩니다.</div>`;
+  // ── 단계 3 body: 참여고객 실적 (확정 후 잠금) — Phase 9 FIX-F ──
+  // ev.resources를 기반으로 자원그룹별 + 그 안의 참여고객(있으면) 실적 표 생성
+  const resources = Array.isArray(ev.resources) ? ev.resources : [];
+  if(resources.length === 0){
+    $('stl-stg3-body').innerHTML = `<div style="font-size:11px;color:var(--text-hint);padding:8px 0;">참여 자원 데이터가 없습니다.</div>`;
   } else {
-    const dist = s.customerDistribution||[];
-    const transferred = dist.filter(d=>d.transferredAt || d.status==='transferred').length;
+    const totalOrd = resources.reduce((s,r)=>s+(r.ordered||0), 0);
+    const totalAct = resources.reduce((s,r)=>s+(r.actual||0), 0);
+    const totalRate = totalOrd>0 ? (totalAct/totalOrd) : 0;
+    const rowsHtml = resources.map(r=>{
+      const rate = (r.actual!=null && r.ordered>0) ? (r.actual/r.ordered) : 0;
+      const rateCls = rate>=0.97 ? 'rate-green' : rate>=0.9 ? 'rate-amber' : rate>=0.7 ? 'rate-amber' : 'rate-red';
+      const stateTxt = r.status==='FAILED' ? '데이터 미수신' : r.status==='DELAYED' ? '데이터 지연' : (rate>=0.9 ? '정상' : rate>=0.7 ? '주의' : '이상');
+      const stateBadgeCls = (r.status==='FAILED'||r.status==='DELAYED'||rate<0.7) ? 'badge-reject' : (rate<0.9 ? 'badge-pending' : 'badge-done');
+      const g = (typeof store!=='undefined' && Array.isArray(store.groups)) ? store.groups.find(x=>x.id===r.groupId) : null;
+      const gName = g ? g.name : `자원그룹 ${r.groupId||'-'}`;
+      const gType = g?.type || '-';
+      return `<tr>
+        <td><strong>${gName}</strong><div style="font-size:10px;color:var(--text-hint);">${gType}</div></td>
+        <td class="num">${(r.ordered||0).toLocaleString()}</td>
+        <td class="num">${(r.actual||0).toLocaleString()}</td>
+        <td class="num"><span class="rate-pill ${rateCls}">${Math.round(rate*100)}%</span></td>
+        <td><span class="badge ${stateBadgeCls}">${stateTxt}</span></td>
+      </tr>`;
+    }).join('');
+    const lockTag = s.status==='awaiting' ? '<span style="font-size:10px;color:var(--text-hint);">(확정 전 — 가변)</span>' : '<span style="font-size:10px;color:var(--green);">🔒 확정 후 잠금</span>';
     $('stl-stg3-body').innerHTML = `
-      <div style="padding:10px;background:#f8faff;border-radius:6px;font-size:11px;">
-        참여고객 배분 · 패널티 차감 · 이체 집행은 <strong>정산관리</strong>에서 처리합니다.<br>
-        <span style="color:var(--text-hint);">배분 진행: ${dist.length?`${transferred}/${dist.length}명`:'미생성'}</span>
-      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-bottom:8px;">참여 자원(그룹) 단위 확정 실적 ${lockTag}</div>
+      <table class="rp-table" style="margin-top:0;">
+        <thead><tr>
+          <th>자원그룹</th>
+          <th style="text-align:right;">지시(kW)</th>
+          <th style="text-align:right;">실적(kW)</th>
+          <th style="text-align:right;">이행률</th>
+          <th>상태</th>
+        </tr></thead>
+        <tbody>${rowsHtml}
+          <tr style="background:var(--grey50);font-weight:600;">
+            <td>합계</td>
+            <td class="num">${totalOrd.toLocaleString()}</td>
+            <td class="num">${totalAct.toLocaleString()}</td>
+            <td class="num">${Math.round(totalRate*100)}%</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
     `;
   }
 
@@ -738,7 +789,7 @@ function rpRegisterKpxData(){
   rpOpenSettlement(ev.id);
   refreshSidebarBadges();
   rpRender();
-  showToast(`KPX 데이터 등록 완료 · 정산 시작(접수) 상태로 전이`);
+  showToast(`KPX 확정 데이터 저장 완료 · 정합성 검토 단계로 이동`);
 }
 function rpSaveKpxDataPatch(){
   const ev = store.events.reduction.find(e=>e.id===rpState.selectedEventId);
