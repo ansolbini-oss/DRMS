@@ -50,6 +50,8 @@ function stmSyncFilters(){
   stmState.statusFilter = $('stm-status-filter')?.value || 'all';
   stmState.typeFilter = $('stm-type-filter')?.value || 'all';
   stmState.search = $('stm-search')?.value || '';
+  // Phase 11-A: 검색 범위 — 'all'(전체) | 'event' | 'group' | 'customer'
+  stmState.searchScope = $('stm-search-scope')?.value || 'all';
   if(stmState.period==='custom'){
     stmState.from = $('stm-from')?.value || null;
     stmState.to = $('stm-to')?.value || null;
@@ -66,10 +68,12 @@ function stmResetFilters(){
   stmState.statusFilter = 'all';
   stmState.typeFilter = 'all';
   stmState.search = '';
+  stmState.searchScope = 'all';
   if($('stm-period')) $('stm-period').value = '3m';
   if($('stm-status-filter')) $('stm-status-filter').value = 'all';
   if($('stm-type-filter')) $('stm-type-filter').value = 'all';
   if($('stm-search')) $('stm-search').value = '';
+  if($('stm-search-scope')) $('stm-search-scope').value = 'all';
   stmChangePeriod('3m');
 }
 
@@ -97,13 +101,32 @@ function stmFilteredEvents(){
     if(stmState.statusFilter !== 'all' && e.settlement.status !== stmState.statusFilter) return false;
     // DR 유형
     if(stmState.typeFilter !== 'all' && e.dispatch_type !== stmState.typeFilter) return false;
-    // 검색 (이벤트ID · 고객명)
+    // Phase 11-A: 검색 — 범위 select 기준으로 분기
     if(q){
-      let match = e.id.toLowerCase().includes(q) || eventDisplayName(e).toLowerCase().includes(q);
-      if(!match){
+      const scope = stmState.searchScope || 'all';
+      const matchEvent = () => e.id.toLowerCase().includes(q) || eventDisplayName(e).toLowerCase().includes(q);
+      const matchGroup = () => (e.resources||[]).some(r=>{
+        const g = (typeof groupById==='function') ? groupById(r.groupId) : null;
+        return g && (g.name||'').toLowerCase().includes(q);
+      });
+      const matchCustomer = () => {
         const custs = (e.settlement.customerDistribution||[]);
-        match = custs.some(c=>(c.customerName||'').toLowerCase().includes(q));
-      }
+        if(custs.some(c=>(c.customerName||'').toLowerCase().includes(q))) return true;
+        // 배분 데이터가 없어도 자원그룹 customerIds → custById로 매칭
+        return (e.resources||[]).some(r=>{
+          const g = (typeof groupById==='function') ? groupById(r.groupId) : null;
+          if(!g) return false;
+          return (g.customerIds||[]).some(cid=>{
+            const c = (typeof custById==='function') ? custById(cid) : null;
+            return c && (c.name||'').toLowerCase().includes(q);
+          });
+        });
+      };
+      let match = false;
+      if(scope==='event')        match = matchEvent();
+      else if(scope==='group')   match = matchGroup();
+      else if(scope==='customer')match = matchCustomer();
+      else /* all */             match = matchEvent() || matchGroup() || matchCustomer();
       if(!match) return false;
     }
     return true;

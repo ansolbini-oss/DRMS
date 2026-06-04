@@ -912,6 +912,17 @@
 
   <div class="wf-note">이 화면은 이벤트별 확정 금액을 기준으로 고객 정산 배분과 증빙 관리까지 수행하는 후속 실행 영역입니다.</div>
 
+  <!-- Phase 11-A: KPI 카드 → 필터바 순서 (운영자 시선: 전체 상태 → 좁히기) -->
+
+  <!-- KPI -->
+  <div class="rp-kpi-grid">
+    <div class="rp-kpi"><div class="rp-kpi-label">정산 대상 이벤트</div><div class="rp-kpi-val blue" id="stm-kpi-total">0</div><div class="rp-kpi-sub">확정 데이터 기준</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">정산대기</div><div class="rp-kpi-val amber" id="stm-kpi-pending">0</div><div class="rp-kpi-sub">확정데이터 기입 완료</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">세금계산서 발행</div><div class="rp-kpi-val" id="stm-kpi-invoiced">0</div><div class="rp-kpi-sub">참여고객 정산금 확정</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">입금 진행</div><div class="rp-kpi-val blue" id="stm-kpi-inprog">0</div><div class="rp-kpi-sub">세금계산서 금액 입금 중</div></div>
+    <div class="rp-kpi"><div class="rp-kpi-label">정산완료</div><div class="rp-kpi-val green" id="stm-kpi-done">0</div><div class="rp-kpi-sub">모든 참여고객 입금 완료</div></div>
+  </div>
+
   <!-- 필터 바 -->
   <div class="rp-filter-bar">
     <label>기간</label>
@@ -943,21 +954,20 @@
       <option value="VOLUNTARY_REDUCTION">자발적감축</option>
     </select>
 
-    <input type="text" class="filter-select" id="stm-search" placeholder="이벤트ID · 자원그룹 · 참여고객 검색" style="min-width:180px;margin-left:10px;" oninput="stmRender()">
+    <!-- Phase 11-A: 검색 범위 select + input — 검색 의도 명확화 -->
+    <label style="margin-left:10px;">검색</label>
+    <select class="filter-select" id="stm-search-scope" onchange="stmRender()">
+      <option value="all">전체</option>
+      <option value="event">이벤트ID</option>
+      <option value="group">자원그룹</option>
+      <option value="customer">참여고객</option>
+    </select>
+    <input type="text" class="filter-select" id="stm-search" placeholder="검색어 입력" style="min-width:160px;" oninput="stmRender()">
+
     <button class="btn btn-primary btn-sm" onclick="stmRunQuery()">조회</button>
     <button class="btn btn-secondary btn-sm" onclick="stmResetFilters()">초기화</button>
 
     <div style="margin-left:auto;font-size:11px;color:var(--text-hint);" id="stm-range-info"></div>
-  </div>
-
-  <!-- KPI -->
-  <div class="rp-kpi-grid">
-    <!-- Phase 11: 4단계 lifecycle KPI -->
-    <div class="rp-kpi"><div class="rp-kpi-label">정산 대상 이벤트</div><div class="rp-kpi-val blue" id="stm-kpi-total">0</div><div class="rp-kpi-sub">확정 데이터 기준</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">정산대기</div><div class="rp-kpi-val amber" id="stm-kpi-pending">0</div><div class="rp-kpi-sub">확정데이터 기입 완료</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">세금계산서 발행</div><div class="rp-kpi-val" id="stm-kpi-invoiced">0</div><div class="rp-kpi-sub">참여고객 정산금 확정</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">입금 진행</div><div class="rp-kpi-val blue" id="stm-kpi-inprog">0</div><div class="rp-kpi-sub">세금계산서 금액 입금 중</div></div>
-    <div class="rp-kpi"><div class="rp-kpi-label">정산완료</div><div class="rp-kpi-val green" id="stm-kpi-done">0</div><div class="rp-kpi-sub">모든 참여고객 입금 완료</div></div>
   </div>
 
   <div id="stm-list-body"></div>
