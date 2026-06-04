@@ -347,12 +347,23 @@ function rpOpenEvent(eventId){
 
   $('re-title').innerHTML = `${eventDisplayName(ev)} <span style="font-weight:400;color:var(--text-hint);font-size:12px;">· ${ev.id} · ${dispLabel}</span>`;
   $('re-sub').textContent = '';
-  const stlActive = ['received','in_progress','completed'].includes(ev.settlement.status);
-  const batchLink = stlActive
-    ? `<button class="link" onclick="closeModal('reEventModal');navigate('settlement');setTimeout(()=>stmOpenDetail('${ev.id}'),150);">STL-${ev.id} →</button>`
-    : `<span style="color:var(--text-hint);">확정 전</span>`;
-  const amtLabel = ev.settlement.finalAmount ? '최종 확정 정산금' : '예상 정산금';
-  const amtVal = (ev.settlement.finalAmount||ev.settlement.ourAmount||0).toLocaleString() + ' KRW';
+
+  // Phase 9-B: 상단 액션 버튼 — 상태별 분기 (정산 lifecycle 노출 X)
+  const stStatus = ev.settlement.status;
+  const slot = $('re-action-slot');
+  if(slot){
+    if(stStatus==='awaiting'){
+      slot.innerHTML = `<button class="btn btn-primary btn-sm" onclick="closeModal('reEventModal');rpOpenSettlement('${ev.id}')">확정 데이터 입력</button>`;
+    } else if(stStatus==='received'){
+      slot.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="closeModal('reEventModal');rpOpenSettlement('${ev.id}')">확정 이력 보기</button>`;
+    } else { // in_progress / completed → 정산관리로 라우팅 (운영실적확정 책임 끝)
+      slot.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="closeModal('reEventModal');navigate('settlement');setTimeout(()=>stmOpenDetail('${ev.id}'),150);">→ 정산관리에서 보기</button>`;
+    }
+  }
+
+  // Phase 9-B: re-meta — 확정 도메인 정보만 (정산 상태/ID/최종 확정금 등 정산 lifecycle 메타 제거)
+  const confirmStateLabel = stStatus==='awaiting' ? 'KPX 데이터 대기' : '정산 대기 (확정 완료)';
+  const confirmStateCls = stStatus==='awaiting' ? 'stl-pending' : 'stl-requested';
   $('re-meta').innerHTML = `
     <table class="rp-table" style="font-size:12px;">
       <tbody>
@@ -360,9 +371,8 @@ function rpOpenEvent(eventId){
             <th style="width:140px;text-align:left;background:#f8fafc;">발령유형</th><td>${dispLabel}</td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">일시</th><td>${ev.date} ${ev.timeRange}</td>
             <th style="text-align:left;background:#f8fafc;">성능률</th><td>${Math.round(a.perfRate*100)}% <span style="color:var(--text-hint);font-size:10px;">(Min(120%, 이행률))</span></td></tr>
-        <tr><th style="text-align:left;background:#f8fafc;">정산 상태</th><td>${rpStlBadge(ev.settlement.status)}</td>
-            <th style="text-align:left;background:#f8fafc;">정산 ID</th><td>${batchLink}</td></tr>
-        <tr><th style="text-align:left;background:#f8fafc;">${amtLabel}</th><td colspan="3" style="font-weight:700;color:var(--navy);">${amtVal}</td></tr>
+        <tr><th style="text-align:left;background:#f8fafc;">확정 상태</th><td colspan="3"><span class="stl-badge ${confirmStateCls}">${confirmStateLabel}</span></td></tr>
+        <tr><th style="text-align:left;background:#f8fafc;">우리 측 예상 정산금</th><td colspan="3" style="font-weight:700;color:var(--navy);">${(ev.settlement.ourAmount||0).toLocaleString()} KRW</td></tr>
       </tbody>
     </table>
   `;
