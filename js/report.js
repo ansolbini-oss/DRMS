@@ -584,45 +584,36 @@ function rpOpenSettlement(eventId){
   $('stl-title').innerHTML = `운영실적 확정 — ${ev.id}`;
   $('stl-sub').textContent = `${ev.date} ${ev.timeRange} · ${ev.dispatch_type==='MANDATORY_REDUCTION'?'의무감축':'자발적감축'} · 소요 ${rpSettlementDays(ev)}일`;
 
-  // 플로우 — 운영실적확정 책임 범위(KPX 데이터 입력 → 정산 대기) + 정산관리 이관 후
-  const steps = ['awaiting','received','in_progress','completed'];
-  const labels = {awaiting:'KPX 데이터 대기', received:'정산 대기', in_progress:'정산관리 진행', completed:'정산 완료'};
-  const curIdx = steps.indexOf(s.status);
+  // Phase 9-B: 운영실적확정의 책임 lifecycle만 노출 (2단계). 정산 lifecycle은 정산관리에서.
+  const steps = ['awaiting','received'];
+  const labels = {awaiting:'KPX 데이터 대기', received:'정산 대기 (확정 완료)'};
+  const isAfterConfirm = ['received','in_progress','completed'].includes(s.status);
+  const curIdx = s.status==='awaiting' ? 0 : 1;
   $('stl-flow').innerHTML = steps.map((st,i)=>{
     const cls = i<curIdx?'done':i===curIdx?'current':'';
     return `<span class="step ${cls}">${labels[st]}</span>${i<steps.length-1?'<span class="arrow">→</span>':''}`;
   }).join('');
 
-  // 메타 요약
-  const stlIdText = ['received','in_progress','completed'].includes(s.status) ? `STL-${ev.id}` : '-';
+  // 메타 요약 — 확정 도메인 정보만 (정산 ID·최종 정산금·수금·배분 등 정산 메타 제거)
+  const confirmStateLabel = s.status==='awaiting' ? 'KPX 데이터 대기' : '정산 대기 (확정 완료)';
+  const confirmStateCls = s.status==='awaiting' ? 'stl-pending' : 'stl-requested';
   $('stl-meta').innerHTML = `
-    <div><div class="k">이벤트 실적</div><div class="v">${a.actual.toLocaleString()}kW (이행률 ${Math.round(a.rate*100)}%)</div></div>
-    <div><div class="k">현재 상태 · 정산 ID</div><div class="v">${rpStlBadge(s.status)} · ${stlIdText}</div></div>
+    <div><div class="k">이벤트 실적 (우리 측)</div><div class="v">${a.actual.toLocaleString()}kW · 이행률 ${Math.round(a.rate*100)}%</div></div>
+    <div><div class="k">확정 상태</div><div class="v"><span class="stl-badge ${confirmStateCls}">${confirmStateLabel}</span></div></div>
     <div><div class="k">우리 측 예상 정산금</div><div class="v">${(s.ourAmount||0).toLocaleString()} KRW</div></div>
-    <div><div class="k">최종 확정 / 수금 / 배분</div><div class="v">${s.finalAmount?s.finalAmount.toLocaleString():'-'} / ${s.receivedFromKpx?.amount?s.receivedFromKpx.amount.toLocaleString():'-'} / ${(s.customerDistribution||[]).reduce((x,d)=>x+(d.amount||0),0).toLocaleString()}</div></div>
   `;
 
-  // 단계별 섹션 상태 결정
-  const stgState = (idx)=>{
-    if(idx<curIdx) return 'done';
-    if(idx===curIdx) return 'active';
-    return 'disabled';
-  };
-  // awaiting → stage1이 active, stage2/3 disabled
-  //   → 사용자가 stage1에서 KPX 데이터 등록 시 received로 전이
+  // 단계 클래스 (단계 ① 입력 · 단계 ② 참여고객 실적)
   if(s.status==='awaiting'){
     $('stl-stg1').className = 'stg-section active';
-    $('stl-stg2').className = 'stg-section disabled';
     $('stl-stg3').className = 'stg-section disabled';
   } else {
-    $('stl-stg1').className = 'stg-section ' + (s.status==='received'?'active':'done');
-    $('stl-stg2').className = 'stg-section ' + (s.status==='in_progress'?'active': s.status==='completed'?'done':'disabled');
-    $('stl-stg3').className = 'stg-section ' + (s.status==='completed'?'done':'disabled');
+    $('stl-stg1').className = 'stg-section done';
+    $('stl-stg3').className = 'stg-section done';
   }
 
   // 단계 헤더 툴팁 주입
   $('stl-stg1-tip').innerHTML = tip('stl-stage1');
-  $('stl-stg2-tip').innerHTML = tip('stl-stage2');
   $('stl-stg3-tip').innerHTML = tip('stl-stage3');
 
   // ── 단계 1 body: KPX 데이터 대사 ──
@@ -686,21 +677,18 @@ function rpOpenSettlement(eventId){
     },0);
   }
 
-  // ── 단계 2 body: 정산 대기 안내 (운영실적확정 책임 끝) — Phase 9-A: 정산 진행 정보 완전 제거
+  // Phase 9-B: 모달 푸터 안내 영역 — 단계가 아닌 라우팅 안내만 (운영실적확정 책임 명시적 종료)
   if(s.status==='awaiting'){
-    $('stl-stg2-body').innerHTML = `<div style="font-size:11px;color:var(--text-hint);padding:4px 0;">① 단계의 정합성 검증 완료 후 자동으로 <b>정산 대기</b> 상태가 됩니다.</div>`;
+    // 아직 KPX 데이터 입력 안 한 상태 — 안내 표시 X (입력에 집중)
+    $('stl-stg2-body').innerHTML = '';
   } else {
-    // 운영실적확정 도메인 책임은 여기서 끝. 정산 진행 상황(수금·배분)은 정산관리만 표시.
     $('stl-stg2-body').innerHTML = `
-      <div style="padding:12px 14px;background:#f8faff;border-radius:6px;font-size:11px;line-height:1.7;">
-        <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:4px;">✓ 정산관리 이관 완료</div>
-        <div style="color:var(--text-sub);">
-          확정 데이터가 정산관리 큐에 등록되었습니다.<br>
-          <b>정산금 수금·참여고객 배분 등 정산 진행 정보는 [고객정산관리]</b> 페이지에서 확인하세요.
+      <div style="padding:14px 16px;background:#f0f7ff;border:1px solid #c8ddfc;border-radius:8px;display:flex;align-items:center;gap:14px;">
+        <div style="flex:1;font-size:12px;line-height:1.6;color:var(--text);">
+          <div style="font-weight:600;color:var(--navy);margin-bottom:2px;">✓ 확정 데이터 등록 완료</div>
+          정산금 수금·참여고객 배분 등 정산 진행 정보는 <b>[고객정산관리]</b> 메뉴에서 확인하세요.
         </div>
-      </div>
-      <div style="margin-top:10px;">
-        <button class="btn btn-primary btn-sm" onclick="rpGoToSettlement()">→ 정산관리에서 확인하기</button>
+        <button class="btn btn-primary btn-sm" onclick="rpGoToSettlement()" style="flex-shrink:0;">→ 정산관리로 이동</button>
       </div>
     `;
   }
