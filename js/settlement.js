@@ -208,19 +208,21 @@ function stmRender(){
   const inprog = evs.filter(e=>e.settlement.status==='in_progress').length;
   const done = evs.filter(e=>e.settlement.status==='completed').length;
   const amtSum = evs.reduce((s,e)=>s+(e.settlement.finalAmount||0),0);
-  $('stm-kpi-total').textContent = total;
-  $('stm-kpi-pending').textContent = pending;
+  // Phase 11-F: 모든 KPI DOM 접근에 null guard — stm-kpi-amt 등 일부 ID가 Phase 11-A에서 제거됨
+  if($('stm-kpi-total'))    $('stm-kpi-total').textContent = total;
+  if($('stm-kpi-pending'))  $('stm-kpi-pending').textContent = pending;
   if($('stm-kpi-invoiced')) $('stm-kpi-invoiced').textContent = invoiced;
-  $('stm-kpi-inprog').textContent = inprog;
-  $('stm-kpi-done').textContent = done;
-  $('stm-kpi-amt').textContent = amtSum.toLocaleString();
+  if($('stm-kpi-inprog'))   $('stm-kpi-inprog').textContent = inprog;
+  if($('stm-kpi-done'))     $('stm-kpi-done').textContent = done;
+  if($('stm-kpi-amt'))      $('stm-kpi-amt').textContent = amtSum.toLocaleString();
 
   // 범위 정보
   const from = stmState.from, to = stmState.to;
-  $('stm-range-info').textContent = (from&&to) ? `${from} ~ ${to}` : '전체 기간';
+  if($('stm-range-info')) $('stm-range-info').textContent = (from&&to) ? `${from} ~ ${to}` : '전체 기간';
 
   // 리스트
   const body = $('stm-list-body');
+  if(!body){ console.error('[stmRender] stm-list-body DOM 못 찾음'); return; }
   if(!evs.length){
     body.innerHTML = `<div class="empty" style="padding:40px;text-align:center;color:var(--text-hint);">해당 조건의 정산 항목이 없습니다.</div>`;
     return;
