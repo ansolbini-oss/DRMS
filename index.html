@@ -1277,10 +1277,11 @@
 
   <div class="summary-bar">
     <!-- Phase 12-A: KPI 카드 클릭 → 리스트 자동 필터링 + 기간 '전체'로 확장 -->
+    <!-- Phase 12-B: KPI 라벨 정합 — 거래일 + 조회 기간 기준으로 통일 -->
     <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('all')">
-      <div class="summary-label">당월 제출 입찰</div>
+      <div class="summary-label">조회 기간 입찰</div>
       <div class="summary-val blue" id="bid-kpi-total">—</div>
-      <div class="summary-val-sub">KPX 제출 기준</div>
+      <div class="summary-val-sub">거래일 기준 · 전체 입찰</div>
     </div>
     <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('BID_WON')">
       <div class="summary-label">결과 확정 낙찰률</div>
@@ -1288,14 +1289,14 @@
       <div class="summary-val-sub">낙찰 / 결과 확정 건</div>
     </div>
     <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('BID_WON')">
-      <div class="summary-label">당월 낙찰 총량</div>
+      <div class="summary-label">조회 기간 낙찰량</div>
       <div class="summary-val amber" id="bid-kpi-awarded">—</div>
-      <div class="summary-val-sub">kW (낙찰 결과 확정분)</div>
+      <div class="summary-val-sub">kW · 낙찰 확정분</div>
     </div>
     <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('BID_SUBMITTED')">
       <div class="summary-label">결과 대기 건수</div>
       <div class="summary-val purple" id="bid-kpi-pending">—</div>
-      <div class="summary-val-sub">KPX 결과 미확정</div>
+      <div class="summary-val-sub">KPX 결과 미확정 (전체)</div>
     </div>
   </div>
 

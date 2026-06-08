@@ -40,16 +40,19 @@ function bidStatusOf(e){
   return 'BID_SUBMITTED';
 }
 
+// Phase 12-B: KPI를 거래일(e.date) 기준 + 조회 기간 필터 연동으로 변경 (C안)
+// - 결과 대기 건수만 전체 기준 (알림 성격으로 유지)
 function bidRefreshKpis(){
-  const now = new Date();
-  const sameMonth = (s)=> s && s.substring(0,7)===`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const all = bidEligibleEvents();
-  const monthly = all.filter(e=> sameMonth(e.bid?.submittedAt?.substring(0,10)));
-  const won = monthly.filter(e=> e.bid?.awardedVolume > 0);
-  const pending = all.filter(e=> bidStatusOf(e)==='BID_SUBMITTED');
-  const hitRate = monthly.length ? Math.round(won.length/monthly.length*100) : 0;
-  const awardedKwSum = monthly.reduce((s,e)=> s + (e.bid?.awardedVolume||0), 0);
-  if($('bid-kpi-total'))    $('bid-kpi-total').textContent = monthly.length;
+  const range = $('bid-range')?.value || '30d';
+  // 조회 기간 필터 적용 — 거래일(e.date) 기준
+  const inRange = all.filter(e=> bidInRange(e, range));
+  const won = inRange.filter(e=> e.bid?.awardedVolume > 0);
+  const settled = inRange.filter(e=> e.bid?.awardedVolume!=null);  // 결과 확정된 건 (낙찰+유찰)
+  const pending = all.filter(e=> bidStatusOf(e)==='BID_SUBMITTED'); // 결과 대기는 전체 기준 (알림)
+  const hitRate = settled.length ? Math.round(won.length/settled.length*100) : 0;
+  const awardedKwSum = inRange.reduce((s,e)=> s + (e.bid?.awardedVolume||0), 0);
+  if($('bid-kpi-total'))    $('bid-kpi-total').textContent = inRange.length;
   if($('bid-kpi-hit'))      $('bid-kpi-hit').textContent   = hitRate+'%';
   if($('bid-kpi-awarded'))  $('bid-kpi-awarded').textContent = awardedKwSum.toLocaleString();
   if($('bid-kpi-pending'))  $('bid-kpi-pending').textContent = pending.length;
@@ -63,6 +66,8 @@ function bidInRange(e, range){
 }
 
 function bidRender(){
+  // Phase 12-B: 필터 변경 시 KPI도 동기화
+  bidRefreshKpis();
   const range = $('bid-range')?.value || '30d';
   const tp = $('bid-type')?.value || 'all';
   const st = $('bid-status')?.value || 'all';
