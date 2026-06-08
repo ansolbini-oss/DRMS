@@ -143,46 +143,77 @@ function bidOpenDetail(eid){
 }
 
 function bidOpenCreate(){
+  // Phase 12 F-03: 자원그룹 옵션에 사업장 수·총 가용량 풍부화
   const groups = store.groups
     .filter(g=>g.status==='active')
-    .map(g=>`<option value="${g.id}">${g.name} · ${g.type}</option>`)
+    .map(g=>{
+      const custCount = Array.isArray(g.customerIds) ? g.customerIds.length : 0;
+      const capacity = (g.customerIds||[]).reduce((s,cid)=>{
+        const c = (typeof custById==='function') ? custById(cid) : null;
+        return s + (c?.reduction || 0);
+      }, 0);
+      const capTxt = capacity ? ` · ${capacity.toLocaleString()}kW · ${custCount}고객` : '';
+      return `<option value="${g.id}" data-cap="${capacity}">${g.name} · ${g.type}${capTxt}</option>`;
+    })
     .join('');
   $('cm-title').textContent = '신규 입찰 등록';
   $('cm-sub').textContent = '자발적감축 또는 플러스DR 계획 입찰을 접수 상태로 등록합니다.';
   $('cm-body').innerHTML = `
     <div class="form-row">
-      <label class="form-label">입찰 유형</label>
+      <label class="form-label">입찰 유형 <span style="color:var(--red);">*</span></label>
       <select class="form-select" id="bid-create-type">
         <option value="VOLUNTARY_REDUCTION">자발적감축</option>
-        <option value="VOLUNTARY_INCREASE">플러스DR (계획)</option>
+        <option value="VOLUNTARY_INCREASE">플러스DR (계획·증대)</option>
       </select>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:4px;">유형에 따라 KPX 입찰 프로그램이 자동 결정됩니다.</div>
     </div>
     <div class="form-row">
-      <label class="form-label">거래일</label>
+      <label class="form-label">거래일 <span style="color:var(--red);">*</span></label>
       <input class="form-input" id="bid-create-date" type="date" value="${todayStr()}">
     </div>
     <div class="form-row">
-      <label class="form-label">시간대</label>
+      <label class="form-label">시간대 <span style="color:var(--red);">*</span></label>
       <input class="form-input" id="bid-create-time" value="14:00~15:00" placeholder="14:00~15:00">
     </div>
     <div class="form-row">
-      <label class="form-label">자원그룹</label>
-      <select class="form-select" id="bid-create-group">${groups}</select>
+      <label class="form-label">자원그룹 <span style="color:var(--red);">*</span></label>
+      <select class="form-select" id="bid-create-group" onchange="bidSyncCapacity()">${groups}</select>
     </div>
     <div class="form-row">
-      <label class="form-label">입찰량 (kW)</label>
-      <input class="form-input" id="bid-create-volume" type="number" min="10" step="10" value="300">
+      <label class="form-label">입찰량 (kW) <span style="color:var(--red);">*</span></label>
+      <input class="form-input" id="bid-create-volume" type="number" min="10" step="10" value="300" oninput="bidSyncCapacity()">
+      <div style="font-size:11px;color:var(--text-hint);margin-top:4px;" id="bid-create-cap-info">자원그룹 가용량 대비 비율: -</div>
     </div>
+    <!-- Phase 12 F-02: 입찰단가 + 가격 미입찰 옵션 -->
     <div class="form-row">
-      <label class="form-label">입찰 프로그램</label>
-      <select class="form-select" id="bid-create-program">
-        <option value="ECONOMIC">ECONOMIC</option>
-        <option value="PLUS_PLANNED">PLUS_PLANNED</option>
-      </select>
+      <label class="form-label">입찰단가 (원/kWh) <span style="color:var(--red);">*</span></label>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <input class="form-input" id="bid-create-price" type="number" min="0" step="1" value="120" style="flex:1;">
+        <label style="font-size:12px;color:var(--text-sub);white-space:nowrap;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="bid-create-no-price" onchange="document.getElementById('bid-create-price').disabled=this.checked;">
+          가격 미입찰
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:4px;">가격 미입찰 선택 시 KPX 시장 단가로 자동 산정됩니다.</div>
     </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
     <button class="btn btn-primary" onclick="bidSubmitCreate()">등록</button>`;
   openModal('commonModal');
+  setTimeout(bidSyncCapacity, 0);
+}
+
+// Phase 12 F-03: 자원그룹 변경/입찰량 변경 시 가용량 대비 비율 표시
+function bidSyncCapacity(){
+  const sel = document.getElementById('bid-create-group');
+  const volEl = document.getElementById('bid-create-volume');
+  const info = document.getElementById('bid-create-cap-info');
+  if(!sel || !info) return;
+  const cap = Number(sel.selectedOptions?.[0]?.dataset?.cap || 0);
+  const vol = Number(volEl?.value || 0);
+  if(!cap){ info.textContent = '자원그룹 가용량 대비 비율: -'; return; }
+  const pct = Math.round((vol/cap)*100);
+  const warn = vol > cap;
+  info.innerHTML = `자원그룹 가용량 대비 비율: <b style="color:${warn?'var(--red)':'var(--navy)'}">${vol.toLocaleString()}kW / ${cap.toLocaleString()}kW (${pct}%)</b>` + (warn ? ' <span style="color:var(--red);">⚠ 가용량 초과</span>' : '');
 }
 function bidSubmitCreate(){
   const dispatchType = $('bid-create-type')?.value || 'VOLUNTARY_REDUCTION';
@@ -190,9 +221,14 @@ function bidSubmitCreate(){
   const timeRange = ($('bid-create-time')?.value || '').trim();
   const groupId = parseInt($('bid-create-group')?.value, 10);
   const bidVolume = parseInt($('bid-create-volume')?.value, 10);
-  const bidProgram = $('bid-create-program')?.value || 'ECONOMIC';
+  // Phase 12 F-01: 입찰 프로그램은 입찰 유형 기반 자동 매핑 (사용자 선택 X)
+  const bidProgram = dispatchType==='VOLUNTARY_INCREASE' ? 'PLUS_PLANNED' : 'ECONOMIC';
+  // Phase 12 F-02: 입찰단가 또는 가격 미입찰
+  const noPrice = $('bid-create-no-price')?.checked;
+  const bidPrice = noPrice ? null : (parseInt($('bid-create-price')?.value, 10) || 0);
   const g = groupById(groupId);
   if(!date || !timeRange || !g || !bidVolume){ showToast('필수 항목을 모두 입력하세요.'); return; }
+  if(!noPrice && (!bidPrice || bidPrice<=0)){ showToast('입찰단가를 입력하거나 가격 미입찰을 선택하세요.'); return; }
   const prefix = dispatchType==='VOLUNTARY_INCREASE' ? 'EVP' : 'EVV';
   const ymd = date.replaceAll('-','');
   const sameDayCount = store.events.reduction.filter(e=>e.id.startsWith(prefix+ymd)).length + 1;
@@ -213,6 +249,7 @@ function bidSubmitCreate(){
       submittedBy:'현진영',
       bidVolume,
       bidProgram,
+      bidPrice,             // Phase 12 F-02: 입찰단가 (null = 가격 미입찰)
       awardedAt:null,
       awardedVolume:null,
       rejectionReason:''
