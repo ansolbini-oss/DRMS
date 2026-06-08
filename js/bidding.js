@@ -5,6 +5,18 @@
 
 function bidInit(){ bidRefreshKpis(); bidRender(); }
 
+// Phase 12-A: KPI 카드 클릭 → 자동 필터링 + 기간 '전체'로 확장 (리스트와 KPI 불일치 해소)
+function bidFilterByStatus(status){
+  // 기간을 '전체'로 강제 — KPI가 전체 기준 카운트라 리스트도 같은 범위로
+  if($('bid-range')) $('bid-range').value = 'all';
+  if($('bid-status')) $('bid-status').value = status || 'all';
+  bidRender();
+  setTimeout(()=>{
+    const box = document.getElementById('bid-list-box');
+    if(box && typeof box.scrollIntoView==='function') box.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 50);
+}
+
 function bidEligibleEvents(){
   return store.events.reduction.filter(e=>{
     if(!e.bid) return false;  // bid 필드 있는 이벤트만
