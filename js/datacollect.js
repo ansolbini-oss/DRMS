@@ -25,7 +25,15 @@ const dcState = {
   status:'all',
   q:'',
   expandedGroupId:null,
+  expandedBizIds:{},   // Phase 13: 사업자별 사업장 펼침 상태 {custId: true/false}
 };
+
+// Phase 13: 사업자 행 펼침 토글 (사업장 sub-행 노출)
+function dcToggleBizSites(custId){
+  dcState.expandedBizIds = dcState.expandedBizIds || {};
+  dcState.expandedBizIds[custId] = !dcState.expandedBizIds[custId];
+  dcRender();
+}
 
 function dcInit(){
   // 페이지 진입 시 항상 목록뷰로 복귀
@@ -205,6 +213,7 @@ function dcRenderTabGroups(aggs){
     if(a.warnCnt>0) stateBadges.push(`<span class="badge badge-pending" style="font-size:10px;">일부 결측 ${a.warnCnt}</span>`);
     if(a.impCustCnt>0) stateBadges.push(`<span class="dm-imp-badge">보정 다수 ${a.impCustCnt}</span>`);
     if(!stateBadges.length) stateBadges.push(`<span class="badge badge-done" style="font-size:10px;">정상</span>`);
+    // Phase 13: 사업자 행 + (사업장 다수일 때) 사업장 sub-행 펼침
     const customerRows = [...a.perCust].sort((x,y)=>{
       const prio = {risk:0, warn:1, imp:2, ok:3};
       return (prio[x.state] ?? 9) - (prio[y.state] ?? 9);
@@ -216,16 +225,46 @@ function dcRenderTabGroups(aggs){
         ok:{label:'정상', cls:'badge-done'}
       }[p.state] || {label:'정상', cls:'badge-done'};
       const rx = Math.round(p.rxRate*1000)/10;
-      return `<button class="dc-customer-jump" onclick='dcOpenCustomerDetail(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)})'>
-        <span>
-          <div class="dc-customer-jump-name">${p.cust.name}</div>
+      const sites = Array.isArray(p.cust.sites) ? p.cust.sites : [];
+      const hasSites = sites.length > 0;
+      const bizExpanded = (dcState.expandedBizIds||{})[p.cust.id];
+      const accordionIcon = hasSites
+        ? `<span class="dc-biz-chevron" onclick="event.stopPropagation();dcToggleBizSites(${JSON.stringify(p.cust.id)})">${bizExpanded?'−':'+'}</span>`
+        : '<span class="dc-biz-chevron-empty"></span>';
+      const sitesBadge = hasSites
+        ? ` <span style="color:var(--text-hint);font-size:10px;font-weight:400;">· ${sites.length}사업장</span>`
+        : '';
+
+      // 사업자 행 (메인) — 펼침 가능, 행 본문 클릭 시 사업자 상세 모니터링
+      const bizRow = `<div class="dc-customer-jump">
+        ${accordionIcon}
+        <span onclick='dcOpenCustomerDetail(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)})' style="cursor:pointer;">
+          <div class="dc-customer-jump-name">${p.cust.name}${sitesBadge}</div>
           <div class="dc-customer-jump-meta">${p.cust.id} · 계약전력 ${p.cust.power ? p.cust.power.toLocaleString() : '-'} kW</div>
         </span>
         <span class="dc-customer-jump-val">${rx}%</span>
         <span class="dc-customer-jump-val" style="color:${p.missCnt>0?'var(--red)':'var(--text-hint)'};">${p.missCnt}</span>
         <span class="dc-customer-jump-val">${p.impCnt}</span>
         <span class="dc-customer-jump-state"><span class="badge ${stateMeta.cls}" style="font-size:10px;">${stateMeta.label}</span></span>
-      </button>`;
+      </div>`;
+
+      // 사업장 sub-행 (펼침 상태일 때만)
+      const sitesRows = (hasSites && bizExpanded) ? sites.map(s=>{
+        // 사업장 단위 통신상태는 사업자 전체 평균 적용 (시드 단순화 — 향후 사업장별 다른 값 가능)
+        return `<div class="dc-site-jump">
+          <span class="dc-site-indent">└</span>
+          <span style="cursor:pointer;" onclick='dcOpenCustomerDetail(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)})'>
+            <div class="dc-customer-jump-name" style="font-weight:500;">${s.siteName}</div>
+            <div class="dc-customer-jump-meta">KEPCO ${s.kepco} · ${s.addr||''} · ${s.power||'-'} kW</div>
+          </span>
+          <span class="dc-customer-jump-val">${rx}%</span>
+          <span class="dc-customer-jump-val" style="color:${p.missCnt>0?'var(--red)':'var(--text-hint)'};">${p.missCnt}</span>
+          <span class="dc-customer-jump-val">${p.impCnt}</span>
+          <span class="dc-customer-jump-state"><span class="badge ${stateMeta.cls}" style="font-size:10px;">${stateMeta.label}</span></span>
+        </div>`;
+      }).join('') : '';
+
+      return bizRow + sitesRows;
     }).join('');
     const expandRow = expanded ? `<tr class="dc-expand-row">
       <td colspan="8">
