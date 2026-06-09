@@ -5,6 +5,15 @@
 
 function bidInit(){ bidRefreshKpis(); bidRender(); }
 
+// Phase 12-D: 필터 초기화 — 다른 페이지(정산관리 등)와 일관성
+function bidResetFilters(){
+  if($('bid-range'))  $('bid-range').value = '30d';
+  if($('bid-type'))   $('bid-type').value = 'all';
+  if($('bid-status')) $('bid-status').value = 'all';
+  if($('bid-q'))      $('bid-q').value = '';
+  bidRender();
+}
+
 // Phase 12-A: KPI 카드 클릭 → 자동 필터링 + 기간 '전체'로 확장 (리스트와 KPI 불일치 해소)
 function bidFilterByStatus(status){
   // 기간을 '전체'로 강제 — KPI가 전체 기준 카운트라 리스트도 같은 범위로
