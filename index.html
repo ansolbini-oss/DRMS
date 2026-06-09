@@ -162,7 +162,7 @@
       <button class="sidebar-item" data-page="bidding" onclick="navigate('bidding')">
         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
         입찰관리
-        <span class="sidebar-badge" id="sb-bid-badge" style="display: inline-block; background: var(--green);" title="당일 입찰 가능 2건">2</span>
+        <span class="sidebar-badge" id="sb-bid-badge" style="display:none;background:var(--amber);" title="KPX 결과 대기 입찰 건수">0</span>
       </button>
     </div>
     <div class="sidebar-divider"></div>
@@ -1275,30 +1275,8 @@
 
   <div class="wf-note">이 화면은 KPX 시장 입찰의 <b>등록·제출·결과 확정·이벤트 발령 lifecycle 전반</b>을 다루는 운영 화면입니다. 자발적감축 또는 플러스DR 계획 입찰을 등록하고, KPX 결과(낙찰/유찰) 통보를 추적합니다.</div>
 
-  <div class="summary-bar">
-    <!-- Phase 12-A: KPI 카드 클릭 → 리스트 자동 필터링 + 기간 '전체'로 확장 -->
-    <!-- Phase 12-B: KPI 라벨 정합 — 거래일 + 조회 기간 기준으로 통일 -->
-    <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('all')">
-      <div class="summary-label">조회 기간 입찰</div>
-      <div class="summary-val blue" id="bid-kpi-total">—</div>
-      <div class="summary-val-sub">거래일 기준 · 전체 입찰</div>
-    </div>
-    <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('BID_WON')">
-      <div class="summary-label">결과 확정 낙찰률</div>
-      <div class="summary-val green" id="bid-kpi-hit">—</div>
-      <div class="summary-val-sub">낙찰 / 결과 확정 건</div>
-    </div>
-    <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('BID_WON')">
-      <div class="summary-label">조회 기간 낙찰량</div>
-      <div class="summary-val amber" id="bid-kpi-awarded">—</div>
-      <div class="summary-val-sub">kW · 낙찰 확정분</div>
-    </div>
-    <div class="summary-card" style="cursor:pointer;" onclick="bidFilterByStatus('BID_SUBMITTED')">
-      <div class="summary-label">결과 대기 건수</div>
-      <div class="summary-val purple" id="bid-kpi-pending">—</div>
-      <div class="summary-val-sub">KPX 결과 미확정 (전체)</div>
-    </div>
-  </div>
+  <!-- Phase 12-C: KPI 카드 전체 제거 — 입찰관리는 액션 페이지(등록/결과 추적).
+       결과 대기 알림은 사이드바 뱃지(sb-bid-badge)에서 표시. -->
 
   <div class="rp-filter-bar">
     <label>조회 기간</label>
