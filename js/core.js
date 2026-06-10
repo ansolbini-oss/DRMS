@@ -8,19 +8,27 @@
    모든 객체(계약·이벤트·자원그룹·사용자 등)의 변경 이력 SSOT
    페이지별 상태이력 탭 = filtered 조회, 이력관리 페이지 = 전체 조회
 ════════════════════════════════════════════════════════════ */
-function logAudit({objectType, objectId, action, title, desc, actor, tone}){
+// Phase 14-A: backward compatible — 옛 2-인자 호출(title, desc) 지원 + 새 객체 인자 시그니처
+function logAudit(arg1, arg2){
+  // 옛 시그니처: logAudit('계정 생성', '홍길동 ...') → general 객체로 변환
+  const payload = (typeof arg1 === 'object' && arg1 !== null)
+    ? arg1
+    : { objectType:'general', objectId:'-', action:'updated', title:String(arg1||'(이벤트)'), desc:String(arg2||''), actor:'시스템', tone:'info' };
   const now = new Date();
   const pad = n => String(n).padStart(2,'0');
   const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   const entry = {
     id: 'L-' + Date.now() + '-' + Math.floor(Math.random()*999),
-    ts, objectType, objectId,
-    action: action || 'updated',
-    title: title || '(이벤트)',
-    desc: desc || '',
-    actor: actor || '시스템',
-    tone: tone || 'info'
+    ts,
+    objectType: payload.objectType,
+    objectId: payload.objectId,
+    action: payload.action || 'updated',
+    title: payload.title || '(이벤트)',
+    desc: payload.desc || '',
+    actor: payload.actor || '시스템',
+    tone: payload.tone || 'info'
   };
+  if(!Array.isArray(store.auditLogs)) store.auditLogs = [];
   store.auditLogs.push(entry);
   return entry;
 }

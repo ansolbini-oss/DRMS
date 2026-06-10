@@ -75,16 +75,26 @@ function acctBulkAction(act){
 }
 
 /* ── 생성 ── */
+// Phase 14-A: 모든 DOM 접근에 null guard — HTML 변경으로 ID가 빠져있어도 함수 멈춤 X
 function acctOpenCreate(){
-  $('acctNewName').value=''; $('acctNewEmail').value='';
-  $('acctNewPhone').value=''; $('acctNewTeam').value=''; $('acctNewPosition').value='';
-  $('acctNewPwMode').value='invite'; $('acctNewMfa').checked=true;
-  $('acctNewEmailHint').className='acct-form-hint';
-  $('acctNewEmailHint').textContent='회사 이메일만 허용 (@60hz.io 도메인)';
-  const sel = $('acctNewRoleSelect');
-  sel.innerHTML = ROLES.map(r=>`<option value="${r.code}" ${r.code==='VIEWER'?'selected':''}>${r.name} (${r.code})</option>`).join('');
-  acctOnNewRoleChange('VIEWER');
-  openModalAcct('acctModalCreate');
+  try {
+    const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v; };
+    const setChecked = (id, v) => { const el = document.getElementById(id); if(el) el.checked = v; };
+    const setText = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+    const setCls = (id, v) => { const el = document.getElementById(id); if(el) el.className = v; };
+    setVal('acctNewName',''); setVal('acctNewEmail','');
+    setVal('acctNewPhone',''); setVal('acctNewTeam',''); setVal('acctNewPosition','');
+    setVal('acctNewPwMode','invite'); setChecked('acctNewMfa', true);
+    setCls('acctNewEmailHint', 'acct-form-hint');
+    setText('acctNewEmailHint', '회사 이메일만 허용 (@60hz.io 도메인)');
+    const sel = document.getElementById('acctNewRoleSelect');
+    if(sel) sel.innerHTML = ROLES.map(r=>`<option value="${r.code}" ${r.code==='VIEWER'?'selected':''}>${r.name} (${r.code})</option>`).join('');
+    acctOnNewRoleChange('VIEWER');
+    openModalAcct('acctModalCreate');
+  } catch(err){
+    console.error('[acctOpenCreate] 실패:', err);
+    if(typeof showToast==='function') showToast('계정 생성 모달을 열 수 없습니다. 콘솔을 확인해 주세요.');
+  }
 }
 function acctOnNewRoleChange(code){
   $('acctNewRoleDesc').textContent = ROLE_MAP[code].desc;
