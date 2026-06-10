@@ -312,11 +312,11 @@ function stmOpenDetail(eventId){
   const totalActual = (ev.resources||[]).reduce((s,r)=>s+(r.actual||0),0);
   const totalOrdered = (ev.resources||[]).reduce((s,r)=>s+(r.ordered||0),0);
   const rate = totalOrdered>0 ? totalActual/totalOrdered : 0;
+  // Phase 14: '정합성 확정' 메타 제거 — 운영리포트 책임이라 정산관리에 노출 불필요 (Phase 9 책임 분리 원칙)
   $('stmd-confirmed').innerHTML = `
     <div class="rp-event-meta-item"><div class="k">참여 자원 · 고객</div><div class="v">${ev.resources.length}개 자원 · ${custs.length}명 고객</div></div>
     <div class="rp-event-meta-item"><div class="k">실 감축 / 이행률</div><div class="v">${totalActual.toLocaleString()} kW · ${Math.round(rate*100)}%</div></div>
     <div class="rp-event-meta-item"><div class="k">KPX 확정 정산금</div><div class="v" style="font-weight:700;color:var(--navy);">${(s.finalAmount||0).toLocaleString()} KRW</div></div>
-    <div class="rp-event-meta-item"><div class="k">정합성 확정</div><div class="v">${s.confirmedAt||'-'} / ${s.confirmedBy||'-'}</div></div>
   `;
 
   // 단계 ① 실 정산 입금
@@ -388,6 +388,7 @@ function stmRenderDistribution(ev){
     return;
   }
   const totalBase = dist.reduce((x,d)=>x+(d.baseAmount||d.amount||0),0);
+  const totalFee = dist.reduce((x,d)=>x+(d.feeAmount||0),0);
   const totalPenalty = dist.reduce((x,d)=>x+(d.penalty?.amount||0),0);
   const totalFinal = dist.reduce((x,d)=>x+(d.finalAmount||d.amount||0),0);
   const recv = s.receivedFromKpx.amount||0;
@@ -401,11 +402,14 @@ function stmRenderDistribution(ev){
           ? `<button class="btn btn-ghost btn-sm" onclick="stmOpenPenalty('${d.customerId}')" style="color:var(--red);">-${pen.toLocaleString()}</button>`
           : `<button class="btn btn-ghost btn-sm" onclick="stmOpenPenalty('${d.customerId}')">패널티</button>`);
     const reasonCell = pen>0 && d.penalty?.reason ? `<div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${d.penalty.reason}</div>` : '';
+    const feeRate = d.feeRate!=null ? d.feeRate : 15;  // 기본 15% (계약관리 contractInfo.feeRate 기준)
+    const feeAmt = d.feeAmount||0;
     return `<tr>
       <td>${d.customerName}${reasonCell}</td>
       <td class="num">${(d.contributionKw||d.capacity||0).toLocaleString()}</td>
       <td class="num">${((d.contributionRatio||d.share||0)*100).toFixed(1)}%</td>
       <td class="num">${(d.baseAmount||d.amount||0).toLocaleString()}</td>
+      <td class="num" style="color:var(--navy);">-${feeAmt.toLocaleString()}<div style="font-size:10px;color:var(--text-hint);margin-top:1px;">(${feeRate}%)</div></td>
       <td class="num">${penBtn}</td>
       <td class="num" style="font-weight:700;">${(d.finalAmount||d.amount||0).toLocaleString()}</td>
     </tr>`;
@@ -418,6 +422,7 @@ function stmRenderDistribution(ev){
         <th style="text-align:right;">감축량(kW)</th>
         <th style="text-align:right;">비율</th>
         <th style="text-align:right;">기초 배분</th>
+        <th style="text-align:right;">수수료 <span style="font-weight:400;color:var(--text-hint);">(우리)</span></th>
         <th style="text-align:right;">패널티</th>
         <th style="text-align:right;">고객 지급액</th>
       </tr></thead>
@@ -425,11 +430,12 @@ function stmRenderDistribution(ev){
     </table>
     <div style="margin-top:10px;padding:10px;background:#f8fafc;border-radius:6px;font-size:12px;">
       <div style="display:flex;justify-content:space-between;"><span>기초 배분 합계:</span><span style="font-variant-numeric:tabular-nums;">${totalBase.toLocaleString()} KRW</span></div>
+      <div style="display:flex;justify-content:space-between;color:var(--navy);"><span>수수료 합계 (우리 귀속):</span><span style="font-variant-numeric:tabular-nums;">-${totalFee.toLocaleString()} KRW</span></div>
       <div style="display:flex;justify-content:space-between;color:var(--red);"><span>패널티 합계 (수요사업자 귀속):</span><span style="font-variant-numeric:tabular-nums;">-${totalPenalty.toLocaleString()} KRW</span></div>
       <div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);margin-top:6px;padding-top:6px;"><span>고객 지급 합계:</span><span style="font-variant-numeric:tabular-nums;">${totalFinal.toLocaleString()} KRW</span></div>
       <div style="display:flex;justify-content:space-between;color:var(--text-hint);margin-top:4px;font-size:11px;"><span>수금액 대비 검증:</span><span style="font-variant-numeric:tabular-nums;">${recv.toLocaleString()} KRW ${recv===totalBase+totalPenalty?'일치':'불일치'}</span></div>
     </div>
-    ${!locked ? `<div style="margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="stmRegenerateDistribution()">배분 재계산 (패널티 초기화)</button></div>` : ''}
+    ${!locked ? `<div style="margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="stmRegenerateDistribution()">배분 재계산 (패널티·수수료 초기화)</button></div>` : ''}
   `;
 }
 
@@ -545,17 +551,24 @@ function stmGenerateDistribution(){
 
   const list = Object.values(custContrib);
   const totalKw = list.reduce((x,c)=>x+c.kw,0);
+  // Phase 14: 수수료 계산 — 고객별 계약 수수료율 적용 (Phase 7 contractInfo.feeRate)
   s.customerDistribution = list.map(c=>{
     const ratio = totalKw>0 ? c.kw/totalKw : 0;
     const baseAmount = Math.round(recv * ratio);
+    // 고객(=사업자)의 계약 수수료율 — 기본 15%, 국민DR은 12% 등
+    const cust = (typeof custById==='function') ? custById(c.id) : null;
+    const feeRate = (cust?.contractInfo?.feeRate) ?? 15;
+    const feeAmount = Math.round(baseAmount * feeRate / 100);
     return {
       customerId: c.id,
       customerName: c.name,
       contributionKw: Math.round(c.kw),
       contributionRatio: ratio,
       baseAmount: baseAmount,
+      feeRate: feeRate,                 // Phase 14: 적용 수수료율
+      feeAmount: feeAmount,             // Phase 14: 수수료 금액 (우리 귀속)
       penalty: {amount:0, reason:''},
-      finalAmount: baseAmount,
+      finalAmount: baseAmount - feeAmount, // 고객 지급액 = 기초 배분 - 수수료 (패널티는 별도 차감)
       notifiedAt: null,
       transferredAt: null,
     };
