@@ -88,7 +88,11 @@ function acctOpenCreate(){
     setCls('acctNewEmailHint', 'acct-form-hint');
     setText('acctNewEmailHint', '회사 이메일만 허용 (@60hz.io 도메인)');
     const sel = document.getElementById('acctNewRoleSelect');
-    if(sel) sel.innerHTML = ROLES.map(r=>`<option value="${r.code}" ${r.code==='VIEWER'?'selected':''}>${r.name} (${r.code})</option>`).join('');
+    if(sel && typeof ROLES!=='undefined' && Array.isArray(ROLES)){
+      sel.innerHTML = ROLES.map(r=>`<option value="${r.code}" ${r.code==='VIEWER'?'selected':''}>${r.name} (${r.code})</option>`).join('');
+    } else {
+      console.warn('[acctOpenCreate] acctNewRoleSelect 또는 ROLES 없음', {sel:!!sel, ROLES:typeof ROLES});
+    }
     acctOnNewRoleChange('VIEWER');
     openModalAcct('acctModalCreate');
   } catch(err){
@@ -97,13 +101,20 @@ function acctOpenCreate(){
   }
 }
 function acctOnNewRoleChange(code){
-  $('acctNewRoleDesc').textContent = ROLE_MAP[code].desc;
-  newPermOverrides = JSON.parse(JSON.stringify(ROLE_MAP[code].perms));
+  const roleMap = (typeof ROLE_MAP!=='undefined') ? ROLE_MAP : {};
+  const role = roleMap[code] || {desc:'', perms:{}};
+  const descEl = document.getElementById('acctNewRoleDesc');
+  if(descEl) descEl.textContent = role.desc || '';
+  newPermOverrides = JSON.parse(JSON.stringify(role.perms || {}));
   acctRenderNewPermMatrix();
 }
 function acctRenderNewPermMatrix(){
-  const perms = newPermOverrides;
-  const tbody = $('acctNewPermMatrix').querySelector('tbody');
+  const perms = newPermOverrides || {};
+  const tableEl = document.getElementById('acctNewPermMatrix');
+  if(!tableEl){ console.warn('[acctRenderNewPermMatrix] acctNewPermMatrix DOM 못 찾음'); return; }
+  const tbody = tableEl.querySelector('tbody');
+  if(!tbody){ console.warn('[acctRenderNewPermMatrix] tbody 못 찾음'); return; }
+  if(typeof MENUS==='undefined' || !Array.isArray(MENUS)){ console.warn('[acctRenderNewPermMatrix] MENUS 없음'); return; }
   tbody.innerHTML = MENUS.map(m=>{
     const act = perms[m.key]||[];
     const cells = ['R','C','U','D','X'].map(k=>{

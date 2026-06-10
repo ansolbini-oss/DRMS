@@ -1153,8 +1153,15 @@ function cancelLogout(){
   const m = document.getElementById('logoutConfirmModal');
   if(m) m.classList.remove('show');
 }
-function openModalAcct(id){ $(id).classList.add('show'); }
-function closeModalAcct(id){ $(id).classList.remove('show'); }
+function openModalAcct(id){
+  const el = document.getElementById(id);
+  if(el) el.classList.add('show');
+  else console.warn(`[openModalAcct] '${id}' DOM 못 찾음`);
+}
+function closeModalAcct(id){
+  const el = document.getElementById(id);
+  if(el) el.classList.remove('show');
+}
 
 /* 데모 즉시 로그인 — 자동완성/타이핑 이슈 완전 우회 */
 function doDemoLogin(){
