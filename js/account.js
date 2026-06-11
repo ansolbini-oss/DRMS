@@ -140,16 +140,20 @@ function acctValidateEmail(el){
   else{ hint.className='acct-form-hint ok'; hint.textContent='사용 가능한 이메일입니다.'; }
 }
 function acctSubmitCreate(){
-  const name = $('acctNewName').value.trim();
-  const email = $('acctNewEmail').value.trim();
-  const team = $('acctNewTeam').value;
-  const role = $('acctNewRoleSelect').value;
-  if(!name||!email||!team||!role){ showToast('필수 항목을 모두 입력하세요.'); return; }
+  // Phase 14-D: 정책서 4.2 — 소속 사업자명 필수
+  const name = $('acctNewName')?.value.trim();
+  const email = $('acctNewEmail')?.value.trim();
+  const company = $('acctNewCompany')?.value.trim();
+  const team = $('acctNewTeam')?.value;
+  const role = $('acctNewRoleSelect')?.value;
+  if(!name||!email||!company||!role){ showToast('필수 항목(담당자명·이메일·소속 사업자명·역할)을 모두 입력하세요.'); return; }
   if(accounts.some(a=>a.email===email)){ showToast('이미 사용 중인 이메일입니다.'); return; }
   accounts.unshift({
-    id:'u'+Date.now(), email, name, empNo:'-', role, team,
-    position:$('acctNewPosition').value||'-',
-    status: $('acctNewPwMode').value==='invite'?'PENDING':'ACTIVE',
+    id:'u'+Date.now(), email, name, empNo:'-', role,
+    company,                  // Phase 14-D: 소속 사업자명
+    team: team || '',          // 부서명(선택)
+    position:$('acctNewPosition')?.value||'-',
+    status: $('acctNewPwMode')?.value==='invite'?'INVITED':'RESET_REQUIRED', // 정책서 9장 상태 코드
     lastLogin:'-', lastIp:'-', validUntil:null, mfa:$('acctNewMfa').checked,
     createdAt:'2026-04-21',
     customPerms: JSON.parse(JSON.stringify(newPermOverrides||ROLE_MAP[role].perms))

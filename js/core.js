@@ -1174,22 +1174,39 @@ function doDemoLogin(){
    ACCOUNT MANAGEMENT — 계정관리 (IIFE로 네임스페이스 격리)
 ══════════════════════════════════════════════════════════════════════ */
 (function(){
+// Phase 14-D: 정책서 8장 '역할 정의' 기준 3개로 재정의
+//   - 운영관리자(OPERATIONS_ADMIN): 전 권한
+//   - 정산 관리자(SETTLEMENT_ADMIN): 운영리포트 조회/수정 + 고객정산관리 전체
+//   - 일반 관리자(GENERAL_ADMIN): 대부분 조회·수정, 삭제·계정관리 불가
+// 정책서 8.2 메뉴 권한 매트릭스 기준 매핑
 const ROLES = [
-  { code:'SYS_ADMIN', name:'시스템관리자', color:'purple',
-    desc:'전 메뉴 CRUD + 계정/권한/시스템 설정. 최소 인원 유지 권장.',
-    perms:{dashboard:['R'],precheck:['R','C','U','D'],resource:['R','C','U','D'],monitoring:['R','C','U','D','X'],report:['R','C','U','D'],settlement:['R','C','U','D'],datacollect:['R','C','U','D'],communication:['R','C','U','D'],bidding:['R','C','U','D','X'],account:['R','C','U','D'],audit:['R'],system:['R','C','U','D']}},
-  { code:'DR_OPERATOR', name:'DR 운영팀', color:'blue',
-    desc:'자원/고객 관리, DR 이벤트 발령 및 실시간 모니터링, 운영 리포트 작성.',
-    perms:{dashboard:['R'],precheck:['R','C','U','D'],resource:['R','C','U','D'],monitoring:['R','C','U','D','X'],report:['R','C','U','D'],settlement:['R'],datacollect:['R'],communication:['R','C','U'],bidding:['R','C','U','X'],account:[],audit:[],system:[]}},
-  { code:'SETTLEMENT', name:'정산담당자', color:'green',
-    desc:'CBL 산정, 정산 배치 실행, 이의신청 처리, 정산 리포트 승인.',
-    perms:{dashboard:['R'],precheck:['R'],resource:['R'],monitoring:['R'],report:['R','U'],settlement:['R','C','U','D','X'],datacollect:['R'],communication:['R'],bidding:['R'],account:[],audit:[],system:[]}},
-  { code:'CUSTOMER_SUPPORT', name:'고객지원', color:'amber',
-    desc:'고객/자원 정보 조회·일부 수정, 이의신청 접수, 문의 대응.',
-    perms:{dashboard:['R'],precheck:['R','U'],resource:['R','U'],monitoring:['R'],report:['R'],settlement:['R'],datacollect:[],communication:['R','C','U'],bidding:[],account:[],audit:[],system:[]}},
-  { code:'VIEWER', name:'조회자', color:'gray',
-    desc:'읽기 전용. 감사인/외부 파트너/경영진 모니터링용.',
-    perms:{dashboard:['R'],precheck:['R'],resource:['R'],monitoring:['R'],report:['R'],settlement:['R'],datacollect:['R'],communication:['R'],bidding:['R'],account:[],audit:[],system:[]}},
+  { code:'OPERATIONS_ADMIN', name:'운영관리자', color:'purple',
+    desc:'전 메뉴 CRUD + 계정/권한/감사로그. 계정 생성·수정·삭제·잠금 해제·권한 변경 권한 보유.',
+    perms:{
+      dashboard:['R'], precheck:['R','C','U','D'], resource:['R','C','U','D'],
+      monitoring:['R','C','U','D','X'], report:['R','C','U','D'],
+      settlement:['R','C','U','D','X'], datacollect:['R','C','U','D'],
+      communication:['R','C','U','D'], bidding:['R','C','U','D','X'],
+      account:['R','C','U','D'], audit:['R'], system:['R','C','U','D']
+    }},
+  { code:'SETTLEMENT_ADMIN', name:'정산 관리자', color:'green',
+    desc:'운영리포트 조회·수정 + 고객정산관리 전체 처리. 외 메뉴는 접근 불가.',
+    perms:{
+      dashboard:[], precheck:[], resource:[],
+      monitoring:[], report:['R','U'],
+      settlement:['R','C','U','D','X'], datacollect:[],
+      communication:[], bidding:[],
+      account:[], audit:[], system:[]
+    }},
+  { code:'GENERAL_ADMIN', name:'일반 관리자', color:'blue',
+    desc:'대부분 메뉴 조회·수정 가능. 자원/참여고객 삭제 및 계정 관련 변경(생성·수정·삭제·잠금 해제·권한 변경)은 불가.',
+    perms:{
+      dashboard:['R'], precheck:['R','C','U'], resource:['R','U'],
+      monitoring:['R','C','U'], report:['R'],
+      settlement:['R'], datacollect:['R'],
+      communication:['R','C','U'], bidding:['R','C','U'],
+      account:['R'], audit:['R'], system:[]
+    }},
 ];
 const ROLE_MAP = Object.fromEntries(ROLES.map(r=>[r.code,r]));
 const MENUS = [
@@ -1206,12 +1223,17 @@ const MENUS = [
   {key:'audit',     label:'감사 로그'},
   {key:'system',    label:'시스템 설정'},
 ];
+// Phase 14-D: 정책서 9장 '계정 상태 정의' 6개 기준
 const STATUS_META = {
-  ACTIVE:   {label:'활성',    badge:'badge-green',  dot:'#22c55e'},
-  LOCKED:   {label:'잠김',    badge:'badge-red',    dot:'#ef4444'},
-  INACTIVE: {label:'비활성',  badge:'badge-gray',   dot:'#94a3b8'},
-  EXPIRED:  {label:'만료',    badge:'badge-amber',  dot:'#f59e0b'},
-  PENDING:  {label:'초대 대기',badge:'badge-blue',  dot:'#4A7FD4'},
+  INVITED:         {label:'초대 대기',         badge:'badge-blue',   dot:'#4A7FD4'},
+  RESET_REQUIRED:  {label:'비밀번호 변경 필요', badge:'badge-amber',  dot:'#f59e0b'},
+  ACTIVE:          {label:'활성',              badge:'badge-green',  dot:'#22c55e'},
+  LOCKED:          {label:'잠김',              badge:'badge-red',    dot:'#ef4444'},
+  INACTIVE:        {label:'비활성',            badge:'badge-gray',   dot:'#94a3b8'},
+  DELETED:         {label:'삭제(논리)',        badge:'badge-gray',   dot:'#94a3b8'},
+  // 구버전 호환 — 기존 PENDING(초대 대기) → INVITED, EXPIRED는 RESET_REQUIRED로 매핑
+  PENDING:         {label:'초대 대기',         badge:'badge-blue',   dot:'#4A7FD4'},
+  EXPIRED:         {label:'비밀번호 변경 필요', badge:'badge-amber',  dot:'#f59e0b'},
 };
 const DEMO_ACCOUNTS = [
   {id:'u001', email:'admin@60hz.io',     name:'현진영', empNo:'20200001', role:'SYS_ADMIN',       team:'IT운영팀',   position:'CTO',     status:'ACTIVE',  lastLogin:'2026-04-21 13:42', lastIp:'10.0.1.12',   validUntil:null, mfa:true,  createdAt:'2024-03-01'},

@@ -1418,24 +1418,31 @@
           <div class="acct-form-hint" id="acctNewEmailHint">회사 이메일만 허용 (@60hz.io 도메인)</div>
         </div>
       </div>
+      <!-- Phase 14-D: 정책서 4.2 기준 — '소속 사업자명' 필드 추가 (사업자 담당자 식별) -->
+      <div class="acct-form-row">
+        <div class="acct-form-field full">
+          <label class="acct-form-label">소속 사업자명<span class="req">*</span></label>
+          <input type="text" class="acct-form-input" id="acctNewCompany" placeholder="예: 60hz / 삼성전자 / 현대제철">
+          <div class="acct-form-hint">운영관리자는 '60hz', 그 외는 담당하는 사업자명 (계약관리 시 매핑됨)</div>
+        </div>
+      </div>
       <div class="acct-form-row">
         <div class="acct-form-field">
-          <label class="acct-form-label">소속<span class="req">*</span></label>
+          <label class="acct-form-label">부서명</label>
           <select class="acct-form-select" id="acctNewTeam">
             <option value="">선택</option>
             <option>운영본부</option><option>DR운영팀</option><option>정산팀</option><option>고객지원팀</option><option>IT운영팀</option><option>외부파트너</option>
           </select>
+          <div class="acct-form-hint">선택 사항</div>
         </div>
         <div class="acct-form-field"><label class="acct-form-label">직책</label><input type="text" class="acct-form-input" id="acctNewPosition" placeholder="예: 팀장, 매니저, 주임"></div>
       </div>
       <div class="acct-divider"></div>
       <label class="acct-form-label">역할(Role)<span class="req">*</span></label>
       <select class="acct-form-select" id="acctNewRoleSelect" onchange="acctOnNewRoleChange(this.value)" style="margin-bottom:6px;">
-        <option value="SYS_ADMIN">시스템관리자 (SYS_ADMIN)</option>
-        <option value="DR_OPERATOR">DR 운영팀 (DR_OPERATOR)</option>
-        <option value="SETTLEMENT">정산담당자 (SETTLEMENT)</option>
-        <option value="CUSTOMER_SUPPORT">고객지원 (CUSTOMER_SUPPORT)</option>
-        <option value="VIEWER" selected>조회자 (VIEWER)</option>
+        <option value="OPERATIONS_ADMIN">운영관리자 (OPERATIONS_ADMIN)</option>
+        <option value="SETTLEMENT_ADMIN">정산 관리자 (SETTLEMENT_ADMIN)</option>
+        <option value="GENERAL_ADMIN" selected>일반 관리자 (GENERAL_ADMIN)</option>
       </select>
       <div class="acct-form-hint" id="acctNewRoleDesc" style="margin-bottom:10px;"></div>
       <label class="acct-form-label">상세 권한 설정</label>
