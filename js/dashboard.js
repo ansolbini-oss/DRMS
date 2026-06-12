@@ -243,19 +243,29 @@ function dashRenderTrialList(){
     : '');
 }
 
-/* 운영이상 항목 클릭 → 자원관리 이동 후 해당 그룹 상세(가동상태 탭) 즉시 열기 */
-/* navigate 내부 closeTransientUi가 rmDetailPanel.classList.remove('open')을 실행하므로,
-   동일 tick에서 add('open')하면 사파리에서 transition이 무효화되는 케이스 발견 →
-   setTimeout(0)으로 다음 task tick에서 명시적으로 다시 패널을 연다. */
+/* 운영이상 항목 클릭 → 자원관리 이동 + 상세 패널 즉시 오픈
+   navigate()를 호출하면 내부 closeTransientUi가 rmDetailPanel.classList.remove('open')을
+   실행하면서 어떤 환경(특히 사파리)에서 상세 패널을 못 여는 경합이 발생한다.
+   → closeTransientUi 호출을 우회하고 페이지 전환만 직접 수행한 뒤 상세 오픈. */
 function dashGoToRiskGroup(gid){
-  navigate('resource');
-  setTimeout(()=>{
-    rmFilterByCard('risk');
-    rmOpenDetail(gid, 'op');
-    // 안전망: 어떤 사유로든 open 클래스가 미적용된 경우 강제 부여
-    const panel = document.getElementById('rmDetailPanel');
-    if(panel && !panel.classList.contains('open')) panel.classList.add('open');
-  }, 0);
+  // 1) 다른 모달/패널만 정리 (rmDetailPanel은 제외해서 이번 오픈을 안 막음)
+  document.querySelectorAll('.modal.show').forEach(el=>el.classList.remove('show'));
+  // 2) 사이드바·페이지 전환을 직접 수행 (navigate 우회)
+  document.querySelectorAll('.sidebar-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.page==='resource');
+  });
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  const page = document.getElementById('page-resource');
+  if(page) page.classList.add('active');
+  // 3) 자원관리 초기화
+  if(typeof rmApplyFilter === 'function')    rmApplyFilter();
+  if(typeof rmRefreshSummary === 'function') rmRefreshSummary();
+  // 4) 운영이상 카드 필터 + 상세 오픈
+  if(typeof rmFilterByCard === 'function')   rmFilterByCard('risk');
+  if(typeof rmOpenDetail === 'function')     rmOpenDetail(gid, 'op');
+  // 5) 안전망 — 어떤 사유로든 open이 미적용이면 강제 부여
+  const panel = document.getElementById('rmDetailPanel');
+  if(panel) panel.classList.add('open');
 }
 
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
