@@ -308,7 +308,7 @@ function monRender(){
     // 완료된 운영 이벤트 → 운영 리포트 진입점 (시니어 기획 판단: 감축 종료 후 바로 정산 업무로 이어지는 동선)
     if(!ev.live && !ev.scheduled && ev.category==='operation' && ev.settlement){
       const stlMap = {pending:'정산요청 대기', requested:'정산요청 완료', received:'수금 완료'};
-      metaHtml += ` <button class="link" style="margin-left:10px;" onclick="navigate('report');setTimeout(()=>rpOpenEvent('${ev.id}'),150);">운영 리포트 (${stlMap[ev.settlement.status]||'-'}) →</button>`;
+      metaHtml += ` <button class="link" style="margin-left:10px;" onclick="navigate('report');setTimeout(()=>rpOpenEvent('${ev.id}'),150);">이행검증 (${stlMap[ev.settlement.status]||'-'}) →</button>`;
     }
     $('mon-event-meta').innerHTML = metaHtml;
   } else {

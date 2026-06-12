@@ -302,7 +302,7 @@ function dcRenderTabGroups(aggs){
 
   $('dc-tab-groups').innerHTML = `
     <div style="font-size:11px;color:var(--text-hint);margin-bottom:8px;">
-      자원그룹을 펼치면 고객별 수신 상태를 확인할 수 있습니다. · <b>수신률</b> = (정상+보정) / 전체 슬롯
+      자원그룹을 펼치면 고객별 수신 상태를 확인할 수 있습니다.
     </div>
     <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:#fff;">
       <table class="dc-summary-table">

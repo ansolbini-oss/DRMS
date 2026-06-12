@@ -692,7 +692,7 @@ function pcCreateLead(){
     cblType:'-', cblAvg:'-', reduction:null, rrmseVal:'-', infraS:'-'
   };
   store.customers.unshift(newCustomer);
-  pcAddLog(newCustomer, '리드 등록', `${name} (${recno}) 신규 등록`, 'done');
+  pcAddLog(newCustomer, '참여신청 등록', `${name} (${recno}) 신규 등록`, 'done');
   closeModal('registerModal');
   ['rg-name','rg-ceo','rg-tel','rg-addr','rg-power'].forEach(id=>$(id).value='');
   $('rg-drtype').value=''; $('rg-inflow').value='사이트';

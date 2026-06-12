@@ -637,7 +637,7 @@ function rpOpenSettlement(eventId){
     $('stl-stg1-body').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
         <div class="stg-meta" style="grid-template-columns:1fr;">
-          <div><div class="k">우리 측 (운영리포트)</div><div class="v">${(k.ourReductionKw||ev_actual).toLocaleString()} kW · 이행률 ${Math.round(a.rate*100)}%</div></div>
+          <div><div class="k">우리 측 (이행검증)</div><div class="v">${(k.ourReductionKw||ev_actual).toLocaleString()} kW · 이행률 ${Math.round(a.rate*100)}%</div></div>
           <div><div class="k">예상 정산금</div><div class="v">${(s.ourAmount||0).toLocaleString()} KRW</div></div>
         </div>
         <div class="stg-meta" style="grid-template-columns:1fr;">

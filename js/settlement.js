@@ -287,7 +287,7 @@ function stmOpenDetail(eventId){
   if(!ev || !ev.settlement){ showToast('정산 대상이 아닙니다.'); return; }
   const s = ev.settlement;
   if(s.status==='awaiting'){
-    showToast('운영리포트에서 정합성 검증 완료 후 이용 가능합니다.');
+    showToast('이행검증에서 정합성 검증 완료 후 이용 가능합니다.');
     navigate('report');
     setTimeout(()=>rpOpenSettlement(eventId), 200);
     return;

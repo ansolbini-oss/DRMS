@@ -163,7 +163,7 @@ function bidOpenDetail(eid){
       <div><span style="color:var(--text-hint);">결정 시각</span><br><b style="font-variant-numeric:tabular-nums;">${e.bid.awardedAt||'—'}</b></div>
       ${e.bid.rejectionReason ? `<div style="grid-column:1/-1;"><span style="color:var(--text-hint);">유찰 사유</span><br><b style="color:var(--red);">${e.bid.rejectionReason}</b></div>`:''}
       ${bs==='ACTIVE' ? `<div style="grid-column:1/-1;padding:8px 12px;background:var(--blue-light);border-radius:var(--radius);">실시간 이행 중 — <button class="link" onclick="closeCommonModal();navigate('monitoring');">감축 모니터링 →</button></div>`:''}
-      ${bs==='COMPLETED' ? `<div style="grid-column:1/-1;padding:8px 12px;background:#f8faff;border-radius:var(--radius);">이행 완료 — <button class="link" onclick="closeCommonModal();navigate('report');setTimeout(()=>rpOpenEvent('${e.id}'),150);">운영리포트 →</button></div>`:''}
+      ${bs==='COMPLETED' ? `<div style="grid-column:1/-1;padding:8px 12px;background:#f8faff;border-radius:var(--radius);">이행 완료 — <button class="link" onclick="closeCommonModal();navigate('report');setTimeout(()=>rpOpenEvent('${e.id}'),150);">이행검증 →</button></div>`:''}
     </div>`;
   openCommonModal(`입찰 상세 · ${eventDisplayName(e)}`, '입찰 ~ 이벤트 실행까지 라이프사이클', body, []);
 }

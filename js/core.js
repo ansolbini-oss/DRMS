@@ -232,7 +232,7 @@ function showFullAuditLogs(objectType, objectId){
     history:[
       {at:'2026-02-08 16:00', user:'system', fromStatus:null, toStatus:'awaiting', note:'감축 이벤트 종료'},
       {at:'2026-04-20 09:00', user:'현진영', fromStatus:'awaiting', toStatus:'received', note:'KPX 정산기준 데이터 수신·등록'},
-      {at:'2026-04-22 14:00', user:'현진영', fromStatus:'received', toStatus:'received', note:'운영리포트 대사 완료 — 차이 -0.26% (허용 범위)'},
+      {at:'2026-04-22 14:00', user:'현진영', fromStatus:'received', toStatus:'received', note:'이행검증 대사 완료 — 차이 -0.26% (허용 범위)'},
       {at:'2026-05-15 15:00', user:'현진영', fromStatus:'received', toStatus:'in_progress', note:'KPX 수금 확인 — 361,440 KRW'},
     ]
   });
@@ -250,7 +250,7 @@ function showFullAuditLogs(objectType, objectId){
     history:[
       {at:'2026-02-22 16:00', user:'system', fromStatus:null, toStatus:'awaiting', note:'감축 이벤트 종료'},
       {at:'2026-04-25 10:00', user:'현진영', fromStatus:'awaiting', toStatus:'received', note:'KPX 정산기준 데이터 수신·등록'},
-      {at:'2026-04-26 14:20', user:'현진영', fromStatus:'received', toStatus:'received', note:'운영리포트 대사 — 차이 -0.9% (허용 범위)'},
+      {at:'2026-04-26 14:20', user:'현진영', fromStatus:'received', toStatus:'received', note:'이행검증 대사 — 차이 -0.9% (허용 범위)'},
     ]
   });
 
@@ -288,7 +288,7 @@ function showFullAuditLogs(objectType, objectId){
     history:[
       {at:'2026-03-18 16:00', user:'system', fromStatus:null, toStatus:'awaiting', note:'감축 이벤트 종료'},
       {at:'2026-05-08 11:00', user:'현진영', fromStatus:'awaiting', toStatus:'received', note:'KPX 정산기준 데이터 수신·등록'},
-      {at:'2026-05-09 14:00', user:'현진영', fromStatus:'received', toStatus:'received', note:'운영리포트 대사 완료 — 정합성 검증 통과'},
+      {at:'2026-05-09 14:00', user:'현진영', fromStatus:'received', toStatus:'received', note:'이행검증 대사 완료 — 정합성 검증 통과'},
       {at:'2026-05-20 10:00', user:'박정산', fromStatus:'received', toStatus:'invoiced', note:'세금계산서 발행 (2026-0318-01) — 496,800 KRW'},
     ]
   });
@@ -756,7 +756,7 @@ function renderDashboard(){
 })();
 
 /* ════════════════════════════════════════════════════════════
-   ★ PAGE: 운영 리포트
+   ★ PAGE: 이행검증
    - 감축 모니터링에서 종료된 이벤트(live:false && !scheduled && category:'operation')를 대상으로
      이벤트별/자원별/월별 집계 + 정산 요청 상태 관리 + 참여고객 리포트 CSV 생성
    - 기능 우선순위 (시니어 기획 판단):
@@ -791,7 +791,7 @@ function renderDashboard(){
     {id:'TPL-003', code:'UNDER_PERFORM_WARN', title:'이행률 미달 경고', channels:['PUSH','SMS','MAIL'],
      body:'[경고] 최근 3회 평균 이행률 {{rate}}%로 80% 미만입니다. 참여 제한 대상이 될 수 있어 담당자 확인 요망.',
      active:true, lastUpdated:'2026-03-28 14:00'},
-    {id:'TPL-004', code:'MONTHLY_REPORT', title:'월간 운영 리포트', channels:['MAIL','KKO'],
+    {id:'TPL-004', code:'MONTHLY_REPORT', title:'월간 이행검증 리포트', channels:['MAIL','KKO'],
      body:'{{customerName}} {{month}} 감축 실적 · 정산 예정액 · 개선 제안이 포함된 월간 리포트가 발송되었습니다.',
      active:true, lastUpdated:'2026-04-01 09:00'},
     {id:'TPL-005', code:'TRIAL_SCHEDULED', title:'등록시험 예정 안내', channels:['SMS','KKO','MAIL'],
@@ -1211,7 +1211,7 @@ const ROLES = [
       account:['R','C','U','D'], audit:['R'], system:['R','C','U','D']
     }},
   { code:'SETTLEMENT_ADMIN', name:'정산 관리자', color:'green',
-    desc:'운영리포트 조회·수정 + 고객정산관리 전체 처리. 외 메뉴는 접근 불가.',
+    desc:'이행검증 조회·수정 + 고객정산관리 전체 처리. 외 메뉴는 접근 불가.',
     perms:{
       dashboard:[], precheck:[], resource:[],
       monitoring:[], report:['R','U'],
@@ -1232,10 +1232,10 @@ const ROLES = [
 const ROLE_MAP = Object.fromEntries(ROLES.map(r=>[r.code,r]));
 const MENUS = [
   {key:'dashboard', label:'대시보드'},
-  {key:'precheck',  label:'사전검증 관리'},
+  {key:'precheck',  label:'접수·사전검증'},
   {key:'resource',  label:'자원관리'},
   {key:'monitoring',label:'감축 모니터링 (이벤트 발령 = X)'},
-  {key:'report',    label:'운영 리포트'},
+  {key:'report',    label:'이행검증'},
   {key:'settlement',label:'정산관리 (배치 실행 = X)'},
   {key:'datacollect',label:'전력데이터 수집'},
   {key:'communication',label:'고객 소통'},
