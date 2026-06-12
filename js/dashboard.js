@@ -244,11 +244,18 @@ function dashRenderTrialList(){
 }
 
 /* 운영이상 항목 클릭 → 자원관리 이동 후 해당 그룹 상세(가동상태 탭) 즉시 열기 */
-/* Phase 15-A의 closeTransientUi가 navigate에서 패널을 닫으므로, 동일 tick에서 다시 여는 흐름 보장 */
+/* navigate 내부 closeTransientUi가 rmDetailPanel.classList.remove('open')을 실행하므로,
+   동일 tick에서 add('open')하면 사파리에서 transition이 무효화되는 케이스 발견 →
+   setTimeout(0)으로 다음 task tick에서 명시적으로 다시 패널을 연다. */
 function dashGoToRiskGroup(gid){
   navigate('resource');
-  rmFilterByCard('risk');
-  rmOpenDetail(gid, 'op');
+  setTimeout(()=>{
+    rmFilterByCard('risk');
+    rmOpenDetail(gid, 'op');
+    // 안전망: 어떤 사유로든 open 클래스가 미적용된 경우 강제 부여
+    const panel = document.getElementById('rmDetailPanel');
+    if(panel && !panel.classList.contains('open')) panel.classList.add('open');
+  }, 0);
 }
 
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
