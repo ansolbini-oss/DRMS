@@ -129,6 +129,8 @@ function rmToggleStatusChip(status){
 }
 
 function rmFilterByCard(card){
+  // [임시 진단 v16-E] — 비니 환경 캐시·핸들러 문제 진단용. 확인 후 제거 예정.
+  try { alert('[DRMS v16-E] rmFilterByCard 호출됨 — card=' + card + '\n현재 시각: ' + new Date().toLocaleTimeString()); } catch(_){}
   rmState.filter.card = card;
   if(card==='all'){
     rmState.filter.status = '';
