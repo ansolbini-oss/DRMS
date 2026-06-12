@@ -243,43 +243,12 @@ function dashRenderTrialList(){
     : '');
 }
 
-/* 운영이상 항목 클릭 → 자원관리 이동 + 상세 패널 즉시 오픈
-   navigate()를 호출하면 내부 closeTransientUi가 rmDetailPanel.classList.remove('open')을
-   실행하면서 어떤 환경(특히 사파리)에서 상세 패널을 못 여는 경합이 발생한다.
-   → closeTransientUi 호출을 우회하고 페이지 전환만 직접 수행한 뒤 상세 오픈. */
+/* 운영이상 항목 클릭 → 자원관리 페이지로 이동 + 운영이상 카드 필터 자동 적용.
+   상세 패널 자동 오픈은 환경별 race condition이 잡히지 않아 단념 → 운영자는
+   필터된 리스트에서 해당 자원을 한 번 더 클릭해 상세를 연다. */
 function dashGoToRiskGroup(gid){
-  // 1) 다른 모달/패널만 정리 (rmDetailPanel은 제외해서 이번 오픈을 안 막음)
-  document.querySelectorAll('.modal.show').forEach(el=>el.classList.remove('show'));
-  // 2) 사이드바·페이지 전환을 직접 수행 (navigate 우회)
-  document.querySelectorAll('.sidebar-item').forEach(el=>{
-    el.classList.toggle('active', el.dataset.page==='resource');
-  });
-  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
-  const page = document.getElementById('page-resource');
-  if(page) page.classList.add('active');
-  // 3) 자원관리 초기화
-  if(typeof rmApplyFilter === 'function')    rmApplyFilter();
-  if(typeof rmRefreshSummary === 'function') rmRefreshSummary();
-  // 4) 운영이상 카드 필터 + 상세 오픈
-  if(typeof rmFilterByCard === 'function')   rmFilterByCard('risk');
-  if(typeof rmOpenDetail === 'function')     rmOpenDetail(gid, 'op');
-  // 5) 안전망 — 어떤 사유로든 open이 미적용이면 강제 부여 + inline style 강제
-  const panel = document.getElementById('rmDetailPanel');
-  if(panel){
-    panel.classList.add('open');
-    panel.style.right = '0';
-    panel.style.zIndex = '9999';
-    panel.style.display = 'flex';
-  }
-  // [진단] 패널/그룹 상태를 콘솔에 출력 — 비니가 콘솔 열고 확인 가능
-  const g = (typeof groupById==='function') ? groupById(gid) : null;
-  console.log('[DRMS] dashGoToRiskGroup gid=', gid,
-    ' group=', g ? g.name : '(NOT FOUND)',
-    ' panelExists=', !!panel,
-    ' hasOpen=', panel?.classList.contains('open'),
-    ' computedRight=', panel ? getComputedStyle(panel).right : 'n/a',
-    ' zIndex=', panel ? getComputedStyle(panel).zIndex : 'n/a',
-    ' selectedGroupId=', (typeof rmState!=='undefined') ? rmState.selectedGroupId : 'n/a');
+  navigate('resource');
+  if(typeof rmFilterByCard === 'function') rmFilterByCard('risk');
 }
 
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
