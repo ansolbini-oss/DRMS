@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css ?v=값은 동적으로 박힘 (아래 script). FOUC 방지 위해 fallback으로 v=16f 유지. -->
-<link rel="stylesheet" href="css/styles.css?v=16f" id="drms-main-css">
+<!-- css/js 모두 ?v=17b. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=17b">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -2090,25 +2090,21 @@
 <!-- 감축 모니터링 모달 (이벤트 발령 시뮬레이터) -->
 <div class="toast" id="toast"></div>
 
-<!-- 동적 스크립트 로더: 페이지 로드마다 timestamp 박힘 → 브라우저·CDN 캐시 완전 무력화.
-     의존성 순서가 중요해서 순차 await 방식으로 로드한다. -->
-<script>
-(function(){
-  const v = Date.now();
-  const files = [
-    'data/store.js', 'data/tips.js',
-    'js/core.js', 'js/dashboard.js', 'js/precheck.js', 'js/resource.js',
-    'js/monitoring.js', 'js/report.js', 'js/settlement.js', 'js/datacollect.js',
-    'js/communication.js', 'js/bidding.js', 'js/account.js', 'js/system.js'
-  ];
-  files.reduce((p, src) => p.then(() => new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src + '?v=' + v;
-    s.onload = resolve;
-    s.onerror = () => { console.error('[DRMS] failed to load', src); reject(new Error(src)); };
-    document.head.appendChild(s);
-  })), Promise.resolve()).catch(err => console.error('[DRMS] script chain aborted:', err));
-})();
-</script>
+<!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
+     현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
+<script src="data/store.js?v=17b"></script>
+<script src="data/tips.js?v=17b"></script>
+<script src="js/core.js?v=17b"></script>
+<script src="js/dashboard.js?v=17b"></script>
+<script src="js/precheck.js?v=17b"></script>
+<script src="js/resource.js?v=17b"></script>
+<script src="js/monitoring.js?v=17b"></script>
+<script src="js/report.js?v=17b"></script>
+<script src="js/settlement.js?v=17b"></script>
+<script src="js/datacollect.js?v=17b"></script>
+<script src="js/communication.js?v=17b"></script>
+<script src="js/bidding.js?v=17b"></script>
+<script src="js/account.js?v=17b"></script>
+<script src="js/system.js?v=17b"></script>
 
 </body></html>
