@@ -517,7 +517,11 @@ function rmTabOpHtml(g){
   if(failedList.length > 0 || delayedList.length > 0){
     const rows = [...failedList, ...delayedList].map(r=>{
       const isFailed = failedList.includes(r);
-      return `<div class="miss-row">
+      // 미수신은 좌측 빨강 dot으로 시각 구분 → 뱃지 중복 제거. 지연만 뱃지 유지.
+      const trailingBadge = isFailed
+        ? ''
+        : `<span class="badge badge-pending" style="font-size:10px;">지연</span>`;
+      return `<div class="miss-row" id="miss-row-${r.cid}">
         <div class="miss-cell miss-name">
           <div class="miss-dot ${isFailed?'fail':'warn'}"></div>
           <div>
@@ -526,8 +530,8 @@ function rmTabOpHtml(g){
           </div>
         </div>
         <div class="miss-cell miss-actions">
-          <span class="badge ${isFailed?'badge-fail':'badge-pending'}" style="font-size:10px;">${isFailed?'미수신':'지연'}</span>
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();rmRequestRecollect(${g.id},'${r.cid}')">재조회 요청</button>
+          ${trailingBadge}
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();rmRequestRecollect(${g.id},'${r.cid}')">재조회</button>
         </div>
       </div>`;
     }).join('');
@@ -644,45 +648,113 @@ function rmTabOpHtml(g){
   return collectCard + missingCard + liveEventCard;
 }
 
-/* 참여고객 데이터 재조회 요청 */
+/* 참여고객 데이터 재조회 요청 (확인 모달) */
 function rmRequestRecollect(gid, cid){
   const g = groupById(gid); if(!g) return;
   const c = custById(cid); if(!c) return;
-  $('cm-title').textContent = '데이터 재조회 요청';
-  $('cm-sub').textContent = `${c.name} (${c.recno})의 계량 데이터를 즉시 재조회합니다.`;
+  $('cm-title').textContent = '데이터 재조회';
+  $('cm-sub').textContent = `${c.name} (${c.recno})의 한전 AMI 계량 데이터를 즉시 재조회합니다.`;
   $('cm-body').innerHTML = `<div class="info-box">
-    한전 API를 통해 해당 고객의 최근 데이터를 즉시 재요청합니다. 요청이 접수되면 통상 1~3분 내 수신됩니다.
+    참여고객의 한전 AMI 채널로 재조회를 시도합니다. 통신 상태에 따라 수초 내 결과가 표시됩니다.
   </div>
-  <div class="check-item-row"><span>대상 고객</span><span style="font-weight:600;">${c.name}</span></div>
+  <div class="check-item-row"><span>참여고객</span><span style="font-weight:600;">${c.name}</span></div>
   <div class="check-item-row"><span>한전 고객번호</span><span style="font-family:monospace;">${c.kepco||'-'}</span></div>
   <div class="check-item-row"><span>최근 수신</span><span style="color:var(--red);font-weight:600;">${g.operational?.custDataStatus?.[cid]?.lastMinutesAgo||'-'}분 전</span></div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-primary" onclick="rmConfirmRecollect(${gid},'${cid}')">재조회 요청</button>`;
+    <button class="btn btn-primary" onclick="rmConfirmRecollect(${gid},'${cid}')">재조회 실행</button>`;
   openModal('commonModal');
 }
+
+/* 재조회 시뮬레이션 — 참여고객(cid)별 결정론 분기.
+   cid 끝자리 패리티로 통신 성공/실패를 갈라 시연한다 (백엔드 연동 시 실제 API 응답으로 교체) */
+function rmSimulateRecollectOutcome(cid){
+  const m = (cid||'').match(/(\d+)$/);
+  const last = m ? parseInt(m[1].slice(-1), 10) : 0;
+  if(last % 2 === 0){
+    return {ok:true};
+  }
+  return {ok:false, reason:'한전 AMI 응답 없음 — 계량기 통신 또는 외부망 점검 필요'};
+}
+
+/* 재조회 실행 — 로딩 표시 후 시뮬레이션 결과를 모달에 표기 */
 function rmConfirmRecollect(gid, cid){
   const g = groupById(gid); if(!g) return;
-  // 시뮬레이션: 재조회 요청 후 상태를 정상으로 복구
-  if(g.operational && g.operational.custDataStatus && g.operational.custDataStatus[cid]){
-    g.operational.custDataStatus[cid] = {status:'NORMAL', lastMinutesAgo:1};
-  }
-  // 그룹 전체 failedCustomers 수도 갱신
-  if(g.operational?.dataCollection){
-    const failed = Object.values(g.operational.custDataStatus||{}).filter(s=>s.status==='FAILED').length;
-    g.operational.dataCollection.failedCustomers = failed;
-    // 모든 고객이 정상이면 그룹 수집 상태도 NORMAL로 회복
-    if(failed===0 && !Object.values(g.operational.custDataStatus).some(s=>s.status==='DELAYED')){
-      g.operational.dataCollection.status = 'NORMAL';
-      g.operational.dataCollection.lastMinutesAgo = 1;
+  const c = custById(cid); if(!c) return;
+
+  // 1) 모달을 로딩 상태로 전환
+  $('cm-title').textContent = '데이터 재조회 중';
+  $('cm-sub').textContent = `${c.name} (${c.recno})`;
+  $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
+      <div class="spinner-inline" style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:rm-recollect-spin 0.9s linear infinite;"></div>
+      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">한전 AMI 재조회 중...</div>
+      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">한전 고객번호 ${c.kepco||'-'} · 응답 대기</div>
+    </div>
+    <style>@keyframes rm-recollect-spin{to{transform:rotate(360deg);}}</style>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" disabled style="opacity:0.5;cursor:not-allowed;">처리 중...</button>`;
+
+  // 2) 1.4초 후 결과 분기 (목업 — 백엔드 응답으로 교체될 위치)
+  setTimeout(()=>{
+    const result = rmSimulateRecollectOutcome(cid);
+    if(result.ok){
+      // 성공: 상태 정상 복구
+      if(g.operational?.custDataStatus?.[cid]){
+        g.operational.custDataStatus[cid] = {status:'NORMAL', lastMinutesAgo:1};
+      }
+      if(g.operational?.dataCollection){
+        const statusMap = g.operational.custDataStatus || {};
+        const failed = Object.values(statusMap).filter(s=>s.status==='FAILED').length;
+        const delayed = Object.values(statusMap).filter(s=>s.status==='DELAYED').length;
+        g.operational.dataCollection.failedCustomers = failed;
+        if(failed===0 && delayed===0){
+          g.operational.dataCollection.status = 'NORMAL';
+          g.operational.dataCollection.lastMinutesAgo = 1;
+        }
+      }
+      logAudit?.({
+        objectType:'customer', objectId:cid, action:'recollect_success',
+        title:`재조회 성공 — ${c.name}`,
+        desc:`한전 고객번호 ${c.kepco||'-'} · 한전 AMI 통신 정상 · 최신 데이터 수신`,
+        actor:'운영자', tone:'success'
+      });
+      $('cm-title').textContent = '재조회 결과';
+      $('cm-body').innerHTML = `<div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:var(--radius);padding:18px 16px;display:flex;gap:12px;align-items:center;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">✓</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:var(--green);">수신 정상</div>
+            <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${c.name} · ${c.kepco||'-'}</div>
+          </div>
+        </div>`;
+      $('cm-footer').innerHTML = `<button class="btn btn-primary" onclick="rmCloseRecollect(${gid})">확인</button>`;
+    } else {
+      // 실패: 상태 유지 + 수동업로드 우회 경로 노출
+      logAudit?.({
+        objectType:'customer', objectId:cid, action:'recollect_failed',
+        title:`재조회 실패 — ${c.name}`,
+        desc:`한전 고객번호 ${c.kepco||'-'} · ${result.reason}`,
+        actor:'운영자', tone:'warn'
+      });
+      $('cm-title').textContent = '재조회 결과';
+      $('cm-body').innerHTML = `<div style="background:var(--red-light,#fef2f2);border:1px solid var(--red-border,#fecaca);border-radius:var(--radius);padding:18px 16px;display:flex;gap:12px;align-items:center;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">!</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:var(--red);">통신 실패</div>
+            <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${c.name} · ${c.kepco||'-'}</div>
+          </div>
+        </div>`;
+      $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">닫기</button>
+        <button class="btn btn-primary" onclick="rmConfirmRecollect(${gid},'${cid}')">다시 시도</button>`;
     }
-  }
+  }, 1400);
+}
+
+/* 재조회 성공 후 모달 닫기 + 화면 동기화 */
+function rmCloseRecollect(gid){
   closeModal('commonModal');
   rmOpenDetail(gid, 'op');
   rmApplyFilter();
-  refreshSidebarBadges();  // 운영이상 건수 변화 반영
-  const c = custById(cid);
-  showToast(`${c?.name||cid} 재조회 요청 완료 — 데이터 수신됨`);
+  refreshSidebarBadges?.();
 }
+
 /* ═══ 등록시험 탭 ═══ */
 function rmTabTrialHtml(g){
   // 면제 대상

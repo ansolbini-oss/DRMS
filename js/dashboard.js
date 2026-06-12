@@ -243,13 +243,12 @@ function dashRenderTrialList(){
     : '');
 }
 
-/* 운영이상 항목 클릭 → 자원관리 이동 후 해당 그룹 상세(가동상태 탭) 열기 */
+/* 운영이상 항목 클릭 → 자원관리 이동 후 해당 그룹 상세(가동상태 탭) 즉시 열기 */
+/* Phase 15-A의 closeTransientUi가 navigate에서 패널을 닫으므로, 동일 tick에서 다시 여는 흐름 보장 */
 function dashGoToRiskGroup(gid){
   navigate('resource');
-  setTimeout(()=>{
-    rmFilterByCard('risk');
-    setTimeout(()=>rmOpenDetail(gid, 'op'), 80);
-  }, 100);
+  rmFilterByCard('risk');
+  rmOpenDetail(gid, 'op');
 }
 
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
