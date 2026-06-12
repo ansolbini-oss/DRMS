@@ -113,7 +113,7 @@ function dcFilteredGroups(){
   dcState.status = $('dc-status').value;
   const activeGroups = store.groups.filter(g=>g.status==='active');
   let targets = activeGroups;
-  if(dcState.groupId !== 'all') targets = targets.filter(g=>g.id===dcState.groupId);
+  if(dcState.groupId !== 'all') targets = targets.filter(g=>String(g.id)===String(dcState.groupId));
   return targets.map(dcAggregateGroup);
 }
 

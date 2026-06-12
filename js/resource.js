@@ -129,8 +129,6 @@ function rmToggleStatusChip(status){
 }
 
 function rmFilterByCard(card){
-  // [임시 진단 v16-E] — 비니 환경 캐시·핸들러 문제 진단용. 확인 후 제거 예정.
-  try { alert('[DRMS v16-E] rmFilterByCard 호출됨 — card=' + card + '\n현재 시각: ' + new Date().toLocaleTimeString()); } catch(_){}
   rmState.filter.card = card;
   if(card==='all'){
     rmState.filter.status = '';
@@ -555,7 +553,7 @@ function rmTabOpHtml(g){
   const collectCard = `<div class="op-card">
     <div class="op-card-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>데이터 수집 현황</span>
-      <button class="btn btn-secondary btn-sm" onclick="dmOpen({groupId:${g.id}})" style="font-weight:500;">상세 보기 →</button>
+      <button class="btn btn-secondary btn-sm" onclick="rmGoToDataCollect(${g.id})" style="font-weight:500;">상세 보기 →</button>
     </div>
     <div class="op-metric op-metric-3">
       <div class="op-metric-item">
@@ -648,6 +646,18 @@ function rmTabOpHtml(g){
   }
 
   return collectCard + missingCard + liveEventCard;
+}
+
+/* 자원 상세 [상세 보기 →] 클릭 → 전력데이터 수집현황 페이지로 라우팅.
+   해당 자원그룹을 미리 dcState에 세팅해 진입 시 그 자원그룹으로 필터된 상태를 보여준다. */
+function rmGoToDataCollect(gid){
+  // 자원관리 상세 패널 닫기
+  const panel = document.getElementById('rmDetailPanel');
+  if(panel) panel.classList.remove('open');
+  // datacollect 페이지의 자원그룹 필터를 해당 그룹으로 미리 세팅
+  if(typeof dcState !== 'undefined') dcState.groupId = String(gid);
+  // 페이지 이동 (dcInit이 자동 호출되어 dcState.groupId 기준 렌더)
+  navigate('datacollect');
 }
 
 /* 참여고객 데이터 재조회 요청 (확인 모달) */
