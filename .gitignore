@@ -5,3 +5,4 @@
 *.swo
 node_modules/
 .cache/
+.claude/settings.local.json

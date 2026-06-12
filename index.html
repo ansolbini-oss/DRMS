@@ -3,10 +3,15 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 브라우저 캐시 무력화: 비니 환경에서 옛 js/css가 잡히지 않게 -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=16e">
+<!-- css ?v=값은 동적으로 박힘 (아래 script). FOUC 방지 위해 fallback으로 v=16f 유지. -->
+<link rel="stylesheet" href="css/styles.css?v=16f" id="drms-main-css">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -2085,19 +2090,25 @@
 <!-- 감축 모니터링 모달 (이벤트 발령 시뮬레이터) -->
 <div class="toast" id="toast"></div>
 
-<script src="data/store.js?v=16e"></script>
-<script src="data/tips.js?v=16e"></script>
-<script src="js/core.js?v=16e"></script>
-<script src="js/dashboard.js?v=16e"></script>
-<script src="js/precheck.js?v=16e"></script>
-<script src="js/resource.js?v=16e"></script>
-<script src="js/monitoring.js?v=16e"></script>
-<script src="js/report.js?v=16e"></script>
-<script src="js/settlement.js?v=16e"></script>
-<script src="js/datacollect.js?v=16e"></script>
-<script src="js/communication.js?v=16e"></script>
-<script src="js/bidding.js?v=16e"></script>
-<script src="js/account.js?v=16e"></script>
-<script src="js/system.js?v=16e"></script>
+<!-- 동적 스크립트 로더: 페이지 로드마다 timestamp 박힘 → 브라우저·CDN 캐시 완전 무력화.
+     의존성 순서가 중요해서 순차 await 방식으로 로드한다. -->
+<script>
+(function(){
+  const v = Date.now();
+  const files = [
+    'data/store.js', 'data/tips.js',
+    'js/core.js', 'js/dashboard.js', 'js/precheck.js', 'js/resource.js',
+    'js/monitoring.js', 'js/report.js', 'js/settlement.js', 'js/datacollect.js',
+    'js/communication.js', 'js/bidding.js', 'js/account.js', 'js/system.js'
+  ];
+  files.reduce((p, src) => p.then(() => new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src + '?v=' + v;
+    s.onload = resolve;
+    s.onerror = () => { console.error('[DRMS] failed to load', src); reject(new Error(src)); };
+    document.head.appendChild(s);
+  })), Promise.resolve()).catch(err => console.error('[DRMS] script chain aborted:', err));
+})();
+</script>
 
 </body></html>

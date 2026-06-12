@@ -254,16 +254,15 @@ function dashGoToRiskGroup(gid){
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
 function dashGoToTrialPending(){
   navigate('resource');
-  setTimeout(()=>rmFilterByCard('trial'), 100);
+  if(typeof rmFilterByCard === 'function') rmFilterByCard('trial');
 }
 
-/* 대시보드 시험 아이템 클릭 → 자원관리로 이동 후 해당 자원의 등록시험 탭 열기 */
+/* 대시보드 시험 아이템 클릭 → 자원관리로 이동 + 시험 대기 필터.
+   상세 패널 자동 오픈은 환경별 race condition 가능 → 운영자가 리스트에서 행을 한 번 더 클릭한다. */
 function dashGoToTrialGroup(gid){
   navigate('resource');
-  setTimeout(()=>{
-    rmFilterByCard('trial');
-    setTimeout(()=>rmOpenDetail(gid, 'trial'), 80);
-  }, 100);
+  if(typeof rmFilterByCard === 'function') rmFilterByCard('trial');
+  if(typeof rmOpenDetail === 'function')   rmOpenDetail(gid, 'trial');
 }
 
 function dashRenderBars(){
