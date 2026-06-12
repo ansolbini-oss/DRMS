@@ -263,9 +263,23 @@ function dashGoToRiskGroup(gid){
   // 4) 운영이상 카드 필터 + 상세 오픈
   if(typeof rmFilterByCard === 'function')   rmFilterByCard('risk');
   if(typeof rmOpenDetail === 'function')     rmOpenDetail(gid, 'op');
-  // 5) 안전망 — 어떤 사유로든 open이 미적용이면 강제 부여
+  // 5) 안전망 — 어떤 사유로든 open이 미적용이면 강제 부여 + inline style 강제
   const panel = document.getElementById('rmDetailPanel');
-  if(panel) panel.classList.add('open');
+  if(panel){
+    panel.classList.add('open');
+    panel.style.right = '0';
+    panel.style.zIndex = '9999';
+    panel.style.display = 'flex';
+  }
+  // [진단] 패널/그룹 상태를 콘솔에 출력 — 비니가 콘솔 열고 확인 가능
+  const g = (typeof groupById==='function') ? groupById(gid) : null;
+  console.log('[DRMS] dashGoToRiskGroup gid=', gid,
+    ' group=', g ? g.name : '(NOT FOUND)',
+    ' panelExists=', !!panel,
+    ' hasOpen=', panel?.classList.contains('open'),
+    ' computedRight=', panel ? getComputedStyle(panel).right : 'n/a',
+    ' zIndex=', panel ? getComputedStyle(panel).zIndex : 'n/a',
+    ' selectedGroupId=', (typeof rmState!=='undefined') ? rmState.selectedGroupId : 'n/a');
 }
 
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
