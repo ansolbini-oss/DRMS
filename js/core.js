@@ -462,23 +462,44 @@ function openModal(id){ $(id).classList.add('show'); }
 function closeModal(id){ $(id).classList.remove('show'); }
 function closeCommonModal(){ closeModal('commonModal'); }
 function closeTransientUi(){
+  // Phase 15-A: 모든 모달·오버레이 강제 종료
   [
     'commonModal','registerModal','stepModal','dmModal','reEventModal','stlModal',
-    'stmDetailModal','stmPenaltyModal','rmCreateModal','rmMappingModal','ctRejectOverlay'
+    'stmDetailModal','stmPenaltyModal','rmCreateModal','rmMappingModal','ctRejectOverlay',
+    'acctModalCreate','acctModalPerm','acctModalReset','acctModalDelete','acctModalLock',
+    'acctModalDisable','acctModalRestore','acctModalEdit'
   ].forEach(id=>{
-    const el = $(id);
+    const el = document.getElementById(id);
     if(el) el.classList.remove('show', 'active');
   });
   ['modalFindPw','logoutConfirmModal'].forEach(id=>{
-    const el = $(id);
+    const el = document.getElementById(id);
     if(el) el.classList.remove('show');
   });
-  const ctPanel = $('ctDetailPanel');
-  if(ctPanel) ctPanel.classList.remove('open');
-  const rmPanel = $('rmDetailPanel');
-  if(rmPanel) rmPanel.classList.remove('open');
-  const acctDrawer = $('acctDrawer');
+  // 사이드 패널 닫기 (계약 상세 / 자원 상세 / 계정 드로어)
+  ['ctDetailPanel','rmDetailPanel'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('open');
+  });
+  const acctDrawer = document.getElementById('acctDrawer');
   if(acctDrawer) acctDrawer.classList.remove('show');
+
+  // Phase 15-A: 페이지 내부 'list ↔ detail' view 전환도 list로 강제 복귀
+  // precheck (사전검증) — pc-detail-view → 숨김, pc-list-view → 표시
+  const pcList = document.getElementById('precheck-list-view');
+  const pcDetail = document.getElementById('precheck-detail-view');
+  if(pcDetail) pcDetail.style.display = 'none';
+  if(pcList) pcList.style.display = 'flex';
+  // datacollect — dc-detail-view → 숨김, dc-list-view → 표시
+  const dcList = document.getElementById('dc-list-view');
+  const dcDetail = document.getElementById('dc-detail-view');
+  if(dcDetail) dcDetail.style.display = 'none';
+  if(dcList) dcList.style.display = 'flex';
+  // dm (감축모니터링 데이터 드릴다운)
+  const dmList = document.getElementById('dm-list-view');
+  const dmDetail = document.getElementById('dm-detail-view');
+  if(dmDetail) dmDetail.style.display = 'none';
+  if(dmList) dmList.style.display = 'flex';
 }
 function nowStr(){ const d=new Date(), pad=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function todayStr(){ const d=new Date(), pad=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }

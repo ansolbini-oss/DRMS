@@ -118,7 +118,7 @@ function comRenderTemplates(){
       </table>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--text-hint);">
-      * 행 체크박스로 다건 선택 후 상단 [삭제]로 일괄 삭제 가능합니다. 삭제된 템플릿은 소프트 딜리트되어 발송 이력 추적은 유지됩니다.
+      삭제된 템플릿도 발송 이력에는 보관됩니다.
     </div>`;
 
   const all = $('com-tpl-select-all');

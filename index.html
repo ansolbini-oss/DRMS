@@ -122,7 +122,7 @@
       <span class="sidebar-group-label">고객 · 자원</span>
       <button class="sidebar-item" data-page="precheck" onclick="navigate('precheck')">
         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-        사전검증 관리
+        접수·사전검증
         <span class="sidebar-badge" id="sb-precheck-count" style="display: inline-block;">10</span>
       </button>
       <button class="sidebar-item" data-page="contract" onclick="navigate('contract')">
@@ -151,7 +151,7 @@
       </button>
       <button class="sidebar-item" data-page="report" onclick="navigate('report')">
         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-        운영리포트
+        이행검증
         <span class="sidebar-badge" id="sb-report-pending" style="display: inline-block; background: var(--amber);" title="대사/이의제기 단계 2건">2</span>
       </button>
       <button class="sidebar-item" data-page="settlement" onclick="navigate('settlement')">
@@ -300,19 +300,19 @@
 </div>
 
 <!-- ══════════════════════════════════════
-     PAGE 2 : 사전검증 관리
+     PAGE 2 : 접수·사전검증
 ══════════════════════════════════════ -->
 <div class="page" id="page-precheck">
   <!-- 목록 뷰 -->
   <div id="precheck-list-view" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
     <div class="page-header">
-      <div class="breadcrumb"><span>고객·자원</span> › 사전검증 관리</div>
+      <div class="breadcrumb"><span>고객·자원</span> › 접수·사전검증</div>
       <div class="page-title-row">
-        <div class="page-title">사전검증 관리</div>
+        <div class="page-title">접수·사전검증</div>
         <div class="page-actions">
           <button class="btn btn-primary" onclick="openModal('registerModal')">
             <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            리드 등록
+            참여신청 등록
           </button>
         </div>
       </div>
@@ -836,14 +836,14 @@
 ══════════════════════════════════════ -->
 <div class="page" id="page-report">
   <div class="page-header">
-    <div class="breadcrumb"><span>이벤트 관리</span> › 운영리포트</div>
+    <div class="breadcrumb"><span>이벤트 관리</span> › 이행검증</div>
     <div class="page-title-row">
-      <div class="page-title">운영리포트 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">RPT-01</span><span id="rp-page-tip"></span></div>
+      <div class="page-title">이행검증 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">RPT-01</span><span id="rp-page-tip"></span></div>
       <div class="page-actions"><span class="page-purpose-chip">이벤트 종료 후 KPX 확정 데이터 입력 → 정산 대기 이관</span></div>
     </div>
   </div>
 
-  <div class="wf-note">이 화면은 종료된 이벤트의 우리 측 수집 실적과 KPX 확정 데이터를 정리해 <b>정산관리로 이관</b>하는 운영 화면입니다. 정산금 수금·참여고객 배분은 [고객정산관리]에서 진행됩니다.</div>
+  <div class="wf-note">KPX 확정 데이터를 입력하고 정산관리로 이관합니다.</div>
 
   <!-- 필터 바 -->
   <div class="rp-filter-bar">
@@ -910,7 +910,7 @@
     </div>
   </div>
 
-  <div class="wf-note">이 화면은 이벤트별 확정 금액을 기준으로 고객 정산 배분과 증빙 관리까지 수행하는 후속 실행 영역입니다.</div>
+  <div class="wf-note">이벤트별 확정 금액으로 정산금 수금·참여고객 배분을 처리합니다.</div>
 
   <!-- Phase 11-A: KPI 카드 → 필터바 순서 (운영자 시선: 전체 상태 → 좁히기) -->
 
@@ -1188,7 +1188,7 @@
 <div class="overlay" id="ctRejectOverlay">
   <div class="modal modal-sm">
     <div class="modal-title">계약 반려</div>
-    <div class="modal-sub">반려 시 참여고객은 사전검증 관리의 반려 상태로 다시 추적됩니다.</div>
+    <div class="modal-sub">반려 시 참여고객은 접수·사전검증의 반려 상태로 다시 추적됩니다.</div>
     <div class="form-row">
       <label class="form-label">반려 사유</label>
       <select class="form-select" id="ct-reject-reason">
@@ -1273,7 +1273,7 @@
     </div>
   </div>
 
-  <div class="wf-note">이 화면은 KPX 시장 입찰의 <b>등록·제출·결과 확정·이벤트 발령 lifecycle 전반</b>을 다루는 운영 화면입니다. 자발적감축 또는 플러스DR 계획 입찰을 등록하고, KPX 결과(낙찰/유찰) 통보를 추적합니다.</div>
+  <div class="wf-note">자발적감축·플러스DR 입찰을 등록하고 KPX 결과를 확인합니다.</div>
 
   <!-- Phase 12-C: KPI 카드 전체 제거 — 입찰관리는 액션 페이지(등록/결과 추적).
        결과 대기 알림은 사이드바 뱃지(sb-bid-badge)에서 표시. -->
@@ -1820,7 +1820,7 @@
         <div class="modal-sub" id="stmd-sub"></div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button class="btn btn-ghost btn-sm" onclick="stmGoToReportEvent(stmState.selectedEventId)">운영리포트에서 보기 →</button>
+        <button class="btn btn-ghost btn-sm" onclick="stmGoToReportEvent(stmState.selectedEventId)">이행검증에서 보기 →</button>
         <button class="btn btn-ghost btn-sm" onclick="closeModal('stmDetailModal')">닫기</button>
       </div>
     </div>
@@ -1828,9 +1828,9 @@
     <!-- 진행 플로우 -->
     <div class="stm-flow" id="stmd-flow"></div>
 
-    <!-- 운영리포트 확정 데이터 (참조 · 잠금) -->
+    <!-- 이행검증 확정 데이터 (참조 · 잠금) -->
     <div class="stm-card" style="background:#f8faff;">
-      <div class="stm-card-title">운영리포트 확정 데이터 🔒</div>
+      <div class="stm-card-title">이행검증 확정 데이터 🔒</div>
       <div class="rp-event-meta" id="stmd-confirmed"></div>
     </div>
 
