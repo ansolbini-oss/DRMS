@@ -310,21 +310,48 @@ function pcSelectSite(bizId, siteId){
   const extS      = s.extS      ?? c.extS      ?? '-';
   const reduction = s.reduction ?? c.reduction ?? null;
 
-  // 검증 단계 6개 박스 (읽기 전용)
+  // 검증 단계 6개 박스 — 상태별 운영자 액션 노출 (Phase 17-C)
+  // ① 외부데이터 조회: 항상 [재조회] (실패 시엔 [재시도]+[수동 업로드])
+  // ⑥ CBL 분석: [유형 변경] (운영자 의사결정 포인트)
+  // 그 외: 완료/실패 시 [재실행]·[재시도] / 대기 시 [실행]
   const stepsHtml = pcStepDefs.map((def, i) => {
     const st = steps[i];
     const stateText = st===2 ? '완료' : st===3 ? '진행중' : st===0 ? '실패' : '대기';
     const stateCls  = st===2 ? 'badge-done' : st===3 ? 'badge-progress' : st===0 ? 'badge-reject' : 'badge-gray';
+    // 액션 버튼 결정
+    let actionBtn = '';
+    if(def.key === 'ext'){
+      const label = st===0 ? '재시도' : '재조회';
+      const cls = st===0 ? 'btn-primary' : 'btn-secondary';
+      actionBtn = `<button class="btn ${cls} btn-sm" onclick="pcOpenExtRecheck('${bizId}','${siteId}')">${label}</button>`;
+      if(st===0){
+        actionBtn += ` <button class="btn btn-secondary btn-sm" onclick="pcManualUploadSite('${bizId}','${siteId}')">수동 업로드</button>`;
+      }
+    } else if(def.key === 'cbl'){
+      actionBtn = `<button class="btn btn-secondary btn-sm" onclick="pcOpenCblChange('${bizId}','${siteId}')">유형 변경</button>`;
+    } else {
+      // infra, smd, malicious, rrmse
+      if(st===0){
+        actionBtn = `<button class="btn btn-primary btn-sm" onclick="pcRerunSiteStep('${bizId}','${siteId}',${i})">재시도</button>`;
+      } else if(st===2){
+        actionBtn = `<button class="btn btn-secondary btn-sm" onclick="pcRerunSiteStep('${bizId}','${siteId}',${i})">재실행</button>`;
+      } else {
+        actionBtn = `<button class="btn btn-primary btn-sm" onclick="pcRerunSiteStep('${bizId}','${siteId}',${i})">실행</button>`;
+      }
+    }
     return `
       <div class="step-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;background:#fff;">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <div style="width:22px;height:22px;border-radius:50%;background:${st===2?'var(--green-light)':st===3?'var(--blue-light)':'var(--grey100)'};color:${st===2?'var(--green)':st===3?'var(--blue)':'var(--text-hint)'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+          <div style="width:22px;height:22px;border-radius:50%;background:${st===2?'var(--green-light)':st===3?'var(--blue-light)':st===0?'var(--red-light,#fef2f2)':'var(--grey100)'};color:${st===2?'var(--green)':st===3?'var(--blue)':st===0?'var(--red)':'var(--text-hint)'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
           <div style="min-width:0;">
             <div style="font-weight:600;font-size:12px;color:var(--navy);">${def.name}</div>
             <div style="font-size:10px;color:var(--text-hint);margin-top:1px;">${def.desc}</div>
           </div>
         </div>
-        <span class="badge ${stateCls}" style="font-size:10px;flex-shrink:0;">${stateText}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span class="badge ${stateCls}" style="font-size:10px;">${stateText}</span>
+          ${actionBtn}
+        </div>
       </div>
     `;
   }).join('');
@@ -385,6 +412,175 @@ function pcSelectSite(bizId, siteId){
       </div>
     </div>
   `;
+}
+
+/* ════════════════════════════════════════════════════════════
+   [Phase 17-C] 사업장 단위 사전검증 단계 운영자 액션
+   ════════════════════════════════════════════════════════════ */
+
+// 사업장 객체 찾기 헬퍼
+function pcFindSite(bizId, siteId){
+  const c = custById(bizId); if(!c) return null;
+  const sites = pcGetSites(c);
+  return sites.find(x=>x.id===siteId) || null;
+}
+
+// 사업장 시뮬레이션 결과 분기 (siteId 끝자리 패리티 기반 결정론)
+function pcSiteOutcome(siteId){
+  const m = String(siteId||'').match(/(\d+)$/);
+  const last = m ? parseInt(m[1].slice(-1), 10) : 0;
+  return last % 2 === 0
+    ? {ok:true}
+    : {ok:false, reason:'한전 API 응답 없음 — 계량기 통신 또는 외부망 점검 필요'};
+}
+
+// ── ① 외부데이터 재조회 ──
+function pcOpenExtRecheck(bizId, siteId){
+  const s = pcFindSite(bizId, siteId); if(!s) return;
+  const c = custById(bizId);
+  $('cm-title').textContent = '외부데이터 재조회';
+  $('cm-sub').textContent = `${c.name} - ${s.siteName} (KEPCO ${s.kepco})`;
+  $('cm-body').innerHTML = `<div class="info-box">
+    한전 AMI·파워플래너 데이터를 즉시 재조회합니다. 통신 상태에 따라 수초 내 결과가 표시됩니다.
+  </div>
+  <div class="check-item-row"><span>사업장</span><span style="font-weight:600;">${s.siteName}</span></div>
+  <div class="check-item-row"><span>KEPCO 고객번호</span><span style="font-family:monospace;">${s.kepco}</span></div>
+  <div class="check-item-row"><span>계약전력</span><span>${s.power||'—'} kW</span></div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="pcDoExtRecheck('${bizId}','${siteId}')">조회 실행</button>`;
+  openModal('commonModal');
+}
+
+function pcDoExtRecheck(bizId, siteId){
+  const s = pcFindSite(bizId, siteId); if(!s) return;
+  // 로딩
+  $('cm-title').textContent = '외부데이터 조회 중';
+  $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
+      <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:pc-spin 0.9s linear infinite;"></div>
+      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">한전 AMI·파워플래너 조회 중...</div>
+      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">${s.siteName} · ${s.kepco}</div>
+    </div>
+    <style>@keyframes pc-spin{to{transform:rotate(360deg);}}</style>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" disabled style="opacity:0.5;cursor:not-allowed;">처리 중...</button>`;
+  setTimeout(()=>{
+    const result = pcSiteOutcome(siteId);
+    if(result.ok){
+      // 성공: ext 단계 완료로 마킹
+      if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+      s.steps[0] = 2;
+      s.extS = '통과';
+      logAudit?.({objectType:'site', objectId:siteId, action:'ext_recheck_success',
+        title:`외부데이터 재조회 성공 — ${s.siteName}`,
+        desc:`KEPCO ${s.kepco} · 한전 AMI·파워플래너 정상`, actor:'운영자', tone:'success'});
+      $('cm-title').textContent = '재조회 결과';
+      $('cm-body').innerHTML = `<div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:var(--radius);padding:18px 16px;display:flex;gap:12px;align-items:center;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">✓</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:var(--green);">수신 정상</div>
+            <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${s.siteName} · ${s.kepco}</div>
+          </div>
+        </div>`;
+      $('cm-footer').innerHTML = `<button class="btn btn-primary" onclick="pcCloseExtRecheck('${bizId}','${siteId}')">확인</button>`;
+    } else {
+      // 실패: ext 단계 실패로 마킹
+      if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+      s.steps[0] = 0;
+      s.extS = '실패';
+      logAudit?.({objectType:'site', objectId:siteId, action:'ext_recheck_failed',
+        title:`외부데이터 재조회 실패 — ${s.siteName}`,
+        desc:`KEPCO ${s.kepco} · ${result.reason}`, actor:'운영자', tone:'warn'});
+      $('cm-title').textContent = '재조회 결과';
+      $('cm-body').innerHTML = `<div style="background:var(--red-light,#fef2f2);border:1px solid var(--red-border,#fecaca);border-radius:var(--radius);padding:18px 16px;display:flex;gap:12px;align-items:center;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">!</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:var(--red);">통신 실패</div>
+            <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${s.siteName} · ${s.kepco}</div>
+          </div>
+        </div>`;
+      $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">닫기</button>
+        <button class="btn btn-primary" onclick="pcDoExtRecheck('${bizId}','${siteId}')">다시 시도</button>`;
+    }
+  }, 1400);
+}
+
+function pcCloseExtRecheck(bizId, siteId){
+  closeModal('commonModal');
+  pcSelectSite(bizId, siteId); // 단계 상태 갱신
+}
+
+// ── 수동 업로드 (외부데이터 실패 시 우회) ──
+function pcManualUploadSite(bizId, siteId){
+  const s = pcFindSite(bizId, siteId); if(!s) return;
+  if(typeof showToast === 'function'){
+    showToast(`${s.siteName} 수동 업로드 — 전력데이터 수집현황에서 진행`);
+  }
+  logAudit?.({objectType:'site', objectId:siteId, action:'manual_upload_start',
+    title:`수동 업로드 진입 — ${s.siteName}`,
+    desc:`KEPCO ${s.kepco} · 외부데이터 조회 실패 우회`, actor:'운영자', tone:'info'});
+  if(typeof navigate === 'function') navigate('datacollect');
+}
+
+// ── ⑥ CBL 유형 변경 ──
+function pcOpenCblChange(bizId, siteId){
+  const s = pcFindSite(bizId, siteId); if(!s) return;
+  const c = custById(bizId);
+  const current = s.cblType ?? c.cblType ?? 'High 5 of 10';
+  $('cm-title').textContent = 'CBL 유형 변경';
+  $('cm-sub').textContent = `${c.name} - ${s.siteName}`;
+  $('cm-body').innerHTML = `<div class="info-box">
+    CBL(Customer Baseline Load) 유형을 선택하면 사업장 기준부하가 재산정됩니다.
+  </div>
+  <div style="margin-top:12px;font-size:12px;color:var(--text-sub);margin-bottom:6px;">CBL 유형</div>
+  <select id="pc-cbl-select" class="filter-select" style="width:100%;">
+    <option value="High 5 of 10" ${current==='High 5 of 10'?'selected':''}>High 5 of 10 (최근 10영업일 중 상위 5일 평균)</option>
+    <option value="Mid 4 of 6"   ${current==='Mid 4 of 6'?'selected':''}>Mid 4 of 6 (최근 6영업일 중 중간 4일 평균)</option>
+    <option value="동일요일 평균" ${current==='동일요일 평균'?'selected':''}>동일요일 평균 (최근 4주 동일 요일)</option>
+  </select>
+  <div class="check-item-row" style="margin-top:14px;"><span>현재 CBL 평균</span><span style="font-weight:600;">${s.cblAvg ?? c.cblAvg ?? '—'}</span></div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="pcDoCblChange('${bizId}','${siteId}')">재산정</button>`;
+  openModal('commonModal');
+}
+
+function pcDoCblChange(bizId, siteId){
+  const s = pcFindSite(bizId, siteId); if(!s) return;
+  const newType = $('pc-cbl-select')?.value;
+  if(!newType) return;
+  // 시뮬레이션: CBL 유형 적용 + 평균 약간 변동
+  s.cblType = newType;
+  const baseAvg = parseInt(String(s.cblAvg||'200').replace(/\D/g,''), 10) || 200;
+  const delta = newType==='High 5 of 10' ? 0 : newType==='Mid 4 of 6' ? -8 : -15;
+  s.cblAvg = (baseAvg + delta) + 'kW';
+  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+  s.steps[5] = 2;
+  s.cblS = '완료';
+  logAudit?.({objectType:'site', objectId:siteId, action:'cbl_changed',
+    title:`CBL 유형 변경 — ${s.siteName}`,
+    desc:`${newType} 적용 · 평균 ${s.cblAvg}`, actor:'운영자', tone:'info'});
+  closeModal('commonModal');
+  if(typeof showToast === 'function') showToast(`CBL 유형 변경: ${newType}`);
+  pcSelectSite(bizId, siteId);
+}
+
+// ── 일반 단계 재실행 (infra/smd/malicious/rrmse) ──
+function pcRerunSiteStep(bizId, siteId, stepIdx){
+  const s = pcFindSite(bizId, siteId); if(!s) return;
+  const def = pcStepDefs[stepIdx];
+  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+  // 시뮬레이션: 1초 후 완료
+  s.steps[stepIdx] = 3; // 진행중
+  pcSelectSite(bizId, siteId);
+  setTimeout(()=>{
+    s.steps[stepIdx] = 2; // 완료
+    // step별 status 필드 갱신
+    if(def.key==='infra')     s.infraS = '완료';
+    if(def.key==='rrmse')     s.rrmseS = '완료';
+    logAudit?.({objectType:'site', objectId:siteId, action:'step_rerun',
+      title:`${def.name} 재실행 완료 — ${s.siteName}`,
+      desc:`KEPCO ${s.kepco}`, actor:'운영자', tone:'info'});
+    pcSelectSite(bizId, siteId);
+    if(typeof showToast === 'function') showToast(`${def.name} 재실행 완료`);
+  }, 900);
 }
 
 function pcRenderSteps(c){
