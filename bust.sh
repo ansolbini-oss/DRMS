@@ -18,6 +18,8 @@ fi
 
 # 모든 ?v=... 값을 NEW_V로 치환 (macOS sed 호환)
 sed -i.bak -E "s/\?v=[a-zA-Z0-9-]+/?v=${NEW_V}/g" "$INDEX_HTML"
+# 사이드바 버전 표기도 갱신 (비니 환경 캐시 진단용)
+sed -i.bak -E "s/v[0-9]{6}-[0-9]{4} · Phase [0-9A-Z-]+/v${NEW_V} · Phase 17-C/g" "$INDEX_HTML"
 rm -f "${INDEX_HTML}.bak"
 
 echo "✅ Cache busted: ?v=${NEW_V}"
