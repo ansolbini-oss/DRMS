@@ -243,12 +243,16 @@ function dashRenderTrialList(){
     : '');
 }
 
-/* 운영이상 항목 클릭 → 자원관리 페이지로 이동 + 운영이상 카드 필터 자동 적용.
-   상세 패널 자동 오픈은 환경별 race condition이 잡히지 않아 단념 → 운영자는
-   필터된 리스트에서 해당 자원을 한 번 더 클릭해 상세를 연다. */
+/* 운영이상 항목 클릭 → 자원관리 페이지로 이동 + 운영이상 카드 필터 + 상세 패널 자동 오픈.
+   Phase 17-B에서 rmRefreshSummary null reference 버그 fix 후, rmApplyFilter가 throw 없이
+   정상 완료되므로 rmOpenDetail이 정상 호출됨. navigate의 closeTransientUi와의 transition
+   충돌 회피를 위해 setTimeout(0)으로 한 tick만 미룬다. */
 function dashGoToRiskGroup(gid){
   navigate('resource');
   if(typeof rmFilterByCard === 'function') rmFilterByCard('risk');
+  setTimeout(()=>{
+    if(typeof rmOpenDetail === 'function') rmOpenDetail(gid, 'op');
+  }, 0);
 }
 
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
