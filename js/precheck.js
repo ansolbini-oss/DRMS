@@ -119,13 +119,19 @@ function pcStepBarHtml(steps){
   return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total}</span></div>`;
 }
 
-// 사업자 단위 검증 진행 — "X/N 사업장 완료" (사업장 다수 사업자에서 사용)
+// [Phase 17-M] 사업자 단위 검증 진행 — 모든 사업장의 단계 진행 합산.
+// 비니 의도: 일관된 의미 "X/N 단계" (사업장 카운트가 아니라 단계 진행도).
+// 사업장 3개 × 4단계 = 전체 12단계 중 N 완료.
 function pcBusinessBarHtml(sites){
-  const total = sites.length;
-  const done = sites.filter(s => Array.isArray(s.steps) && s.steps.every(x => x===2)).length;
+  const stepsPerSite = pcStepDefs.length;  // 4
+  const total = sites.length * stepsPerSite;
+  const done = sites.reduce((acc, s) => {
+    const normalized = pcNormalizeSteps(s.steps);
+    return acc + normalized.filter(x=>x===2).length;
+  }, 0);
   const pct = total>0 ? Math.round(done/total*100) : 0;
   const barColor = done===total ? 'var(--green)' : done===0 ? 'var(--border-dark)' : 'var(--blue)';
-  return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total} 사업장</span></div>`;
+  return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total}</span></div>`;
 }
 
 function pcRenderTable(){
