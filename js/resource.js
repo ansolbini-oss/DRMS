@@ -90,30 +90,40 @@ function rmHealth(g){
    반환 원소: { group, level:'risk'|'warn', reason:string, reasonKey, affectedCount }
    정렬: risk 먼저, 그 안에서 데이터수집 문제 > 저성과 순 */
 function rmRefreshSummary(){
+  // [Phase 17-B] Phase 10에서 칩 element 제거했으나 JS가 여전히 참조해서 null TypeError 발생 →
+  // 모든 DOM 접근에 null guard. 한 개라도 null이면 silent skip.
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = val;
+  };
+  const setStyle = (id, prop, val) => {
+    const el = document.getElementById(id);
+    if(el) el.style[prop] = val;
+  };
   const g = store.groups;
   const waitCnt = g.filter(x=>x.status==='waiting').length;
   const activeCnt = g.filter(x=>x.status==='active').length;
   const suspendCnt = g.filter(x=>x.status==='suspended').length;
-  $('rm-cnt-all').textContent = g.length;
-  // 상태 칩 카운트 갱신
-  $('rm-chip-waiting').textContent = waitCnt;
-  $('rm-chip-active').textContent = activeCnt;
-  $('rm-chip-suspended').textContent = suspendCnt;
-  // 중지 상태 칩은 일시중지된 그룹이 있을 때만 표시 (평상시 UI 간결화)
-  $('rm-chip-suspended-btn').style.display = suspendCnt>0 ? '' : 'none';
+  setText('rm-cnt-all', g.length);
+  // 상태 칩 카운트 갱신 (Phase 10에서 제거된 element일 수 있음 → guard)
+  setText('rm-chip-waiting', waitCnt);
+  setText('rm-chip-active', activeCnt);
+  setText('rm-chip-suspended', suspendCnt);
+  // 중지 상태 칩은 일시중지된 그룹이 있을 때만 표시
+  setStyle('rm-chip-suspended-btn', 'display', suspendCnt>0 ? '' : 'none');
   // 칩 활성 상태는 rm-status-filter와 양방향 동기화
   const curStatus = $('rm-status-filter')?.value || '';
   document.querySelectorAll('.rm-status-chip').forEach(chip=>{
     chip.classList.toggle('active', chip.dataset.status === curStatus);
   });
-  // 시험 대기 카운트 — 시험 대상이면서 아직 합격 전인 그룹
-  const trialPending = trialPendingGroups();
-  $('rm-cnt-trial').textContent = trialPending.length;
-  // 단일 원천: getProblematicGroups
-  const problems = getProblematicGroups();
+  // 시험 대기 카운트
+  const trialPending = (typeof trialPendingGroups === 'function') ? trialPendingGroups() : [];
+  setText('rm-cnt-trial', trialPending.length);
+  // 운영이상 카운트
+  const problems = (typeof getProblematicGroups === 'function') ? getProblematicGroups() : [];
   const risk = problems.filter(p=>p.level==='risk').length;
   const warn = problems.filter(p=>p.level==='warn').length;
-  $('rm-cnt-risk').textContent = risk+warn;
+  setText('rm-cnt-risk', risk+warn);
 }
 
 /* 상태 필터 칩 토글 — rm-status-filter 드롭다운과 양방향 동기화 */

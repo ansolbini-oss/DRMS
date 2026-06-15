@@ -1194,7 +1194,11 @@ function doDemoLogin(){
 /* ══════════════════════════════════════════════════════════════════════
    ACCOUNT MANAGEMENT — 계정관리 (IIFE로 네임스페이스 격리)
 ══════════════════════════════════════════════════════════════════════ */
-(function(){
+/* [Phase 17-B] 이 블록은 원래 IIFE(function(){})() 안에 있었으나,
+   1) acct* 함수들이 account.js로 분리되며 IIFE 안 export(window.acctXxx = acctXxx)에서
+      ReferenceError(acctInit is not defined) 발생 → 모든 후속 export·코드가 중단됨
+   2) ROLES, STATUS_META, accounts, selectedIds 등도 IIFE 안에 갇혀 account.js에서 안 보임
+   → IIFE 래퍼를 제거해 모든 변수·함수를 글로벌로 노출. 무의미한 acct* export 라인도 제거. */
 // Phase 14-D: 정책서 8장 '역할 정의' 기준 3개로 재정의
 //   - 운영관리자(OPERATIONS_ADMIN): 전 권한
 //   - 정산 관리자(SETTLEMENT_ADMIN): 운영리포트 조회/수정 + 고객정산관리 전체
@@ -1277,43 +1281,14 @@ let permRoleCode = null;
 let permOverrides = null;
 let newPermOverrides = null;
 
-/* 감사로그 자동 기록 헬퍼 */
-function logAudit(action, target, result='성공'){
-  if(!store.auditLog) return;
-  store.auditLog.unshift({
-    at: new Date().toISOString().substring(0,19).replace('T',' '),
-    user:'현진영', role:'SUPER_ADMIN', action, target,
-    ip:'10.0.12.44', result
-  });
-}
+/* [Phase 17-B] 옛 logAudit(3-인자 + store.auditLog 단수형) 정의 제거.
+   - JavaScript 함수 선언은 마지막 정의가 글로벌을 차지 → 이 정의가 12라인의 새 객체 시그니처를 덮어
+     Phase 16 재조회 등 새 logAudit 호출이 깨졌음.
+   - 12라인의 backward-compatible logAudit이 옛 2-인자 호출(account.js 등)도 받아내므로 안전 제거.
+   - store.auditLog(단수) 시드는 999라인에서 그대로 보존 (다른 코드가 직접 unshift). */
 
-/* ── 초기화 & 렌더 ── */
-window.acctInit = acctInit;
-window.acctRender = acctRender;
-window.acctResetFilters = acctResetFilters;
-window.acctToggleSel = acctToggleSel;
-window.acctToggleAll = acctToggleAll;
-window.acctBulkAction = acctBulkAction;
-window.acctOpenCreate = acctOpenCreate;
-window.acctOnNewRoleChange = acctOnNewRoleChange;
-window.acctOnNewPermToggle = acctOnNewPermToggle;
-window.acctValidateEmail = acctValidateEmail;
-window.acctSubmitCreate = acctSubmitCreate;
-window.acctOpenPerm = acctOpenPerm;
-window.acctOnPermRoleChange = acctOnPermRoleChange;
-window.acctOnPermToggle = acctOnPermToggle;
-window.acctSubmitPerm = acctSubmitPerm;
-window.acctOpenReset = acctOpenReset;
-window.acctOnResetModeChange = acctOnResetModeChange;
-window.acctSubmitReset = acctSubmitReset;
-window.acctOpenDelete = acctOpenDelete;
-window.acctSubmitDelete = acctSubmitDelete;
-window.acctReactivate = acctReactivate;
-window.acctUnlock = acctUnlock;
-window.acctOpenDrawer = acctOpenDrawer;
-window.acctCloseDrawer = acctCloseDrawer;
-window.logAudit = logAudit;
-})();
+/* [Phase 17-B] 위 IIFE 래퍼 제거에 맞춰 무의미한 export 블록도 제거.
+   acct* 함수는 account.js에서 글로벌 선언되어 자동 노출. */
 
 
 /* ════════════════════════════════════════════════════════════
