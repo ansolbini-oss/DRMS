@@ -10,7 +10,8 @@ function acctResetFilters(){
 function acctRender(){
   const q = ($('acctSearchBox').value||'').trim().toLowerCase();
   let rows = accounts.slice();
-  if(q) rows = rows.filter(a=> (a.name+a.email+(a.empNo||'')+(a.position||'')+a.team).toLowerCase().includes(q));
+  // [Phase 17-I] 사번(empNo) 검색 제거 — 정책서에 없는 필드. 이름·이메일·소속 사업자명·부서·역할명 위주로
+  if(q) rows = rows.filter(a=> (a.name+a.email+(a.company||'')+(a.team||'')+(ROLE_MAP[a.role]?.name||'')).toLowerCase().includes(q));
   const tbody = $('acctBody');
   if(rows.length===0){
     tbody.innerHTML = '<tr><td colspan="7" class="acct-empty">검색 조건에 해당하는 계정이 없습니다.</td></tr>';
@@ -23,10 +24,11 @@ function acctRender(){
         <td class="center" onclick="event.stopPropagation()">
           <input type="checkbox" ${selectedIds.has(a.id)?'checked':''} onchange="acctToggleSel('${a.id}',this.checked)">
         </td>
-        <td><div class="acct-user-name">${a.name}</div><div style="font-size:10px;color:var(--text-hint);margin-top:1px;">${a.empNo||'-'}</div></td>
+        <!-- [Phase 17-I] 사번 표기 제거 (정책서 외 잔존 필드). 이름만 표시. -->
+        <td><div class="acct-user-name">${a.name}</div></td>
         <td style="font-family:monospace;font-size:11.5px;color:var(--text-sub);">${a.email}</td>
         <td><span class="badge badge-${role.color}">${role.name}</span></td>
-        <td>${a.team}<div style="font-size:11px;color:var(--text-hint);">${a.position||'-'}</div></td>
+        <td>${a.company||a.team||'-'}<div style="font-size:11px;color:var(--text-hint);">${a.position||''}</div></td>
         <td class="center"><span class="badge ${st.badge}">${st.label}</span></td>
         <td class="center" onclick="event.stopPropagation()">
           <button class="btn btn-secondary btn-xs" onclick="acctOpenDrawer('${a.id}')">상세</button>
@@ -155,7 +157,8 @@ function acctSubmitCreate(){
     position:$('acctNewPosition')?.value||'-',
     status: $('acctNewPwMode')?.value==='invite'?'INVITED':'RESET_REQUIRED', // 정책서 9장 상태 코드
     lastLogin:'-', lastIp:'-', validUntil:null, mfa:$('acctNewMfa').checked,
-    createdAt:'2026-04-21',
+    // [Phase 17-I] 신규 계정 생성일은 오늘. 옛 하드코딩 '2026-04-21' 제거.
+    createdAt: (typeof todayStr === 'function') ? todayStr() : new Date().toISOString().slice(0,10),
     customPerms: JSON.parse(JSON.stringify(newPermOverrides||ROLE_MAP[role].perms))
   });
   logAudit('계정 생성', `${name} (${email}) — ${ROLE_MAP[role].name}`);
@@ -312,9 +315,10 @@ function acctOpenDrawer(id){
   $('acctDrawerBody').innerHTML = `
     <div class="acct-detail-section">
       <div class="acct-detail-section-title">기본 정보</div>
-      <div class="acct-detail-row"><div class="acct-detail-row-label">사번</div><div class="acct-detail-row-val">${a.empNo||'-'}</div></div>
-      <div class="acct-detail-row"><div class="acct-detail-row-label">소속</div><div class="acct-detail-row-val">${a.team}</div></div>
-      <div class="acct-detail-row"><div class="acct-detail-row-label">직책</div><div class="acct-detail-row-val">${a.position||'-'}</div></div>
+      <!-- [Phase 17-I] 사번 row 제거 (정책서 외 잔존 필드). 소속 사업자명 우선 표기. -->
+      <div class="acct-detail-row"><div class="acct-detail-row-label">소속 사업자명</div><div class="acct-detail-row-val">${a.company||'—'}</div></div>
+      ${a.team?`<div class="acct-detail-row"><div class="acct-detail-row-label">부서</div><div class="acct-detail-row-val">${a.team}</div></div>`:''}
+      ${a.position?`<div class="acct-detail-row"><div class="acct-detail-row-label">직책</div><div class="acct-detail-row-val">${a.position}</div></div>`:''}
       <div class="acct-detail-row"><div class="acct-detail-row-label">상태</div><div class="acct-detail-row-val"><span class="badge ${st.badge}">${st.label}</span></div></div>
       <div class="acct-detail-row"><div class="acct-detail-row-label">MFA</div><div class="acct-detail-row-val">${a.mfa?'활성':'비활성'}</div></div>
       <div class="acct-detail-row"><div class="acct-detail-row-label">생성일</div><div class="acct-detail-row-val">${a.createdAt}</div></div>
