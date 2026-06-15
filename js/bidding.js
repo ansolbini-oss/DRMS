@@ -6,8 +6,9 @@
 function bidInit(){ bidRefreshKpis(); bidRender(); }
 
 // Phase 12-D: 필터 초기화 — 다른 페이지(정산관리 등)와 일관성
+// Phase 17-H: 디폴트 조회 기간을 'all'(전체)로 — 진입 시 전체 입찰 노출이 비니 의도
 function bidResetFilters(){
-  if($('bid-range'))  $('bid-range').value = '30d';
+  if($('bid-range'))  $('bid-range').value = 'all';
   if($('bid-type'))   $('bid-type').value = 'all';
   if($('bid-status')) $('bid-status').value = 'all';
   if($('bid-q'))      $('bid-q').value = '';
@@ -53,7 +54,7 @@ function bidStatusOf(e){
 // - 결과 대기 건수만 전체 기준 (알림 성격으로 유지)
 function bidRefreshKpis(){
   const all = bidEligibleEvents();
-  const range = $('bid-range')?.value || '30d';
+  const range = $('bid-range')?.value || 'all';
   // 조회 기간 필터 적용 — 거래일(e.date) 기준
   const inRange = all.filter(e=> bidInRange(e, range));
   const won = inRange.filter(e=> e.bid?.awardedVolume > 0);
@@ -68,8 +69,9 @@ function bidRefreshKpis(){
 }
 
 function bidInRange(e, range){
-  if(range==='all') return true;
-  const days = range==='7d' ? 7 : range==='30d' ? 30 : range==='90d' ? 90 : 30;
+  if(range==='all' || !range) return true;  // [Phase 17-H] 미지정 시 '전체' 동작
+  const days = range==='7d' ? 7 : range==='30d' ? 30 : range==='90d' ? 90 : null;
+  if(days == null) return true;
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
   return new Date(e.date) >= cutoff;
 }
@@ -77,7 +79,7 @@ function bidInRange(e, range){
 function bidRender(){
   // Phase 12-B: 필터 변경 시 KPI도 동기화
   bidRefreshKpis();
-  const range = $('bid-range')?.value || '30d';
+  const range = $('bid-range')?.value || 'all';
   const tp = $('bid-type')?.value || 'all';
   const st = $('bid-status')?.value || 'all';
   const q  = ($('bid-q')?.value||'').toLowerCase().trim();
