@@ -209,7 +209,9 @@ function pcShowDetail(id){
 // 사업자 → 사업장 배열 정규화. sites 없으면 customer 자체를 단일 사업장으로 변환
 function pcGetSites(c){
   if(Array.isArray(c.sites) && c.sites.length > 0) return c.sites;
-  return [{
+  // [Phase 17-E] 가상 사이트도 c.sites에 영구 저장. 매 호출마다 새 객체를 반환하면
+  // 단계 상태 갱신(s.steps[0]=2 등)이 다음 호출에서 사라져 화면에 반영 안 됨.
+  c.sites = [{
     id: c.id + '-S1',
     siteName: c.name + ' 본사',
     kepco: c.kepco,
@@ -217,7 +219,7 @@ function pcGetSites(c){
     power: c.power,
     tel: c.tel,
     manager: c.ceo,
-    steps: c.steps,
+    steps: Array.isArray(c.steps) ? [...c.steps] : [1,1,1,1,1,1],  // by-reference 분리 (사업자와 사업장 독립)
     dataStatus: c.dataStatus,
     verifyStatus: (c.status === '검증완료' || c.status === '계약완료') ? '검증완료' : c.status,
     date: c.date,
@@ -229,6 +231,7 @@ function pcGetSites(c){
     reduction: c.reduction,
     _isVirtual: true   // customer에서 자동 매핑된 가상 site임을 표시
   }];
+  return c.sites;
 }
 
 // 기본정보 탭 우측의 사업자 요약 카드 렌더링
@@ -497,7 +500,8 @@ function pcDoExtRecheck(bizId, siteId){
             <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${s.siteName} · ${s.kepco}</div>
           </div>
         </div>`;
-      $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">닫기</button>
+      // [Phase 17-E] 실패 [닫기]도 화면 갱신 흐름으로 통일 (단계 0/실패 뱃지 즉시 반영)
+      $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="pcCloseExtRecheck('${bizId}','${siteId}')">닫기</button>
         <button class="btn btn-primary" onclick="pcDoExtRecheck('${bizId}','${siteId}')">다시 시도</button>`;
     }
   }, 1400);
@@ -505,7 +509,10 @@ function pcDoExtRecheck(bizId, siteId){
 
 function pcCloseExtRecheck(bizId, siteId){
   closeModal('commonModal');
-  pcSelectSite(bizId, siteId); // 단계 상태 갱신
+  // [Phase 17-E] 좌측 사업장 목록(N/6 뱃지) + 우측 단계 박스 모두 갱신
+  const c = custById(bizId);
+  if(c && typeof pcRenderSitesTab === 'function') pcRenderSitesTab(c);
+  pcSelectSite(bizId, siteId);
 }
 
 // ── 수동 업로드 (외부데이터 실패 시 우회) ──
@@ -559,6 +566,9 @@ function pcDoCblChange(bizId, siteId){
     desc:`${newType} 적용 · 평균 ${s.cblAvg}`, actor:'운영자', tone:'info'});
   closeModal('commonModal');
   if(typeof showToast === 'function') showToast(`CBL 유형 변경: ${newType}`);
+  // [Phase 17-E] 좌측 목록 N/6 뱃지도 갱신
+  const c2 = custById(bizId);
+  if(c2 && typeof pcRenderSitesTab === 'function') pcRenderSitesTab(c2);
   pcSelectSite(bizId, siteId);
 }
 
@@ -578,6 +588,9 @@ function pcRerunSiteStep(bizId, siteId, stepIdx){
     logAudit?.({objectType:'site', objectId:siteId, action:'step_rerun',
       title:`${def.name} 재실행 완료 — ${s.siteName}`,
       desc:`KEPCO ${s.kepco}`, actor:'운영자', tone:'info'});
+    // [Phase 17-E] 좌측 목록 + 우측 상세 둘 다 갱신
+    const c3 = custById(bizId);
+    if(c3 && typeof pcRenderSitesTab === 'function') pcRenderSitesTab(c3);
     pcSelectSite(bizId, siteId);
     if(typeof showToast === 'function') showToast(`${def.name} 재실행 완료`);
   }, 900);
