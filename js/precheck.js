@@ -428,9 +428,16 @@ function pcFindSite(bizId, siteId){
   return sites.find(x=>x.id===siteId) || null;
 }
 
-// 사업장 시뮬레이션 결과 분기 (siteId 끝자리 패리티 기반 결정론)
-function pcSiteOutcome(siteId){
-  const m = String(siteId||'').match(/(\d+)$/);
+// 사업장 시뮬레이션 결과 분기 (KEPCO 고객번호 끝자리 패리티 기반 결정론)
+// [Phase 17-K] siteId 기반 → KEPCO 기반으로 변경. 가상 사이트(*-S1)가 모두 실패되는 문제 해소.
+function pcSiteOutcome(site){
+  // 인자가 string(siteId)로 옛 호출이면 호환 처리
+  if(typeof site === 'string'){
+    const s = (typeof pcFindSiteAnywhere === 'function') ? pcFindSiteAnywhere(site) : null;
+    site = s || {kepco:''};
+  }
+  const kepco = String(site?.kepco || '');
+  const m = kepco.match(/(\d+)$/);
   const last = m ? parseInt(m[1].slice(-1), 10) : 0;
   return last % 2 === 0
     ? {ok:true}
@@ -509,7 +516,9 @@ function pcDoExtRecheck(bizId, siteId){
     <style>@keyframes pc-spin{to{transform:rotate(360deg);}}</style>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" disabled style="opacity:0.5;cursor:not-allowed;">처리 중...</button>`;
   setTimeout(()=>{
-    const result = pcSiteOutcome(siteId);
+    // [Phase 17-K] KEPCO 끝자리 기반 분기 (siteId 기반은 가상 사이트 모두 실패 처리되던 문제 해소)
+    // 이미 위에서 input으로 s.kepco가 갱신되었으므로 최신 KEPCO 기준으로 평가
+    const result = pcSiteOutcome(s);
     if(result.ok){
       // 성공: ext 단계 완료로 마킹
       if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
