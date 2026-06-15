@@ -522,64 +522,20 @@ function rmTabOpHtml(g){
     PARTIAL:['일부수집','warn',''],
   }[dc.status] || ['-','good',''];
 
-  // 미수신/지연 고객이 있을 때만 표시되는 명단 카드
-  let missingCard = '';
-  if(failedList.length > 0 || delayedList.length > 0){
-    const rows = [...failedList, ...delayedList].map(r=>{
-      const isFailed = failedList.includes(r);
-      // 미수신은 좌측 빨강 dot으로 시각 구분 → 뱃지 중복 제거. 지연만 뱃지 유지.
-      const trailingBadge = isFailed
-        ? ''
-        : `<span class="badge badge-pending" style="font-size:10px;">지연</span>`;
-      return `<div class="miss-row" id="miss-row-${r.cid}">
-        <div class="miss-cell miss-name">
-          <div class="miss-dot ${isFailed?'fail':'warn'}"></div>
-          <div>
-            <div class="miss-company">${r.name}</div>
-            <div class="miss-meta">${r.recno} · 마지막 수신 ${r.mins}분 전</div>
-          </div>
-        </div>
-        <div class="miss-cell miss-actions">
-          ${trailingBadge}
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();rmRequestRecollect(${g.id},'${r.cid}')">재조회</button>
-        </div>
-      </div>`;
-    }).join('');
-    const headText = failedList.length > 0
-      ? `미수신 ${failedList.length}명${delayedList.length?` · 지연 ${delayedList.length}명`:''} (전체 ${totalCust}명 중)`
-      : `지연 ${delayedList.length}명 (전체 ${totalCust}명 중)`;
-    const headCls = failedList.length > 0 ? 'danger' : 'warning';
-    const guide = failedList.length > 0
-      ? '한전 API 통신 상태 또는 참여고객 계량 장비 점검이 필요합니다.'
-      : '일시적 지연일 수 있으나, 장시간 지속 시 원인 파악이 필요합니다.';
-    missingCard = `<div class="op-card op-card-alert ${headCls}">
-      <div class="op-card-title">수신 이상 고객 <span style="font-weight:400;font-size:11px;color:var(--text-hint);margin-left:6px;">${headText}</span></div>
-      <div class="miss-list">${rows}</div>
-      <div class="op-guide">${guide}</div>
-    </div>`;
-  }
-
-  // 수집 현황 카드 (상단)
-  const collectCard = `<div class="op-card">
-    <div class="op-card-title" style="display:flex;align-items:center;justify-content:space-between;">
-      <span>데이터 수집 현황</span>
-      <button class="btn btn-secondary btn-sm" onclick="rmGoToDataCollect(${g.id})" style="font-weight:500;">상세 보기 →</button>
-    </div>
-    <div class="op-metric op-metric-3">
-      <div class="op-metric-item">
-        <div class="op-metric-lbl">수집 상태</div>
-        <div class="op-metric-val ${colStatus[1]}">${colStatus[2]} ${colStatus[0]}</div>
+  // [Phase 17-N] 미니멀 데이터 수집 카드 — 상태 한 줄 + 진입점만.
+  // 사업장별 미수신·재조회·수동 업로드 등 깊은 진단은 모두 전력데이터 수집현황 페이지 책임.
+  // 미수신 명단 카드(missingCard)도 제거 (전력데이터 수집현황으로 일원화).
+  const isAbnormal = dc.status !== 'NORMAL';
+  const statusText = colStatus[0];
+  const statusColor = colStatus[1] === 'good' ? 'var(--green)' : colStatus[1] === 'warn' ? 'var(--amber)' : 'var(--red)';
+  const collectCard = `<div class="op-card ${isAbnormal ? 'op-card-alert danger' : ''}">
+    <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:${statusColor};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-size:12px;color:var(--text-hint);font-weight:500;">데이터 수집 상태</div>
+        <div style="font-size:14px;font-weight:700;color:${statusColor};margin-top:2px;">${statusText}${isAbnormal ? ' — 사업장별 진단 필요' : ''}</div>
       </div>
-      <div class="op-metric-item">
-        <div class="op-metric-lbl">최근 수신</div>
-        <div class="op-metric-val">${dc.lastMinutesAgo}분 전</div>
-      </div>
-      <div class="op-metric-item">
-        <div class="op-metric-lbl">참여고객 수신률</div>
-        <div class="op-metric-val ${failedList.length>0?'bad':delayedList.length>0?'warn':'good'}">
-          ${normalList.length} / ${totalCust}명
-        </div>
-      </div>
+      <button class="btn btn-primary btn-sm" onclick="rmGoToDataCollect(${g.id})">전력데이터 수집현황 →</button>
     </div>
   </div>`;
 
@@ -655,7 +611,8 @@ function rmTabOpHtml(g){
     </div>`;
   }
 
-  return collectCard + missingCard + liveEventCard;
+  // [Phase 17-N] missingCard 제거 — 수신 이상 고객 명단은 전력데이터 수집현황 책임으로 일원화
+  return collectCard + liveEventCard;
 }
 
 /* 자원 상세 [상세 보기 →] 클릭 → 전력데이터 수집현황 페이지로 라우팅.
