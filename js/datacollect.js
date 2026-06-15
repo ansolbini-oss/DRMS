@@ -212,7 +212,9 @@ function dcDoUpload(){
       const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites||[]);
       const s = sites.find(x=>x.id===siteId);
       if(s){
-        if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+        // [Phase 17-L] 4단계 정규화 (옛 6 시드 호환)
+        if(typeof pcNormalizeSteps === 'function'){ s.steps = pcNormalizeSteps(s.steps); }
+        else if(!Array.isArray(s.steps)){ s.steps = [1,1,1,1]; }
         s.steps[0] = 2;  // 외부데이터 조회 = 완료 (수동 업로드로 충족)
         s.extS = '통과 (수동)';
       }

@@ -5,14 +5,40 @@
 
 const pcState = { filter:{status:'',data:'',type:'',q:''}, currentId:null };
 
+// [Phase 17-L] 사전검증 단계 재정리 (도메인 통합)
+//   - 옛 'SMD 데이터 분석' → 인프라 검증의 RTU·미터링 데이터 측면이라 인프라 검증에 통합
+//   - 옛 '악의성 검증' → RRMSE 분석이 악의성 탐지의 핵심 통계 도구이므로 RRMSE에 통합
+// 결과: 4단계 (외부데이터 → 인프라 → RRMSE → CBL)
 const pcStepDefs = [
-  {key:'ext',   name:'외부데이터 조회', desc:'한전·파워플래너 연동',            auto:false},
-  {key:'infra', name:'인프라 검증',      desc:'AMI/RTU 설치·통신 확인',          auto:false},
-  {key:'smd',   name:'SMD 데이터 분석',  desc:'SMD 기기 설치·데이터 수집 확인',  auto:false},
-  {key:'mali',  name:'악의성 검증',      desc:'이상 사용 패턴 확인 (자동)',       auto:true},
-  {key:'rrmse', name:'RRMSE 분석',       desc:'사용 패턴 오차 분석 (자동)',       auto:true},
-  {key:'cbl',   name:'CBL 분석',         desc:'기준부하 산정 및 유형 선택',       auto:false},
+  {key:'ext',   name:'외부데이터 조회', desc:'한전·파워플래너 연동',                       auto:false},
+  {key:'infra', name:'인프라 검증',      desc:'AMI/RTU/SMD 설치·통신 및 데이터 수집 확인',  auto:false},
+  {key:'rrmse', name:'RRMSE 분석',       desc:'부하 패턴 오차 분석 — 악의성 탐지 (자동)',   auto:true},
+  {key:'cbl',   name:'CBL 분석',         desc:'기준부하 산정 및 유형 선택',                  auto:false},
 ];
+
+// 옛 6단계 steps 배열을 새 4단계로 변환 (시드 호환).
+// 옛 인덱스: 0:ext, 1:infra, 2:smd, 3:mali, 4:rrmse, 5:cbl
+// 새 인덱스: 0:ext, 1:infra(+smd), 2:rrmse(+mali), 3:cbl
+function pcMergeStepStates(a, b){
+  // 둘 중 하나라도 실패면 실패 / 둘 다 완료면 완료 / 진행중 우선
+  if(a === 0 || b === 0) return 0;
+  if(a === 2 && b === 2) return 2;
+  if(a === 3 || b === 3) return 3;
+  return 1;
+}
+function pcNormalizeSteps(raw){
+  if(!Array.isArray(raw)) return [1,1,1,1];
+  if(raw.length === 4) return [...raw];
+  if(raw.length === 6){
+    return [
+      raw[0],
+      pcMergeStepStates(raw[1], raw[2]),
+      pcMergeStepStates(raw[3], raw[4]),
+      raw[5]
+    ];
+  }
+  return [1,1,1,1];
+}
 
 function pcFilterByStatus(s){
   pcState.filter.status = (pcState.filter.status===s)? '' : s;
@@ -83,10 +109,11 @@ function pcToggleBusiness(bizId){
   }
 }
 
-// 6단계 검증 진행률 progress bar HTML (사업장 단위 또는 단일 사업자)
+// [Phase 17-L] 검증 단계 진행률 progress bar HTML (4단계 동적)
 function pcStepBarHtml(steps){
-  const done = steps.filter(s=>s===2).length;
-  const total = 6;
+  const normalized = pcNormalizeSteps(steps);
+  const total = pcStepDefs.length;
+  const done = normalized.filter(s=>s===2).length;
   const pct = Math.round(done/total*100);
   const barColor = done===total ? 'var(--green)' : done===0 ? 'var(--border-dark)' : 'var(--blue)';
   return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total}</span></div>`;
@@ -208,7 +235,15 @@ function pcShowDetail(id){
 
 // 사업자 → 사업장 배열 정규화. sites 없으면 customer 자체를 단일 사업장으로 변환
 function pcGetSites(c){
-  if(Array.isArray(c.sites) && c.sites.length > 0) return c.sites;
+  if(Array.isArray(c.sites) && c.sites.length > 0){
+    // [Phase 17-L] 각 사이트의 steps를 4단계로 정규화 (옛 시드 6단계 호환)
+    c.sites.forEach(s => {
+      if(Array.isArray(s.steps) && s.steps.length !== 4){
+        s.steps = pcNormalizeSteps(s.steps);
+      }
+    });
+    return c.sites;
+  }
   // [Phase 17-E] 가상 사이트도 c.sites에 영구 저장. 매 호출마다 새 객체를 반환하면
   // 단계 상태 갱신(s.steps[0]=2 등)이 다음 호출에서 사라져 화면에 반영 안 됨.
   c.sites = [{
@@ -219,7 +254,7 @@ function pcGetSites(c){
     power: c.power,
     tel: c.tel,
     manager: c.ceo,
-    steps: Array.isArray(c.steps) ? [...c.steps] : [1,1,1,1,1,1],  // by-reference 분리 (사업자와 사업장 독립)
+    steps: pcNormalizeSteps(c.steps),  // 옛 6 → 새 4 변환. 사업자와 사업장 독립.
     dataStatus: c.dataStatus,
     verifyStatus: (c.status === '검증완료' || c.status === '계약완료') ? '검증완료' : c.status,
     date: c.date,
@@ -229,7 +264,7 @@ function pcGetSites(c){
     infraS: c.infraS,
     extS: c.extS,
     reduction: c.reduction,
-    _isVirtual: true   // customer에서 자동 매핑된 가상 site임을 표시
+    _isVirtual: true
   }];
   return c.sites;
 }
@@ -272,8 +307,11 @@ function pcRenderSitesTab(c){
   if(sites.length===0) return;
   $('pc-sites-count').textContent = `총 ${sites.length}사업장`;
   sites.forEach((s, idx) => {
-    const done = Array.isArray(s.steps) ? s.steps.filter(x=>x===2).length : 0;
-    const isDone = done===6;
+    // [Phase 17-L] 단계 수 동적 — 정규화 후 4단계 기준
+    const stepsArr = pcNormalizeSteps(s.steps);
+    const total = pcStepDefs.length;
+    const done = stepsArr.filter(x=>x===2).length;
+    const isDone = done===total;
     const item = document.createElement('div');
     item.className = 'site-list-item';
     item.dataset.siteId = s.id;
@@ -281,7 +319,7 @@ function pcRenderSitesTab(c){
     item.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
         <div style="font-weight:600;font-size:13px;color:var(--navy);">${s.siteName}</div>
-        <span class="badge ${isDone?'badge-done':'badge-progress'}" style="font-size:10px;">${done}/6</span>
+        <span class="badge ${isDone?'badge-done':'badge-progress'}" style="font-size:10px;">${done}/${total}</span>
       </div>
       <div style="font-size:11px;color:var(--text-hint);margin-top:3px;font-family:monospace;">KEPCO ${s.kepco}</div>
     `;
@@ -303,7 +341,10 @@ function pcSelectSite(bizId, siteId){
     el.style.borderColor = isActive ? 'var(--blue)' : 'var(--border)';
   });
   // 우측 상세 렌더 — 사업장 기본정보 + 검증 절차 + 산정 결과 + 외부데이터 검증 결과
-  const steps = Array.isArray(s.steps) ? s.steps : [1,1,1,1,1,1];
+  // [Phase 17-L] 4단계 정규화 + 동적 카운트
+  const steps = pcNormalizeSteps(s.steps);
+  s.steps = steps;  // 정규화 결과를 사이트에 영속 저장 (다음 갱신이 4 길이 기준으로 동작하도록)
+  const total = pcStepDefs.length;
   const done = steps.filter(x=>x===2).length;
   // 사업장 단위 산정 결과: 사업장에 값이 있으면 우선, 없으면 사업자 customer 값 fallback
   const cblType   = s.cblType   ?? c.cblType   ?? '-';
@@ -382,7 +423,7 @@ function pcSelectSite(bizId, siteId){
     <div class="r-card">
       <div class="r-card-header">
         <div class="r-card-title">검증 단계 진행</div>
-        <span style="font-size:11px;font-weight:700;color:var(--blue);">${done} / 6</span>
+        <span style="font-size:11px;font-weight:700;color:var(--blue);">${done} / ${total}</span>
       </div>
       <div class="r-card-body">
         ${stepsHtml}
@@ -521,7 +562,7 @@ function pcDoExtRecheck(bizId, siteId){
     const result = pcSiteOutcome(s);
     if(result.ok){
       // 성공: ext 단계 완료로 마킹
-      if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+      if(!Array.isArray(s.steps)) s.steps = [1,1,1,1];
       s.steps[0] = 2;
       s.extS = '통과';
       logAudit?.({objectType:'site', objectId:siteId, action:'ext_recheck_success',
@@ -538,7 +579,7 @@ function pcDoExtRecheck(bizId, siteId){
       $('cm-footer').innerHTML = `<button class="btn btn-primary" onclick="pcCloseExtRecheck('${bizId}','${siteId}')">확인</button>`;
     } else {
       // 실패: ext 단계 실패로 마킹
-      if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+      if(!Array.isArray(s.steps)) s.steps = [1,1,1,1];
       s.steps[0] = 0;
       s.extS = '실패';
       logAudit?.({objectType:'site', objectId:siteId, action:'ext_recheck_failed',
@@ -619,7 +660,7 @@ function pcDoCblChange(bizId, siteId){
   const baseAvg = parseInt(String(s.cblAvg||'200').replace(/\D/g,''), 10) || 200;
   const delta = newType==='High 5 of 10' ? 0 : newType==='Mid 4 of 6' ? -8 : -15;
   s.cblAvg = (baseAvg + delta) + 'kW';
-  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1];
   s.steps[5] = 2;
   s.cblS = '완료';
   logAudit?.({objectType:'site', objectId:siteId, action:'cbl_changed',
@@ -637,7 +678,7 @@ function pcDoCblChange(bizId, siteId){
 function pcRerunSiteStep(bizId, siteId, stepIdx){
   const s = pcFindSite(bizId, siteId); if(!s) return;
   const def = pcStepDefs[stepIdx];
-  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1];
   // 시뮬레이션: 1초 후 완료
   s.steps[stepIdx] = 3; // 진행중
   pcSelectSite(bizId, siteId);
@@ -660,13 +701,15 @@ function pcRerunSiteStep(bizId, siteId, stepIdx){
 function pcRenderSteps(c){
   const list = $('pc-steps-list'); list.innerHTML='';
   let done = 0;
+  // [Phase 17-L] 사업자 c.steps도 4단계로 정규화 (옛 6 길이 시드 호환)
+  const cSteps = pcNormalizeSteps(c.steps);
+  c.steps = cSteps;  // 영구 저장
   pcStepDefs.forEach((s,i)=>{
-    const st = c.steps[i];
-    // 잠금조건: 순차 실행 (SMD(2): infra(1) 완료 필요, 악의성(3): 앞 3단계 필요, RRMSE(4): 악의성 필요, CBL(5): RRMSE 필요)
-    const isLocked = (i===2 && c.steps[1]!==2)
-                 || (i===3 && !(c.steps[0]===2 && c.steps[1]===2 && c.steps[2]===2))
-                 || (i===4 && c.steps[3]!==2)
-                 || (i===5 && c.steps[4]!==2);
+    const st = cSteps[i];
+    // 잠금조건: 순차 실행 (infra: ext 완료 / rrmse: infra 완료 / cbl: rrmse 완료)
+    const isLocked = (i===1 && cSteps[0]!==2)
+                 || (i===2 && cSteps[1]!==2)
+                 || (i===3 && cSteps[2]!==2);
     let nc='step-num', bc='wait', bt='대기';
     if(st===2){nc+=' done'; bc='done'; bt='완료'; done++;}
     else if(st===3){nc+=' active-step'; bc='active-step'; bt=s.auto?'자동 실행중':'진행중';}
@@ -689,7 +732,7 @@ function pcRenderSteps(c){
     }
     list.appendChild(d);
   });
-  $('pc-step-count').textContent = `${done} / 6`;
+  $('pc-step-count').textContent = `${done} / ${pcStepDefs.length}`;
 }
 
 function pcUpdateContractBtn(c){
@@ -958,7 +1001,7 @@ function pcCreateLead(){
   const newCustomer = {
     id:newId, name, ceo, tel, addr, recno, date:ymd, power, kepco:'',
     drType, status:'검증대기', dataStatus:'미수집', inflow,
-    steps:[1,1,1,1,1,1], extS:'미실행', rrmseS:'미실행', cblS:'미실행',
+    steps:[1,1,1,1], extS:'미실행', rrmseS:'미실행', cblS:'미실행',
     cblType:'-', cblAvg:'-', reduction:null, rrmseVal:'-', infraS:'-'
   };
   store.customers.unshift(newCustomer);
@@ -1496,9 +1539,12 @@ function ctRenderTable(){
     </tr>`;
     // ───── 사업장 자식 행들 (기본 숨김) ─────
     const siteRows = hasSites ? c.sites.map(s=>{
-      const stepsDone = Array.isArray(s.steps) ? s.steps.filter(x=>x===2).length : 0;
-      const verifyLabel = stepsDone===6 ? '검증완료' : (stepsDone===0 ? '검증대기' : `검증중 (${stepsDone}/6)`);
-      const verifyCls = stepsDone===6 ? 'badge-done' : (stepsDone===0 ? 'badge-gray' : 'badge-progress');
+      // [Phase 17-L] 4단계 정규화 후 진행도 표기
+      const stepsArr = pcNormalizeSteps(s.steps);
+      const totalSteps = pcStepDefs.length;
+      const stepsDone = stepsArr.filter(x=>x===2).length;
+      const verifyLabel = stepsDone===totalSteps ? '검증완료' : (stepsDone===0 ? '검증대기' : `검증중 (${stepsDone}/${totalSteps})`);
+      const verifyCls = stepsDone===totalSteps ? 'badge-done' : (stepsDone===0 ? 'badge-gray' : 'badge-progress');
       return `<tr class="ct-site-row" data-parent-id="${c.id}" style="display:none;background:var(--grey50);">
         <td style="padding-left:32px;">
           <div class="ct-name" style="color:var(--grey700);font-weight:500;">
