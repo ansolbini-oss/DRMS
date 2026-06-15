@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260615-1428. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260615-1428">
+<!-- css/js 모두 ?v=260615-1442. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260615-1442">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">v260615-1428 · Phase 17-C</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">v260615-1442 · Phase 17-C</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -994,6 +994,7 @@
         <div class="page-title">전력데이터 수집현황 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">DATA-01</span></div>
         <div class="page-actions" style="display:flex;gap:6px;align-items:center;">
           <button class="btn btn-sm btn-secondary" onclick="dcExportCsv()" title="현재 조회 범위의 15분 슬롯 원자료 CSV 다운로드">CSV 내보내기</button>
+          <button class="btn btn-sm btn-secondary" onclick="dcOpenUploadModal()" title="한전 AMI 통신 실패 시 운영자가 직접 엑셀 파일로 업로드">엑셀 업로드</button>
           <button class="btn btn-sm btn-primary" onclick="dcRerun()" title="조회 기간 슬롯 재수집 요청 (통신 장애 복구 후)">재수집 요청</button>
         </div>
       </div>
@@ -2094,19 +2095,19 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260615-1428"></script>
-<script src="data/tips.js?v=260615-1428"></script>
-<script src="js/core.js?v=260615-1428"></script>
-<script src="js/dashboard.js?v=260615-1428"></script>
-<script src="js/precheck.js?v=260615-1428"></script>
-<script src="js/resource.js?v=260615-1428"></script>
-<script src="js/monitoring.js?v=260615-1428"></script>
-<script src="js/report.js?v=260615-1428"></script>
-<script src="js/settlement.js?v=260615-1428"></script>
-<script src="js/datacollect.js?v=260615-1428"></script>
-<script src="js/communication.js?v=260615-1428"></script>
-<script src="js/bidding.js?v=260615-1428"></script>
-<script src="js/account.js?v=260615-1428"></script>
-<script src="js/system.js?v=260615-1428"></script>
+<script src="data/store.js?v=260615-1442"></script>
+<script src="data/tips.js?v=260615-1442"></script>
+<script src="js/core.js?v=260615-1442"></script>
+<script src="js/dashboard.js?v=260615-1442"></script>
+<script src="js/precheck.js?v=260615-1442"></script>
+<script src="js/resource.js?v=260615-1442"></script>
+<script src="js/monitoring.js?v=260615-1442"></script>
+<script src="js/report.js?v=260615-1442"></script>
+<script src="js/settlement.js?v=260615-1442"></script>
+<script src="js/datacollect.js?v=260615-1442"></script>
+<script src="js/communication.js?v=260615-1442"></script>
+<script src="js/bidding.js?v=260615-1442"></script>
+<script src="js/account.js?v=260615-1442"></script>
+<script src="js/system.js?v=260615-1442"></script>
 
 </body></html>

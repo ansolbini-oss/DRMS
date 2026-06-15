@@ -559,14 +559,23 @@ function pcCloseExtRecheck(bizId, siteId){
 }
 
 // ── 수동 업로드 (외부데이터 실패 시 우회) ──
+// [Phase 17-J] 데이터수집현황 페이지로 이동 + 사업자/사업장 컨텍스트 전달.
+// dcInit가 dcState.pendingUpload를 감지해 자동으로 엑셀 업로드 모달 오픈.
 function pcManualUploadSite(bizId, siteId){
   const s = pcFindSite(bizId, siteId); if(!s) return;
-  if(typeof showToast === 'function'){
-    showToast(`${s.siteName} 수동 업로드 — 전력데이터 수집현황에서 진행`);
+  // 해당 사업자가 속한 자원그룹 찾기 (있으면 컨텍스트로 전달)
+  const ownerGroup = store.groups.find(g => (g.customerIds||[]).includes(bizId));
+  // 데이터수집 페이지에 업로드 컨텍스트 전달
+  if(typeof dcState !== 'undefined'){
+    dcState.pendingUpload = {
+      bizId, siteId, kepco: s.kepco || '',
+      groupId: ownerGroup ? ownerGroup.id : null
+    };
   }
   logAudit?.({objectType:'site', objectId:siteId, action:'manual_upload_start',
     title:`수동 업로드 진입 — ${s.siteName}`,
     desc:`KEPCO ${s.kepco} · 외부데이터 조회 실패 우회`, actor:'운영자', tone:'info'});
+  closeModal('commonModal');
   if(typeof navigate === 'function') navigate('datacollect');
 }
 

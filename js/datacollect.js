@@ -53,6 +53,196 @@ function dcInit(){
   $('dc-range').value = dcState.range;
   dcApplyRange(false);
   dcRender();
+  // [Phase 17-J] 사전검증 [수동 업로드]에서 진입한 경우 자동으로 업로드 모달 오픈
+  if(dcState.pendingUpload){
+    const ctx = dcState.pendingUpload;
+    dcState.pendingUpload = null;  // 소비
+    setTimeout(()=> dcOpenUploadModal(ctx), 100);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   [Phase 17-J] 엑셀 수동 업로드 — 한전 AMI 통신 실패 시 우회 경로
+   ════════════════════════════════════════════════════════════ */
+
+// 업로드 모달 오픈. ctx={bizId, siteId, kepco} 형태로 사전검증에서 전달 시 자동 채움.
+function dcOpenUploadModal(ctx){
+  const activeGroups = store.groups.filter(g=>g.status==='active');
+  const preGroupId = ctx?.groupId ? String(ctx.groupId) : '';
+  const preCustId  = ctx?.bizId || '';
+  const preSiteId  = ctx?.siteId || '';
+  const preKepco   = ctx?.kepco || '';
+
+  // 자원그룹 옵션
+  const groupOpts = activeGroups.map(g =>
+    `<option value="${g.id}" ${String(g.id)===preGroupId?'selected':''}>${g.name}</option>`
+  ).join('');
+
+  // 사업자 옵션 (기본: 전체 customer 중 계약완료)
+  const custOpts = store.customers
+    .filter(c => c.status === '계약완료')
+    .map(c => `<option value="${c.id}" ${c.id===preCustId?'selected':''}>${c.name}</option>`)
+    .join('');
+
+  $('cm-title').textContent = '엑셀 데이터 업로드';
+  $('cm-sub').textContent = '한전 AMI 통신 실패 시 운영자가 직접 계량 데이터 엑셀 파일을 업로드합니다.';
+  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
+    ⓘ 업로드 양식: 15분 단위 슬롯 데이터 (시각, kW). 첨부 파일은 검증 후 시스템에 반영됩니다.
+    <a href="#" onclick="event.preventDefault();dcDownloadTemplate();" style="margin-left:8px;color:var(--blue);text-decoration:underline;">양식 다운로드</a>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">자원그룹 <span style="color:var(--red);">*</span></label>
+      <select id="dc-up-group" class="filter-select" style="width:100%;" onchange="dcOnUploadGroupChange()">
+        <option value="">선택하세요</option>${groupOpts}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업자 <span style="color:var(--red);">*</span></label>
+      <select id="dc-up-cust" class="filter-select" style="width:100%;" onchange="dcOnUploadCustChange()">
+        <option value="">선택하세요</option>${custOpts}
+      </select>
+    </div>
+    <div id="dc-up-site-wrap" style="display:${preSiteId?'block':'none'};">
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장</label>
+      <select id="dc-up-site" class="filter-select" style="width:100%;"></select>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">KEPCO 고객번호</label>
+      <input id="dc-up-kepco" type="text" value="${preKepco}" placeholder="자동 채워짐"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;" readonly>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">엑셀 파일 <span style="color:var(--red);">*</span></label>
+      <input id="dc-up-file" type="file" accept=".xlsx,.xls,.csv"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;background:#fff;">
+      <div style="font-size:10px;color:var(--text-hint);margin-top:4px;">.xlsx, .xls, .csv (최대 10MB)</div>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">업로드 사유</label>
+      <textarea id="dc-up-reason" placeholder="예: 한전 AMI 통신 장애로 수동 업로드"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;min-height:60px;box-sizing:border-box;resize:vertical;"></textarea>
+    </div>
+  </div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="dcDoUpload()">업로드 실행</button>`;
+  openModal('commonModal');
+  // 사업자 선택 시 사업장 옵션 자동 채움
+  if(preCustId) dcOnUploadCustChange();
+  if(preSiteId){
+    const siteSel = $('dc-up-site');
+    if(siteSel){ siteSel.value = preSiteId; }
+  }
+}
+
+// 자원그룹 선택 시 자원그룹에 매핑된 customer로 사업자 select 갱신
+function dcOnUploadGroupChange(){
+  const gid = $('dc-up-group')?.value;
+  if(!gid) return;
+  const g = store.groups.find(x=>String(x.id)===String(gid));
+  if(!g) return;
+  const custSel = $('dc-up-cust'); if(!custSel) return;
+  const ids = g.customerIds || [];
+  const opts = store.customers
+    .filter(c => ids.includes(c.id))
+    .map(c => `<option value="${c.id}">${c.name}</option>`)
+    .join('');
+  custSel.innerHTML = '<option value="">선택하세요</option>' + opts;
+}
+
+// 사업자 선택 시 사업장 옵션 + KEPCO 자동 채움
+function dcOnUploadCustChange(){
+  const cid = $('dc-up-cust')?.value;
+  if(!cid) return;
+  const c = custById(cid); if(!c) return;
+  const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites||[]);
+  const siteWrap = $('dc-up-site-wrap');
+  const siteSel = $('dc-up-site');
+  const kepcoInput = $('dc-up-kepco');
+  if(sites.length > 1 && siteSel && siteWrap){
+    siteWrap.style.display = 'block';
+    siteSel.innerHTML = '<option value="">전체 (사업자 단위)</option>' +
+      sites.map(s => `<option value="${s.id}" data-kepco="${s.kepco||''}">${s.siteName} (KEPCO ${s.kepco||'-'})</option>`).join('');
+    siteSel.onchange = () => {
+      const opt = siteSel.selectedOptions[0];
+      if(kepcoInput) kepcoInput.value = opt?.dataset?.kepco || '';
+    };
+  } else if(sites.length === 1){
+    if(siteWrap) siteWrap.style.display = 'none';
+    if(kepcoInput) kepcoInput.value = sites[0].kepco || c.kepco || '';
+  } else {
+    if(siteWrap) siteWrap.style.display = 'none';
+    if(kepcoInput) kepcoInput.value = c.kepco || '';
+  }
+}
+
+// 양식 다운로드 (목업 — 안내 토스트)
+function dcDownloadTemplate(){
+  if(typeof showToast === 'function') showToast('양식 다운로드 — 실 환경에서는 .xlsx 파일이 다운로드됩니다 (목업)');
+}
+
+// 업로드 실행 — 시뮬레이션 (1.2초 로딩 → 완료)
+function dcDoUpload(){
+  const gid = $('dc-up-group')?.value;
+  const cid = $('dc-up-cust')?.value;
+  const siteId = $('dc-up-site')?.value;
+  const file = $('dc-up-file')?.files?.[0];
+  const reason = $('dc-up-reason')?.value?.trim() || '';
+  if(!gid){ alert('자원그룹을 선택하세요.'); return; }
+  if(!cid){ alert('사업자를 선택하세요.'); return; }
+  if(!file){ alert('업로드할 엑셀 파일을 선택하세요.'); return; }
+  if(file.size > 10 * 1024 * 1024){ alert('파일 크기는 10MB 이하여야 합니다.'); return; }
+
+  const c = custById(cid);
+  const g = store.groups.find(x=>String(x.id)===String(gid));
+
+  // 로딩 모달
+  $('cm-title').textContent = '엑셀 데이터 업로드 중';
+  $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
+      <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:dc-up-spin 0.9s linear infinite;"></div>
+      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">파일 검증·반영 중...</div>
+      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">${file.name} (${(file.size/1024).toFixed(1)} KB)</div>
+    </div>
+    <style>@keyframes dc-up-spin{to{transform:rotate(360deg);}}</style>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" disabled style="opacity:0.5;cursor:not-allowed;">처리 중...</button>`;
+
+  setTimeout(()=>{
+    // 사이트 컨텍스트가 있으면 ext 단계 완료로 마킹
+    if(siteId && c){
+      const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites||[]);
+      const s = sites.find(x=>x.id===siteId);
+      if(s){
+        if(!Array.isArray(s.steps)) s.steps = [1,1,1,1,1,1];
+        s.steps[0] = 2;  // 외부데이터 조회 = 완료 (수동 업로드로 충족)
+        s.extS = '통과 (수동)';
+      }
+    }
+    // 감사 로그
+    logAudit?.({
+      objectType:'site', objectId: siteId || cid,
+      action:'manual_upload_completed',
+      title:`엑셀 수동 업로드 — ${c?.name||cid} ${siteId?`(사업장 ${siteId})`:''}`,
+      desc:`자원그룹 ${g?.name||gid} · 파일 ${file.name} (${(file.size/1024).toFixed(1)}KB)${reason?' · 사유: '+reason:''}`,
+      actor:'운영자', tone:'info'
+    });
+    // 결과
+    $('cm-title').textContent = '업로드 완료';
+    $('cm-body').innerHTML = `<div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:var(--radius);padding:18px 16px;display:flex;gap:12px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">✓</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:var(--green);">엑셀 업로드 성공</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:4px;line-height:1.6;">
+            ${c?.name||''} ${siteId?'사업장':''} 데이터가 정상 반영되었습니다.<br>
+            수동 업로드 이력은 감사 로그에 기록되었습니다.
+          </div>
+        </div>
+      </div>
+      <div class="check-item-row" style="margin-top:12px;"><span>파일명</span><span style="font-weight:600;">${file.name}</span></div>
+      <div class="check-item-row"><span>자원그룹</span><span>${g?.name||gid}</span></div>
+      <div class="check-item-row"><span>사업자</span><span>${c?.name||cid}</span></div>`;
+    $('cm-footer').innerHTML = `<button class="btn btn-primary" onclick="closeModal('commonModal');dcRender();">확인</button>`;
+    if(typeof showToast === 'function') showToast(`엑셀 업로드 완료 — ${file.name}`);
+  }, 1200);
 }
 
 function dcApplyRange(doRender){
