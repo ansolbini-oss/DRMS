@@ -437,18 +437,39 @@ function pcSiteOutcome(siteId){
     : {ok:false, reason:'한전 API 응답 없음 — 계량기 통신 또는 외부망 점검 필요'};
 }
 
-// ── ① 외부데이터 재조회 ──
+// ── ① 외부데이터 재조회 (KEPCO 정보 수정 + 재조회) ──
 function pcOpenExtRecheck(bizId, siteId){
   const s = pcFindSite(bizId, siteId); if(!s) return;
   const c = custById(bizId);
-  $('cm-title').textContent = '외부데이터 재조회';
-  $('cm-sub').textContent = `${c.name} - ${s.siteName} (KEPCO ${s.kepco})`;
+  $('cm-title').textContent = '외부데이터 조회';
+  $('cm-sub').textContent = `${c.name} - ${s.siteName}`;
   $('cm-body').innerHTML = `<div class="info-box">
-    한전 AMI·파워플래너 데이터를 즉시 재조회합니다. 통신 상태에 따라 수초 내 결과가 표시됩니다.
+    한전 AMI·파워플래너 데이터를 조회합니다. KEPCO 정보가 잘못 등록된 경우 아래에서 수정 후 [조회 실행].
   </div>
-  <div class="check-item-row"><span>사업장</span><span style="font-weight:600;">${s.siteName}</span></div>
-  <div class="check-item-row"><span>KEPCO 고객번호</span><span style="font-family:monospace;">${s.kepco}</span></div>
-  <div class="check-item-row"><span>계약전력</span><span>${s.power||'—'} kW</span></div>`;
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">KEPCO 고객번호 <span style="color:var(--red);">*</span></label>
+      <input id="pc-ext-kepco" type="text" value="${s.kepco||''}" placeholder="예: 10012001"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계약전력 (kW)</label>
+      <input id="pc-ext-power" type="number" value="${s.power||''}" placeholder="예: 500"
+        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">현장 책임자 / 연락처</label>
+      <div style="display:flex;gap:8px;">
+        <input id="pc-ext-manager" type="text" value="${s.manager||''}" placeholder="이름"
+          style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        <input id="pc-ext-tel" type="text" value="${s.tel||''}" placeholder="010-0000-0000"
+          style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:10px;padding:8px 12px;background:var(--grey-light,#f8f9fa);border-radius:6px;font-size:10px;color:var(--text-hint);">
+    ⓘ KEPCO 고객번호는 한전 AMI 시스템 등록 번호와 일치해야 합니다. 변경 시 감사로그가 기록됩니다.
+  </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
     <button class="btn btn-primary" onclick="pcDoExtRecheck('${bizId}','${siteId}')">조회 실행</button>`;
   openModal('commonModal');
@@ -456,6 +477,28 @@ function pcOpenExtRecheck(bizId, siteId){
 
 function pcDoExtRecheck(bizId, siteId){
   const s = pcFindSite(bizId, siteId); if(!s) return;
+  // [Phase 17-F] 입력값 검증 + 갱신
+  const kepcoInput = $('pc-ext-kepco')?.value?.trim();
+  const powerInput = $('pc-ext-power')?.value?.trim();
+  const managerInput = $('pc-ext-manager')?.value?.trim();
+  const telInput = $('pc-ext-tel')?.value?.trim();
+  if(kepcoInput !== undefined){
+    if(!kepcoInput){
+      alert('KEPCO 고객번호는 필수 입력입니다.');
+      return;
+    }
+    // KEPCO 변경 시 감사로그
+    if(kepcoInput !== s.kepco){
+      logAudit?.({objectType:'site', objectId:siteId, action:'kepco_changed',
+        title:`KEPCO 고객번호 변경 — ${s.siteName}`,
+        desc:`이전 ${s.kepco||'(미등록)'} → 변경 ${kepcoInput}`,
+        actor:'운영자', tone:'warn'});
+    }
+    s.kepco = kepcoInput;
+    if(powerInput) s.power = parseInt(powerInput, 10) || s.power;
+    if(managerInput !== undefined) s.manager = managerInput;
+    if(telInput !== undefined) s.tel = telInput;
+  }
   // 로딩
   $('cm-title').textContent = '외부데이터 조회 중';
   $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
