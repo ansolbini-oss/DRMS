@@ -345,11 +345,11 @@ function stmRenderPayment(ev){
   const s = ev.settlement;
   const box = $('stmd-payment');
   if(!s.receivedFromKpx){
+    // [Phase 17-P] 비고 필드 제거 — KPX 확정금액과 실 입금액 차이는 '최종 확정 대비'에 자동 표기되어 운영자가 즉시 인지 가능. 별도 메모 불필요.
     box.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div><label class="form-label">수금일</label><input type="date" class="form-input" id="stmd-pay-date"></div>
         <div><label class="form-label">실 수금액 (KRW)</label><input class="form-input" id="stmd-pay-amt" type="number" placeholder="${s.finalAmount||0}"></div>
-        <div><label class="form-label">비고</label><input class="form-input" id="stmd-pay-ref" placeholder="예) 5월 정산월 1차"></div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="stmRegisterPayment()">입금 등록 → 배분 단계</button>
     `;
@@ -357,11 +357,11 @@ function stmRenderPayment(ev){
     const rp = s.receivedFromKpx;
     const diff = (rp.amount||0) - (s.finalAmount||0);
     const diffCls = diff===0?'stg-diff-ok':diff>0?'stg-diff-warn':'stg-diff-bad';
+    // [Phase 17-P] 표시도 3개 컬럼으로 (수금일·수금액·최종 확정 대비)
     box.innerHTML = `
       <div class="stg-meta">
         <div><div class="k">수금일</div><div class="v">${rp.receivedAt||'-'}</div></div>
         <div><div class="k">수금액</div><div class="v">${(rp.amount||0).toLocaleString()} KRW</div></div>
-        <div><div class="k">비고</div><div class="v">${rp.paymentRef||'-'}</div></div>
         <div><div class="k">최종 확정 대비</div><div class="v ${diffCls}">${diff===0?'일치':`차액 ${diff.toLocaleString()} KRW`}</div></div>
       </div>
       ${s.status!=='completed' ? `<div style="margin-top:10px;"><button class="btn btn-ghost btn-sm" onclick="stmResetPayment()">입금 기록 삭제</button></div>` : ''}
@@ -498,9 +498,9 @@ function stmRegisterPayment(){
   const s = ev.settlement;
   const date = $('stmd-pay-date').value;
   const amt = parseInt($('stmd-pay-amt').value,10);
-  const ref = $('stmd-pay-ref').value||'';
+  // [Phase 17-P] paymentRef(비고) 필드 제거 — KPX 확정금액과 차액은 자동 표시되어 별도 메모 불필요
   if(!date || !amt){ showToast('수금일과 금액을 입력하세요.'); return; }
-  s.receivedFromKpx = {amount:amt, receivedAt:date, paymentRef:ref};
+  s.receivedFromKpx = {amount:amt, receivedAt:date};
   const prev = s.status;
   s.status = 'in_progress';
   s.history.push({at:nowStr(), user:'현진영', fromStatus:prev, toStatus:'in_progress', note:`KPX 수금 등록 · ${amt.toLocaleString()} KRW`});
