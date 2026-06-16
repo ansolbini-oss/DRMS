@@ -359,6 +359,10 @@ function rpOpenEvent(eventId){
   // Phase 9-B: re-meta — 확정 도메인 정보만 (정산 상태/ID/최종 확정금 등 정산 lifecycle 메타 제거)
   const confirmStateLabel = stStatus==='awaiting' ? 'KPX 데이터 대기' : '정산 대기 (확정 완료)';
   const confirmStateCls = stStatus==='awaiting' ? 'stl-pending' : 'stl-requested';
+  // [Phase 17-Q] 이벤트 전체 지시 감축용량·실 감축량 합산 (자원그룹별 ordered/actual 합)
+  const totalOrdered = ev.resources.reduce((s, r) => s + (r.ordered||0), 0);
+  const totalActual  = ev.resources.reduce((s, r) => s + (r.actual||0), 0);
+  const totalRate    = totalOrdered > 0 ? Math.round(totalActual/totalOrdered*100) : 0;
   $('re-meta').innerHTML = `
     <table class="rp-table" style="font-size:12px;">
       <tbody>
@@ -366,6 +370,8 @@ function rpOpenEvent(eventId){
             <th style="width:140px;text-align:left;background:#f8fafc;">발령유형</th><td>${dispLabel}</td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">일시</th><td>${ev.date} ${ev.timeRange}</td>
             <th style="text-align:left;background:#f8fafc;">성능률</th><td>${Math.round(a.perfRate*100)}% <span style="color:var(--text-hint);font-size:10px;">(Min(120%, 이행률))</span></td></tr>
+        <tr><th style="text-align:left;background:#f8fafc;">지시 감축용량</th><td style="font-weight:600;">${totalOrdered.toLocaleString()} kW</td>
+            <th style="text-align:left;background:#f8fafc;">실 감축량 / 이행률</th><td><b>${totalActual.toLocaleString()} kW</b> <span style="color:var(--text-hint);font-size:10px;">· ${totalRate}%</span></td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">확정 상태</th><td colspan="3"><span class="stl-badge ${confirmStateCls}">${confirmStateLabel}</span></td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">우리 측 예상 정산금</th><td colspan="3" style="font-weight:700;color:var(--navy);">${(ev.settlement.ourAmount||0).toLocaleString()} KRW</td></tr>
       </tbody>
