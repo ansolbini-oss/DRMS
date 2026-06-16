@@ -615,16 +615,21 @@ function rmTabOpHtml(g){
   return collectCard + liveEventCard;
 }
 
-/* 자원 상세 [상세 보기 →] 클릭 → 전력데이터 수집현황 페이지로 라우팅.
-   해당 자원그룹을 미리 dcState에 세팅해 진입 시 그 자원그룹으로 필터된 상태를 보여준다. */
+/* 자원 상세 [전력데이터 수집현황 →] 클릭 → 해당 자원그룹의 데이터 수집 상세 페이지로 바로 점프.
+   [Phase 17-O] 옛: 데이터 수집 목록뷰로 이동 후 운영자가 다시 클릭
+   새: 자원그룹 상세뷰(dcOpenDetail)로 한 번에 이동 — 한 단계 줄임. */
 function rmGoToDataCollect(gid){
   // 자원관리 상세 패널 닫기
   const panel = document.getElementById('rmDetailPanel');
   if(panel) panel.classList.remove('open');
-  // datacollect 페이지의 자원그룹 필터를 해당 그룹으로 미리 세팅
+  // datacollect 페이지의 자원그룹 필터도 미리 세팅 (목록뷰 fallback 대비)
   if(typeof dcState !== 'undefined') dcState.groupId = String(gid);
-  // 페이지 이동 (dcInit이 자동 호출되어 dcState.groupId 기준 렌더)
+  // 페이지 이동 (dcInit이 자동 호출 → 목록뷰 렌더)
   navigate('datacollect');
+  // 다음 tick에 자원그룹 상세뷰로 전환 (navigate의 closeTransientUi + dcInit 끝난 후 안전 호출)
+  setTimeout(()=>{
+    if(typeof dcOpenDetail === 'function') dcOpenDetail(gid);
+  }, 0);
 }
 
 /* 참여고객 데이터 재조회 요청 (확인 모달) */
