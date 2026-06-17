@@ -132,8 +132,9 @@ function rtuRefreshKpis(){
   const ok  = all.filter(r => rtuOverallStatus(r) === 'ok').length;
   const bad = total - ok;  // 어느 한 채널이라도 이상이면 점검 대상
   const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  // [Phase 17-X] 분수 표기 제거 — 전체 N이 옆에 있어 합산으로 검증 가능
   set('rtu-kpi-total', total);
-  set('rtu-kpi-ok', `${ok}/${total}`);
+  set('rtu-kpi-ok', ok);
   set('rtu-kpi-bad', bad);
 }
 
