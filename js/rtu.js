@@ -125,17 +125,15 @@ function rtuFilteredRows(){
   });
 }
 
-/* KPI 카드 갱신 */
+/* [Phase 17-W] KPI 카드 갱신 — 3개 단순화 (전체 / 정상 통신 / 이상) */
 function rtuRefreshKpis(){
   const all = rtuCollectRows();
   const total = all.length;
-  const hzOk  = all.filter(r => r.rtu.hzCommStatus === 'OK').length;
-  const kpxOk = all.filter(r => r.rtu.kpxCommStatus === 'OK').length;
-  const bad   = all.filter(r => rtuOverallStatus(r) === 'bad').length;
+  const ok  = all.filter(r => rtuOverallStatus(r) === 'ok').length;
+  const bad = total - ok;  // 어느 한 채널이라도 이상이면 점검 대상
   const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
   set('rtu-kpi-total', total);
-  set('rtu-kpi-hz', `${hzOk}/${total}`);
-  set('rtu-kpi-kpx', `${kpxOk}/${total}`);
+  set('rtu-kpi-ok', `${ok}/${total}`);
   set('rtu-kpi-bad', bad);
 }
 
