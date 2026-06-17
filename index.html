@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260617-1718. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260617-1718">
+<!-- css/js 모두 ?v=260617-1729. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260617-1729">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260617-1718</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260617-1729</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -409,19 +409,25 @@
     </div>
 
     <div class="detail-body" id="pc-tab-info">
-      <!-- LEFT: 사업자 정보 -->
+      <!-- LEFT: 사업자 정보 (Phase 17-AA: 6개 항목 + [수정] 버튼) -->
       <div class="detail-left">
         <div class="info-section">
-          <div style="font-size:14px;font-weight:700;color:var(--navy);" id="pc-d-name">-</div>
-          <div style="font-size:11px;color:var(--text-hint);margin-top:2px;" id="pc-d-recno">-</div>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--navy);" id="pc-d-name">-</div>
+              <div style="font-size:11px;color:var(--text-hint);margin-top:2px;" id="pc-d-recno">-</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="pcOpenEditCustomer()">수정</button>
+          </div>
           <table class="info-table" style="margin-top:10px;">
-            <tbody><tr><td>대표자</td><td id="pc-d-ceo">-</td></tr>
-            <tr><td>연락처</td><td id="pc-d-tel">-</td></tr>
-            <tr><td>주소</td><td id="pc-d-addr">-</td></tr>
-            <tr><td>접수일</td><td id="pc-d-date">-</td></tr>
-            <tr><td>계약전력</td><td id="pc-d-power">-</td></tr>
-            <tr><td>DR 유형</td><td id="pc-d-drtype">-</td></tr>
-          </tbody></table>
+            <tbody>
+              <tr><td>사업자번호</td><td id="pc-d-bizno">-</td></tr>
+              <tr><td>업종 / 업태</td><td id="pc-d-bizcat">-</td></tr>
+              <tr><td>담당자 이름</td><td id="pc-d-ceo">-</td></tr>
+              <tr><td>연락처</td><td id="pc-d-tel">-</td></tr>
+              <tr><td>유입경로</td><td id="pc-d-inflow">-</td></tr>
+            </tbody>
+          </table>
         </div>
         <div style="margin-top:14px;padding:10px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;color:var(--blue);font-size:11px;line-height:1.6;">
           ※ 검증 절차·산정 결과·외부데이터 검증 결과는<br>
@@ -1803,13 +1809,7 @@
         <div class="form-row"><label class="form-label">담당자 이름 <span class="req">*</span></label><input class="form-input" id="rg-ceo" placeholder="홍길동"></div>
         <div class="form-row"><label class="form-label">담당자 연락처 <span class="req">*</span></label><input class="form-input" id="rg-tel" placeholder="010-0000-0000"></div>
       </div>
-      <div class="form-row"><label class="form-label">희망 DR 유형 <span class="req">*</span></label>
-        <select class="form-select" id="rg-drtype">
-          <option value="">선택</option>
-          <option>표준DR</option><option>중소형DR</option><option>국민DR</option>
-          <option>제주DR</option><option>주파수DR</option><option>플러스DR</option>
-        </select>
-      </div>
+      <!-- [Phase 17-AA] 희망 DR 유형 제거 — 사전검증 단계에서는 사업자·담당자 기본 정보만 -->
       <div class="form-row"><label class="form-label">유입경로</label>
         <select class="form-select" id="rg-inflow"><option>사이트</option><option>영업</option></select>
       </div>
@@ -2238,20 +2238,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260617-1718"></script>
-<script src="data/tips.js?v=260617-1718"></script>
-<script src="js/core.js?v=260617-1718"></script>
-<script src="js/dashboard.js?v=260617-1718"></script>
-<script src="js/precheck.js?v=260617-1718"></script>
-<script src="js/resource.js?v=260617-1718"></script>
-<script src="js/monitoring.js?v=260617-1718"></script>
-<script src="js/report.js?v=260617-1718"></script>
-<script src="js/settlement.js?v=260617-1718"></script>
-<script src="js/datacollect.js?v=260617-1718"></script>
-<script src="js/rtu.js?v=260617-1718"></script>
-<script src="js/communication.js?v=260617-1718"></script>
-<script src="js/bidding.js?v=260617-1718"></script>
-<script src="js/account.js?v=260617-1718"></script>
-<script src="js/system.js?v=260617-1718"></script>
+<script src="data/store.js?v=260617-1729"></script>
+<script src="data/tips.js?v=260617-1729"></script>
+<script src="js/core.js?v=260617-1729"></script>
+<script src="js/dashboard.js?v=260617-1729"></script>
+<script src="js/precheck.js?v=260617-1729"></script>
+<script src="js/resource.js?v=260617-1729"></script>
+<script src="js/monitoring.js?v=260617-1729"></script>
+<script src="js/report.js?v=260617-1729"></script>
+<script src="js/settlement.js?v=260617-1729"></script>
+<script src="js/datacollect.js?v=260617-1729"></script>
+<script src="js/rtu.js?v=260617-1729"></script>
+<script src="js/communication.js?v=260617-1729"></script>
+<script src="js/bidding.js?v=260617-1729"></script>
+<script src="js/account.js?v=260617-1729"></script>
+<script src="js/system.js?v=260617-1729"></script>
 
 </body></html>

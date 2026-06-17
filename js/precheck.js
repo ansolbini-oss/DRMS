@@ -215,14 +215,15 @@ function pcShowDetail(id){
   const badge = $('pc-d-badge');
   badge.className = 'badge ' + statusBadgeClass(c.status);
   badge.textContent = c.status;
+  // [Phase 17-AA] 사업자 정보 6항목: 사업자명·사업자번호·업종/업태·담당자·연락처·유입경로
   $('pc-d-name').textContent = c.name;
   $('pc-d-recno').textContent = c.recno;
-  $('pc-d-ceo').textContent = c.ceo;
-  $('pc-d-tel').textContent = c.tel;
-  $('pc-d-addr').textContent = c.addr;
-  $('pc-d-date').textContent = c.date;
-  $('pc-d-power').textContent = (c.power||'-') + ' kW';
-  $('pc-d-drtype').textContent = c.drType;
+  const setText = (id, val) => { const el = $(id); if(el) el.textContent = val; };
+  setText('pc-d-bizno', c.bizno || '-');
+  setText('pc-d-bizcat', `${c.bizcat || '-'} / ${c.biztype || '-'}`);
+  setText('pc-d-ceo', c.ceo || '-');
+  setText('pc-d-tel', c.tel || '-');
+  setText('pc-d-inflow', c.inflow || '-');
   // 검증 절차·산정 결과·외부데이터 검증 결과는 [사업장] 탭으로 이동됨 (Phase 5-D)
   pcRenderMemo(c);
   pcRenderDetailLog(c);
@@ -986,6 +987,113 @@ function pcAddMemo(){
   showToast('메모가 저장되었습니다.');
 }
 
+/* [Phase 17-AA] 사업자 정보 수정 모달 — 사전검증 상세 기본정보 탭에서 호출 */
+function pcOpenEditCustomer(){
+  const id = pcState.currentId;
+  const c = custById(id); if(!c) return;
+  $('cm-title').textContent = '사업자 정보 수정';
+  $('cm-sub').textContent = `${c.name} (${c.recno})`;
+  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
+    사업자·담당자 정보를 수정합니다. 변경 시 감사로그가 기록됩니다.
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업자명 <span style="color:var(--red);">*</span></label>
+      <input id="pc-ec-name" type="text" value="${(c.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업자번호 <span style="color:var(--red);">*</span></label>
+      <div style="display:flex;gap:6px;">
+        <input id="pc-ec-bizno" type="text" value="${(c.bizno||'').replace(/"/g,'&quot;')}" placeholder="000-00-00000" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        <button class="btn btn-secondary btn-sm" type="button" onclick="pcEcLookupBizno()">조회</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">업종</label>
+        <input id="pc-ec-bizcat" type="text" value="${(c.bizcat||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#f8fafc;" readonly>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">업태</label>
+        <input id="pc-ec-biztype" type="text" value="${(c.biztype||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#f8fafc;" readonly>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">담당자 이름 <span style="color:var(--red);">*</span></label>
+        <input id="pc-ec-ceo" type="text" value="${(c.ceo||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">연락처 <span style="color:var(--red);">*</span></label>
+        <input id="pc-ec-tel" type="text" value="${(c.tel||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">유입경로</label>
+      <select id="pc-ec-inflow" class="filter-select" style="width:100%;">
+        <option value="사이트" ${c.inflow==='사이트'?'selected':''}>사이트</option>
+        <option value="영업" ${c.inflow==='영업'?'selected':''}>영업</option>
+      </select>
+    </div>
+  </div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="pcSubmitEditCustomer()">저장</button>`;
+  openModal('commonModal');
+}
+
+/* 수정 모달용 사업자번호 조회 */
+function pcEcLookupBizno(){
+  const bizno = $('pc-ec-bizno')?.value?.trim();
+  if(!bizno){ showToast('사업자번호를 입력하세요.'); return; }
+  const lastDigit = parseInt(bizno.replace(/\D/g,'').slice(-1), 10) || 0;
+  const bizcatMap   = ['제조업','도매업','서비스업','정보통신업','전기·가스','건설업','부동산업','운수업','금융업','교육서비스'];
+  const biztypeMap = ['반도체','종합도매','데이터센터','SI개발','발전사업','종합건설','임대업','물류운송','은행','학원'];
+  $('pc-ec-bizcat').value = bizcatMap[lastDigit] || '제조업';
+  $('pc-ec-biztype').value = biztypeMap[lastDigit] || '일반';
+  showToast(`사업자번호 조회 완료`);
+}
+
+/* 수정 모달 저장 */
+function pcSubmitEditCustomer(){
+  const id = pcState.currentId;
+  const c = custById(id); if(!c) return;
+  const newName    = $('pc-ec-name')?.value?.trim();
+  const newBizno   = $('pc-ec-bizno')?.value?.trim();
+  const newBizcat  = $('pc-ec-bizcat')?.value?.trim();
+  const newBiztype = $('pc-ec-biztype')?.value?.trim();
+  const newCeo     = $('pc-ec-ceo')?.value?.trim();
+  const newTel     = $('pc-ec-tel')?.value?.trim();
+  const newInflow  = $('pc-ec-inflow')?.value;
+  if(!newName || !newBizno || !newCeo || !newTel){
+    alert('필수 항목(사업자명·사업자번호·담당자 이름·연락처)을 모두 입력하세요.');
+    return;
+  }
+  const changes = [];
+  const apply = (key, oldVal, newVal, label) => {
+    const a = (oldVal == null ? '' : String(oldVal));
+    const b = (newVal == null ? '' : String(newVal));
+    if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); c[key] = newVal; }
+  };
+  apply('name', c.name, newName, '사업자명');
+  apply('bizno', c.bizno, newBizno, '사업자번호');
+  apply('bizcat', c.bizcat, newBizcat, '업종');
+  apply('biztype', c.biztype, newBiztype, '업태');
+  apply('ceo', c.ceo, newCeo, '담당자 이름');
+  apply('tel', c.tel, newTel, '연락처');
+  apply('inflow', c.inflow, newInflow, '유입경로');
+  logAudit?.({
+    objectType:'customer', objectId:c.id, action:'customer_info_updated',
+    title:`사업자 정보 수정 — ${newName}`,
+    desc: changes.length ? changes.join(' · ') : '변경 사항 없음',
+    actor:'운영자', tone:'info'
+  });
+  pcAddLog(c, '사업자 정보 수정', changes.length ? changes.join(' · ') : '변경 사항 없음', 'done');
+  closeModal('commonModal');
+  showToast(`사업자 정보 저장 — ${newName}`);
+  pcShowDetail(c.id);  // 화면 갱신
+  pcRenderTable();      // 리스트 사업자명도 갱신
+}
+
 /* [Phase 17-Y] 사업자번호 조회 — 업종·업태 자동 입력 stub */
 function pcLookupBizno(){
   const bizno = $('rg-bizno')?.value?.trim();
@@ -1015,7 +1123,8 @@ function pcCreateLead(){
   const biztype= $('rg-biztype')?.value?.trim() || '';
   const ceo    = $('rg-ceo')?.value?.trim() || '';
   const tel    = $('rg-tel')?.value?.trim() || '';
-  const drType = $('rg-drtype')?.value || '';
+  // [Phase 17-AA] 희망 DR 유형 필드 제거 — 사전검증 단계에서는 미수집
+  const drType = '';
   const inflow = $('rg-inflow')?.value || '사이트';
   // 2단계 선택
   const siteName = $('rg-site-name')?.value?.trim() || '';
@@ -1024,8 +1133,8 @@ function pcCreateLead(){
   const kepco    = $('rg-kepco')?.value?.trim() || '';
 
   // 필수 검증
-  if(!name || !bizno || !ceo || !tel || !drType){
-    showToast('필수 항목(사업자명·사업자번호·담당자 이름·연락처·희망 DR 유형)을 모두 입력하세요.');
+  if(!name || !bizno || !ceo || !tel){
+    showToast('필수 항목(사업자명·사업자번호·담당자 이름·연락처)을 모두 입력하세요.');
     return;
   }
   // 사업자번호 조회 안 했으면 자동 트리거
@@ -1080,7 +1189,6 @@ function pcCreateLead(){
   // 폼 초기화
   ['rg-name','rg-bizno','rg-bizcat','rg-biztype','rg-ceo','rg-tel','rg-site-name','rg-site-addr','rg-power','rg-kepco']
     .forEach(id => { const el = $(id); if(el) el.value = ''; });
-  if($('rg-drtype'))   $('rg-drtype').value = '';
   if($('rg-inflow'))   $('rg-inflow').value = '사이트';
   pcRenderTable();
   refreshSidebarBadges();
