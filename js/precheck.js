@@ -986,38 +986,107 @@ function pcAddMemo(){
   showToast('메모가 저장되었습니다.');
 }
 
-/* 리드 신규 등록 */
+/* [Phase 17-Y] 사업자번호 조회 — 업종·업태 자동 입력 stub */
+function pcLookupBizno(){
+  const bizno = $('rg-bizno')?.value?.trim();
+  if(!bizno){
+    showToast('사업자번호를 입력하세요.');
+    return;
+  }
+  // 시뮬레이션: 사업자번호 → 업종·업태 자동 매핑
+  // 실 환경에선 국세청 사업자등록정보 진위확인 API 호출
+  const lastDigit = parseInt(bizno.replace(/\D/g,'').slice(-1), 10) || 0;
+  const bizcatMap   = ['제조업','도매업','서비스업','정보통신업','전기·가스','건설업','부동산업','운수업','금융업','교육서비스'];
+  const biztypeMap = ['반도체','종합도매','데이터센터','SI개발','발전사업','종합건설','임대업','물류운송','은행','학원'];
+  const bizcat = bizcatMap[lastDigit] || '제조업';
+  const biztype = biztypeMap[lastDigit] || '일반';
+  $('rg-bizcat').value = bizcat;
+  $('rg-biztype').value = biztype;
+  $('rg-bizno-result').innerHTML = `<span style="color:var(--green);">✓ 국세청 진위 확인 완료 — ${bizcat} / ${biztype}</span>`;
+  showToast(`사업자번호 조회 완료 — ${bizcat} / ${biztype}`);
+}
+
+/* [Phase 17-Y] 참여신청 등록 — 1차 필수(사업자·담당자)만으로 검증리스트 인입.
+   사업장·한전 정보는 선택 입력이며, 미입력 시 등록 후 상세에서 추가 가능. */
 function pcCreateLead(){
-  const name=$('rg-name').value.trim(), ceo=$('rg-ceo').value.trim(), tel=$('rg-tel').value.trim();
-  const addr=$('rg-addr').value.trim(), power=parseInt($('rg-power').value)||0;
-  const drType=$('rg-drtype').value, inflow=$('rg-inflow').value;
-  if(!name||!ceo||!tel||!power||!drType){ showToast('필수 항목을 모두 입력하세요.'); return; }
-  const d=new Date(), pad=n=>String(n).padStart(2,'0');
+  // 1단계 필수
+  const name   = $('rg-name')?.value?.trim() || '';
+  const bizno  = $('rg-bizno')?.value?.trim() || '';
+  const bizcat = $('rg-bizcat')?.value?.trim() || '';
+  const biztype= $('rg-biztype')?.value?.trim() || '';
+  const ceo    = $('rg-ceo')?.value?.trim() || '';
+  const tel    = $('rg-tel')?.value?.trim() || '';
+  const drType = $('rg-drtype')?.value || '';
+  const inflow = $('rg-inflow')?.value || '사이트';
+  // 2단계 선택
+  const siteName = $('rg-site-name')?.value?.trim() || '';
+  const siteAddr = $('rg-site-addr')?.value?.trim() || '';
+  const power    = parseInt($('rg-power')?.value, 10) || 0;
+  const kepco    = $('rg-kepco')?.value?.trim() || '';
+
+  // 필수 검증
+  if(!name || !bizno || !ceo || !tel || !drType){
+    showToast('필수 항목(사업자명·사업자번호·담당자 이름·연락처·희망 DR 유형)을 모두 입력하세요.');
+    return;
+  }
+  // 사업자번호 조회 안 했으면 자동 트리거
+  if(!bizcat || !biztype){
+    pcLookupBizno();
+  }
+
+  const d = new Date(), pad = n => String(n).padStart(2,'0');
   const ymd = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  // 접수번호 자동 생성 (DR-YYYY-NNNN)
   const maxSeq = store.customers
-    .map(c=>parseInt(c.recno.split('-')[2])||0)
-    .reduce((m,v)=>Math.max(m,v),0);
+    .map(c => parseInt((c.recno||'').split('-')[2]) || 0)
+    .reduce((m,v) => Math.max(m,v), 0);
   const recno = `DR-${d.getFullYear()}-${String(maxSeq+1).padStart(4,'0')}`;
-  // 기존 고객 ID 중 최대값 + 1 (최소값 200 보장)
   const maxCid = store.customers
-    .map(c=>parseInt((c.id||'').replace(/\D/g,''))||0)
-    .reduce((m,v)=>Math.max(m,v),0);
-  const newId = 'C'+String(Math.max(200, maxCid+1)).padStart(3,'0');
+    .map(c => parseInt((c.id||'').replace(/\D/g,'')) || 0)
+    .reduce((m,v) => Math.max(m,v), 0);
+  const newId = 'C' + String(Math.max(200, maxCid+1)).padStart(3,'0');
+
+  // 사업장 정보가 입력됐으면 sites 배열 즉시 생성. 미입력이면 빈 배열 (가상 사이트 자동 매핑 trigger)
+  const sites = [];
+  if(siteName || siteAddr || power || kepco){
+    sites.push({
+      id: newId + '-S1',
+      siteName: siteName || `${name} 본사`,
+      addr: siteAddr || '',
+      power: power || 0,
+      kepco: kepco || '',
+      manager: ceo,
+      tel: tel,
+      steps: [1,1,1,1],
+      dataStatus: '미수집',
+      verifyStatus: '검증대기',
+      date: ymd,
+    });
+  }
+
   const newCustomer = {
-    id:newId, name, ceo, tel, addr, recno, date:ymd, power, kepco:'',
-    drType, status:'검증대기', dataStatus:'미수집', inflow,
-    steps:[1,1,1,1], extS:'미실행', rrmseS:'미실행', cblS:'미실행',
-    cblType:'-', cblAvg:'-', reduction:null, rrmseVal:'-', infraS:'-'
+    id: newId, name, ceo, tel, recno, date: ymd,
+    bizno, bizcat, biztype,             // [신규] 사업자 정보
+    addr: '',                           // 사업자 주소는 사업장 정보로 일원화 (옛 필드는 비움)
+    power: power || 0,                  // 사업자 단위 fallback (사이트가 있으면 사이트 우선)
+    kepco: kepco || '',
+    drType, status: '검증대기', dataStatus: '미수집', inflow,
+    sites: sites.length > 0 ? sites : undefined,  // 미입력 시 가상 사이트 자동 생성됨
+    steps: [1,1,1,1],
+    extS: '미실행', rrmseS: '미실행', cblS: '미실행',
+    cblType: '-', cblAvg: '-', reduction: null, rrmseVal: '-', infraS: '-',
   };
   store.customers.unshift(newCustomer);
-  pcAddLog(newCustomer, '참여신청 등록', `${name} (${recno}) 신규 등록`, 'done');
+  pcAddLog(newCustomer, '참여신청 등록', `${name} (${recno}) 신규 등록 · ${bizcat||'-'} / ${biztype||'-'}`, 'done');
   closeModal('registerModal');
-  ['rg-name','rg-ceo','rg-tel','rg-addr','rg-power'].forEach(id=>$(id).value='');
-  $('rg-drtype').value=''; $('rg-inflow').value='사이트';
+  // 폼 초기화
+  ['rg-name','rg-bizno','rg-bizcat','rg-biztype','rg-ceo','rg-tel','rg-site-name','rg-site-addr','rg-power','rg-kepco']
+    .forEach(id => { const el = $(id); if(el) el.value = ''; });
+  if($('rg-drtype'))   $('rg-drtype').value = '';
+  if($('rg-inflow'))   $('rg-inflow').value = '사이트';
+  if($('rg-bizno-result')) $('rg-bizno-result').innerHTML = '조회 시 업종·업태가 자동 입력됩니다.';
   pcRenderTable();
   refreshSidebarBadges();
-  showToast(`${name} 등록 완료 (${recno})`);
+  showToast(`${name} 등록 완료 (${recno}) — 검증리스트 인입`);
 }
 
 /* 계약 전환 → 자원 풀 등록 */
