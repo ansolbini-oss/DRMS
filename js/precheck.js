@@ -1002,7 +1002,6 @@ function pcLookupBizno(){
   const biztype = biztypeMap[lastDigit] || '일반';
   $('rg-bizcat').value = bizcat;
   $('rg-biztype').value = biztype;
-  $('rg-bizno-result').innerHTML = `<span style="color:var(--green);">✓ 국세청 진위 확인 완료 — ${bizcat} / ${biztype}</span>`;
   showToast(`사업자번호 조회 완료 — ${bizcat} / ${biztype}`);
 }
 
@@ -1083,7 +1082,6 @@ function pcCreateLead(){
     .forEach(id => { const el = $(id); if(el) el.value = ''; });
   if($('rg-drtype'))   $('rg-drtype').value = '';
   if($('rg-inflow'))   $('rg-inflow').value = '사이트';
-  if($('rg-bizno-result')) $('rg-bizno-result').innerHTML = '조회 시 업종·업태가 자동 입력됩니다.';
   pcRenderTable();
   refreshSidebarBadges();
   showToast(`${name} 등록 완료 (${recno}) — 검증리스트 인입`);

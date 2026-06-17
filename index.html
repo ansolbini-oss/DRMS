@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260617-1703. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260617-1703">
+<!-- css/js 모두 ?v=260617-1718. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260617-1718">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260617-1703</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260617-1718</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -1783,18 +1783,17 @@
 <div class="overlay" id="registerModal" onclick="if(event.target===this) closeModal('registerModal')">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;">
     <div class="modal-title">참여신청 등록</div>
-    <div class="modal-sub">사업자 정보·담당자 연락처만 입력하면 즉시 사전검증 리스트에 등록됩니다. 사업장·한전 정보는 등록 후 상세에서 추가할 수 있습니다.</div>
 
-    <!-- [Phase 17-Y] 1단계: 필수 (사업자번호 + 담당자) -->
+    <!-- [Phase 17-Z] 1단계: 필수 -->
     <div style="margin-top:14px;padding:12px 14px;background:var(--blue-light,#eff6ff);border:1px solid var(--blue-border,#bfdbfe);border-radius:8px;">
-      <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px;">① 필수 정보 — 등록 즉시 검증리스트 인입</div>
+      <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:10px;">필수 정보</div>
       <div class="form-row"><label class="form-label">사업자명 <span class="req">*</span></label><input class="form-input" id="rg-name" placeholder="(주)예시기업"></div>
       <div class="form-row"><label class="form-label">사업자번호 <span class="req">*</span></label>
         <div style="display:flex;gap:6px;">
           <input class="form-input" id="rg-bizno" placeholder="000-00-00000" style="flex:1;">
           <button class="btn btn-secondary btn-sm" onclick="pcLookupBizno()" type="button">조회</button>
         </div>
-        <div style="font-size:10px;color:var(--text-hint);margin-top:4px;" id="rg-bizno-result">조회 시 업종·업태가 자동 입력됩니다.</div>
+        <div style="font-size:10px;color:var(--text-hint);margin-top:4px;display:none;" id="rg-bizno-result"></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div class="form-row"><label class="form-label">업종</label><input class="form-input" id="rg-bizcat" placeholder="예: 제조업" readonly style="background:#f8fafc;"></div>
@@ -1816,17 +1815,14 @@
       </div>
     </div>
 
-    <!-- [Phase 17-Y] 2단계: 선택 (사업장·한전 정보) -->
+    <!-- [Phase 17-Z] 2단계: 선택 -->
     <div style="margin-top:12px;padding:12px 14px;background:var(--grey50,#f8fafc);border:1px dashed var(--border);border-radius:8px;">
-      <div style="font-size:11px;font-weight:700;color:var(--text-sub);margin-bottom:10px;">② 선택 정보 — 사업장·한전 정보 (등록 후 상세 페이지에서 추가 가능)</div>
-      <div class="form-row"><label class="form-label">사업장명</label><input class="form-input" id="rg-site-name" placeholder="예: 수원사업장 (미입력 시 사업자 본사로 자동 생성)"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-sub);margin-bottom:10px;">선택 정보</div>
+      <div class="form-row"><label class="form-label">사업장명</label><input class="form-input" id="rg-site-name" placeholder="예: 수원사업장"></div>
       <div class="form-row"><label class="form-label">사업장 주소</label><input class="form-input" id="rg-site-addr" placeholder="서울 강남구..."></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div class="form-row"><label class="form-label">한전 계약전력 (kW)</label><input class="form-input" id="rg-power" type="number" placeholder="예: 500"></div>
         <div class="form-row"><label class="form-label">한전 고객번호</label><input class="form-input" id="rg-kepco" placeholder="8자리 숫자" style="font-family:monospace;"></div>
-      </div>
-      <div style="font-size:10px;color:var(--text-hint);margin-top:4px;line-height:1.5;">
-        ⓘ 한전 고객번호는 별지 개인정보동의 서식 기준 데이터 조회용. 참여고객 제출 후 등록 가능합니다.
       </div>
     </div>
 
@@ -2242,20 +2238,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260617-1703"></script>
-<script src="data/tips.js?v=260617-1703"></script>
-<script src="js/core.js?v=260617-1703"></script>
-<script src="js/dashboard.js?v=260617-1703"></script>
-<script src="js/precheck.js?v=260617-1703"></script>
-<script src="js/resource.js?v=260617-1703"></script>
-<script src="js/monitoring.js?v=260617-1703"></script>
-<script src="js/report.js?v=260617-1703"></script>
-<script src="js/settlement.js?v=260617-1703"></script>
-<script src="js/datacollect.js?v=260617-1703"></script>
-<script src="js/rtu.js?v=260617-1703"></script>
-<script src="js/communication.js?v=260617-1703"></script>
-<script src="js/bidding.js?v=260617-1703"></script>
-<script src="js/account.js?v=260617-1703"></script>
-<script src="js/system.js?v=260617-1703"></script>
+<script src="data/store.js?v=260617-1718"></script>
+<script src="data/tips.js?v=260617-1718"></script>
+<script src="js/core.js?v=260617-1718"></script>
+<script src="js/dashboard.js?v=260617-1718"></script>
+<script src="js/precheck.js?v=260617-1718"></script>
+<script src="js/resource.js?v=260617-1718"></script>
+<script src="js/monitoring.js?v=260617-1718"></script>
+<script src="js/report.js?v=260617-1718"></script>
+<script src="js/settlement.js?v=260617-1718"></script>
+<script src="js/datacollect.js?v=260617-1718"></script>
+<script src="js/rtu.js?v=260617-1718"></script>
+<script src="js/communication.js?v=260617-1718"></script>
+<script src="js/bidding.js?v=260617-1718"></script>
+<script src="js/account.js?v=260617-1718"></script>
+<script src="js/system.js?v=260617-1718"></script>
 
 </body></html>
