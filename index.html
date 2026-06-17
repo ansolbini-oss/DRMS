@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260617-1426. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260617-1426">
+<!-- css/js 모두 ?v=260617-1436. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260617-1436">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260617-1426</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260617-1436</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -1422,11 +1422,18 @@
         <span style="color:var(--blue);cursor:pointer;" onclick="rtuGotoList()">RTU 관리</span> › <span id="rtu-d-crumb">—</span>
       </div>
       <div class="page-title-row">
-        <div class="page-title" id="rtu-d-title">—</div>
+        <!-- [Phase 17-V] 좌측 타이틀 앞에 ← 아이콘 뒤로가기 버튼 -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="rtuGotoList()" title="목록으로"
+            style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--text-sub);transition:all .15s ease;"
+            onmouseover="this.style.background='var(--grey50)';this.style.color='var(--navy)';"
+            onmouseout="this.style.background='#fff';this.style.color='var(--text-sub)';">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="page-title" id="rtu-d-title">—</div>
+        </div>
         <div class="page-actions" style="display:flex;gap:6px;align-items:center;">
-          <!-- [Phase 17-S] 전력데이터 수집현황 이동 버튼을 상단으로 이동 -->
           <button class="btn btn-sm btn-secondary" id="rtu-d-jump-dc" onclick="rtuGoToDataCollectFromDetail()" style="display:none;">전력데이터 수집현황 →</button>
-          <button class="btn btn-sm btn-secondary" onclick="rtuGotoList()">← 목록</button>
           <button class="btn btn-sm btn-primary" onclick="rtuRetestComm()">통신 재시도</button>
         </div>
       </div>
@@ -2211,20 +2218,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260617-1426"></script>
-<script src="data/tips.js?v=260617-1426"></script>
-<script src="js/core.js?v=260617-1426"></script>
-<script src="js/dashboard.js?v=260617-1426"></script>
-<script src="js/precheck.js?v=260617-1426"></script>
-<script src="js/resource.js?v=260617-1426"></script>
-<script src="js/monitoring.js?v=260617-1426"></script>
-<script src="js/report.js?v=260617-1426"></script>
-<script src="js/settlement.js?v=260617-1426"></script>
-<script src="js/datacollect.js?v=260617-1426"></script>
-<script src="js/rtu.js?v=260617-1426"></script>
-<script src="js/communication.js?v=260617-1426"></script>
-<script src="js/bidding.js?v=260617-1426"></script>
-<script src="js/account.js?v=260617-1426"></script>
-<script src="js/system.js?v=260617-1426"></script>
+<script src="data/store.js?v=260617-1436"></script>
+<script src="data/tips.js?v=260617-1436"></script>
+<script src="js/core.js?v=260617-1436"></script>
+<script src="js/dashboard.js?v=260617-1436"></script>
+<script src="js/precheck.js?v=260617-1436"></script>
+<script src="js/resource.js?v=260617-1436"></script>
+<script src="js/monitoring.js?v=260617-1436"></script>
+<script src="js/report.js?v=260617-1436"></script>
+<script src="js/settlement.js?v=260617-1436"></script>
+<script src="js/datacollect.js?v=260617-1436"></script>
+<script src="js/rtu.js?v=260617-1436"></script>
+<script src="js/communication.js?v=260617-1436"></script>
+<script src="js/bidding.js?v=260617-1436"></script>
+<script src="js/account.js?v=260617-1436"></script>
+<script src="js/system.js?v=260617-1436"></script>
 
 </body></html>
