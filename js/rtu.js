@@ -211,6 +211,13 @@ function rtuOpenDetail(rtuId){
   $('rtu-d-title').textContent = `${r.custName} - ${r.siteName}`;
   $('rtu-d-crumb').textContent = `${r.custName} > ${r.siteName}`;
 
+  // [Phase 17-S] 상단 [전력데이터 수집현황 →] 버튼은 자원그룹 있을 때만 노출
+  const jumpBtn = document.getElementById('rtu-d-jump-dc');
+  if(jumpBtn){
+    jumpBtn.style.display = r.ownerGroup ? '' : 'none';
+    jumpBtn.dataset.gid = r.ownerGroup ? r.ownerGroup.id : '';
+  }
+
   const rtu = r.rtu;
   const hzCls = rtu.hzCommStatus === 'OK' ? 'good' : 'bad';
   const kpxCls = rtu.kpxCommStatus === 'OK' ? 'good' : 'bad';
@@ -252,16 +259,19 @@ function rtuOpenDetail(rtuId){
       </div>
     </div>
 
-    <!-- 사업장 정보 카드 -->
+    <!-- [Phase 17-S] 사업장 정보 카드 — 비니 요청: 사업장명·담당자·연락처·주소 + [정보 수정] 액션 -->
     <div class="r-card" style="margin-bottom:14px;">
-      <div class="r-card-header"><div class="r-card-title">사업장 정보</div></div>
+      <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="r-card-title">사업장 정보</div>
+        <button class="btn btn-secondary btn-sm" onclick="rtuOpenEditSite('${r.rtu.id}')">정보 수정</button>
+      </div>
       <div class="r-card-body">
         <table class="info-table">
           <tbody>
-            <tr><td>사업자</td><td>${r.custName}</td></tr>
             <tr><td>사업장명</td><td>${r.siteName}</td></tr>
-            <tr><td>KEPCO 고객번호</td><td style="font-family:monospace;">${r.kepco}</td></tr>
-            <tr><td>소속 자원그룹</td><td>${r.ownerGroup?.name || '—'} <span style="color:var(--text-hint);font-size:11px;">(${r.ownerGroup?.type || '—'})</span></td></tr>
+            <tr><td>담당자</td><td>${rtuGetSiteField(r, 'manager') || '—'}</td></tr>
+            <tr><td>연락처</td><td>${rtuGetSiteField(r, 'tel') || '—'}</td></tr>
+            <tr><td>주소</td><td>${rtuGetSiteField(r, 'addr') || '—'}</td></tr>
           </tbody>
         </table>
       </div>
@@ -308,14 +318,204 @@ function rtuOpenDetail(rtuId){
       </div>
     </div>
 
-    <!-- 액션 -->
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button class="btn btn-primary btn-sm" onclick="rtuRetestComm()">통신 재시도</button>
-      <button class="btn btn-secondary btn-sm" onclick="rtuRequestFwUpdate()">펌웨어 업데이트 요청</button>
-      <button class="btn btn-secondary btn-sm" onclick="rtuRenewCert()">VEN 인증서 갱신 요청</button>
-      ${r.ownerGroup ? `<button class="btn btn-secondary btn-sm" onclick="rtuGoToDataCollect(${r.ownerGroup.id})" style="margin-left:auto;">전력데이터 수집현황 →</button>` : ''}
+    <!-- 액션 (전력데이터 수집현황 점프는 상단으로 이동) + 설명 hint -->
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="rtuRetestComm()">통신 재시도</button>
+        <button class="btn btn-secondary btn-sm" onclick="rtuRequestFwUpdate()">펌웨어 업데이트 요청</button>
+        <button class="btn btn-secondary btn-sm" onclick="rtuRenewCert()">VEN 인증서 갱신 요청</button>
+      </div>
+      <div style="padding:10px 12px;background:var(--grey-light,#f8f9fa);border-radius:6px;font-size:11px;color:var(--text-sub);line-height:1.6;">
+        <b>· 펌웨어 업데이트</b> — KPX/한전 통신 프로토콜 변경·보안 패치·버그 수정 시 필수. 옛 펌웨어 RTU는 신규 표준에 송신 실패 가능.<br>
+        <b>· VEN 인증서 갱신</b> — OpenADR 채널 인증서 만료 시 KPX 통신이 즉시 차단됨. 만료 90일 전부터 사전 갱신 필수.
+      </div>
     </div>
   `;
+}
+
+/* [Phase 17-S] 사업장 필드 조회 헬퍼 */
+function rtuGetSiteField(r, field){
+  // 1) 사업자 c.sites 안의 사이트에서 우선 찾고
+  const c = custById(r.custId);
+  if(c){
+    const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites || []);
+    const s = sites.find(x => x.id === r.siteId);
+    if(s && s[field]) return s[field];
+    // 2) customer 자체 필드 fallback (가상 사이트 케이스)
+    if(c[field]) return c[field];
+    if(field === 'manager' && c.ceo) return c.ceo;
+  }
+  return '';
+}
+
+/* [Phase 17-S] 사업장 정보 수정 모달 */
+function rtuOpenEditSite(rtuId){
+  const rows = rtuCollectRows();
+  const r = rows.find(x => x.rtu.id === rtuId);
+  if(!r) return;
+  const cur = {
+    siteName: r.siteName,
+    manager:  rtuGetSiteField(r, 'manager'),
+    tel:      rtuGetSiteField(r, 'tel'),
+    addr:     rtuGetSiteField(r, 'addr'),
+  };
+  $('cm-title').textContent = '사업장 정보 수정';
+  $('cm-sub').textContent = `${r.custName} - ${r.siteName}`;
+  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
+    사업장 운영 정보를 수정합니다. 변경 시 감사로그가 기록됩니다.
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장명 <span style="color:var(--red);">*</span></label>
+      <input id="rtu-edit-name" type="text" value="${(cur.siteName||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">담당자</label>
+      <input id="rtu-edit-manager" type="text" value="${(cur.manager||'').replace(/"/g,'&quot;')}" placeholder="현장 책임자 이름" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">연락처</label>
+      <input id="rtu-edit-tel" type="text" value="${(cur.tel||'').replace(/"/g,'&quot;')}" placeholder="010-0000-0000" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">주소</label>
+      <input id="rtu-edit-addr" type="text" value="${(cur.addr||'').replace(/"/g,'&quot;')}" placeholder="시·구·상세주소" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="rtuSubmitEditSite('${rtuId}')">저장</button>`;
+  openModal('commonModal');
+}
+
+function rtuSubmitEditSite(rtuId){
+  const rows = rtuCollectRows();
+  const r = rows.find(x => x.rtu.id === rtuId);
+  if(!r) return;
+  const c = custById(r.custId);
+  const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites || []);
+  const s = sites.find(x => x.id === r.siteId);
+  if(!s){ if(typeof showToast === 'function') showToast('사업장을 찾을 수 없습니다.'); return; }
+
+  const newName    = $('rtu-edit-name')?.value?.trim();
+  const newManager = $('rtu-edit-manager')?.value?.trim();
+  const newTel     = $('rtu-edit-tel')?.value?.trim();
+  const newAddr    = $('rtu-edit-addr')?.value?.trim();
+  if(!newName){ alert('사업장명은 필수 입력입니다.'); return; }
+
+  const changes = [];
+  if(s.siteName !== newName){ changes.push(`사업장명: ${s.siteName} → ${newName}`); s.siteName = newName; }
+  if((s.manager||'') !== newManager){ changes.push(`담당자: ${s.manager||'(미입력)'} → ${newManager||'(미입력)'}`); s.manager = newManager; }
+  if((s.tel||'') !== newTel){ changes.push(`연락처: ${s.tel||'(미입력)'} → ${newTel||'(미입력)'}`); s.tel = newTel; }
+  if((s.addr||'') !== newAddr){ changes.push(`주소: ${s.addr||'(미입력)'} → ${newAddr||'(미입력)'}`); s.addr = newAddr; }
+
+  logAudit?.({
+    objectType:'site', objectId:r.siteId, action:'site_info_updated',
+    title:`사업장 정보 수정 — ${newName}`,
+    desc: changes.length ? changes.join(' · ') : '변경 사항 없음',
+    actor:'운영자', tone:'info'
+  });
+  closeModal('commonModal');
+  if(typeof showToast === 'function') showToast(`사업장 정보 저장 — ${newName}`);
+  rtuOpenDetail(rtuId);
+}
+
+/* [Phase 17-S] 상단 헤더에서 전력데이터 수집현황으로 점프 */
+function rtuGoToDataCollectFromDetail(){
+  const btn = document.getElementById('rtu-d-jump-dc');
+  const gid = btn?.dataset?.gid;
+  if(!gid){ if(typeof showToast === 'function') showToast('연결된 자원그룹이 없습니다.'); return; }
+  rtuGoToDataCollect(parseInt(gid, 10));
+}
+
+/* [Phase 17-S] 엑셀 업로드 — 일괄 RTU 정보 등록·수정 */
+function rtuOpenUpload(){
+  $('cm-title').textContent = 'RTU 정보 엑셀 업로드';
+  $('cm-sub').textContent = '여러 사업장의 RTU 정보를 한 번에 등록·수정합니다.';
+  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
+    ⓘ 양식: 사업자명·사업장명·KEPCO·RTU 번호·시리얼·모델·펌웨어·IP·포트·VEN 인증서 정보 등 (.xlsx)
+    <a href="#" onclick="event.preventDefault();rtuDownloadTemplate();" style="margin-left:8px;color:var(--blue);text-decoration:underline;">양식 다운로드</a>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">엑셀 파일 <span style="color:var(--red);">*</span></label>
+      <input id="rtu-up-file" type="file" accept=".xlsx,.xls,.csv" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;background:#fff;">
+      <div style="font-size:10px;color:var(--text-hint);margin-top:4px;">.xlsx, .xls, .csv (최대 10MB)</div>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">업로드 모드</label>
+      <select id="rtu-up-mode" class="filter-select" style="width:100%;">
+        <option value="upsert">신규 등록 + 기존 수정 (upsert)</option>
+        <option value="insert">신규 등록만 (기존 있으면 skip)</option>
+        <option value="update">기존 수정만 (신규 행 skip)</option>
+      </select>
+    </div>
+  </div>
+  <div style="margin-top:10px;padding:8px 12px;background:var(--grey-light,#f8f9fa);border-radius:6px;font-size:10px;color:var(--text-hint);">
+    ⓘ 업로드 후 검증 결과(성공·실패·warning) 리포트가 표시됩니다.
+  </div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="rtuDoUpload()">업로드 실행</button>`;
+  openModal('commonModal');
+}
+
+function rtuDoUpload(){
+  const file = $('rtu-up-file')?.files?.[0];
+  const mode = $('rtu-up-mode')?.value || 'upsert';
+  if(!file){ alert('업로드할 엑셀 파일을 선택하세요.'); return; }
+  if(file.size > 10 * 1024 * 1024){ alert('파일 크기는 10MB 이하여야 합니다.'); return; }
+
+  $('cm-title').textContent = 'RTU 정보 업로드 중';
+  $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
+      <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:rtu-up-spin 0.9s linear infinite;"></div>
+      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">파일 검증·반영 중...</div>
+      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">${file.name} (${(file.size/1024).toFixed(1)} KB) · 모드: ${mode}</div>
+    </div>
+    <style>@keyframes rtu-up-spin{to{transform:rotate(360deg);}}</style>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" disabled style="opacity:0.5;cursor:not-allowed;">처리 중...</button>`;
+
+  setTimeout(()=>{
+    // 시뮬레이션: 성공 N건 / 경고 M건 / 실패 K건
+    const total = 12 + Math.floor(Math.random() * 8);
+    const fail = Math.floor(Math.random() * 3);
+    const warn = Math.floor(Math.random() * 2);
+    const ok = total - fail - warn;
+    logAudit?.({
+      objectType:'rtu', objectId:'bulk', action:'rtu_bulk_upload',
+      title:`RTU 일괄 업로드`,
+      desc:`파일 ${file.name} · 모드 ${mode} · 성공 ${ok} · 경고 ${warn} · 실패 ${fail}`,
+      actor:'운영자', tone: fail > 0 ? 'warn' : 'info'
+    });
+    $('cm-title').textContent = '업로드 완료';
+    $('cm-body').innerHTML = `<div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:var(--radius);padding:16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;">
+        <div style="width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">✓</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:var(--green);">업로드 완료</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">총 ${total}행 처리</div>
+        </div>
+      </div>
+      <div class="check-item-row"><span>성공</span><span style="color:var(--green);font-weight:600;">${ok}건</span></div>
+      <div class="check-item-row"><span>경고</span><span style="color:var(--amber);font-weight:600;">${warn}건</span></div>
+      <div class="check-item-row"><span>실패</span><span style="color:var(--red);font-weight:600;">${fail}건</span></div>
+      ${(warn > 0 || fail > 0) ? '<div style="margin-top:10px;padding:8px 12px;background:var(--grey-light,#f8f9fa);border-radius:6px;font-size:11px;color:var(--text-sub);">경고/실패 행은 별도 리포트에서 확인 (목업)</div>' : ''}`;
+    $('cm-footer').innerHTML = `<button class="btn btn-primary" onclick="closeModal('commonModal');rtuRender();">확인</button>`;
+    if(typeof showToast === 'function') showToast(`RTU 업로드 완료 — 성공 ${ok}건`);
+  }, 1200);
+}
+
+function rtuDownloadTemplate(){
+  if(typeof showToast === 'function') showToast('RTU 양식 다운로드 — 실 환경에서는 .xlsx 파일이 다운로드됩니다 (목업)');
+}
+
+/* [Phase 17-S] 엑셀 다운로드 — 현재 필터 범위의 RTU 정보 전체 */
+function rtuExportExcel(){
+  const rows = rtuFilteredRows();
+  if(typeof showToast === 'function') showToast(`RTU ${rows.length}건 엑셀 다운로드 (목업) — 사업자·사업장·RTU·통신·인증서 정보 포함`);
+  logAudit?.({
+    objectType:'rtu', objectId:'bulk', action:'rtu_excel_export',
+    title:`RTU 정보 엑셀 다운로드`,
+    desc:`${rows.length}건 추출`,
+    actor:'운영자', tone:'info'
+  });
 }
 
 /* 목록으로 복귀 */
