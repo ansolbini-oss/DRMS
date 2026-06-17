@@ -230,41 +230,36 @@ function rtuOpenDetail(rtuId){
   const certWarning = daysToExpire <= 90 && daysToExpire > 0;
   const certExpired = daysToExpire <= 0;
 
+  // [Phase 17-T] 통신 상태 컴팩트 — 큰 2 카드 → 한 줄 인포 박스
+  const hzText = rtu.hzCommStatus === 'OK' ? '정상' : '통신 실패';
+  const kpxText = rtu.kpxCommStatus === 'OK' ? '정상' : '통신 실패';
+  const hzMinTxt = rtu.lastHzSyncMinutesAgo < 60 ? `${rtu.lastHzSyncMinutesAgo}분 전` : `${Math.floor(rtu.lastHzSyncMinutesAgo/60)}시간 전`;
+  const kpxMinTxt = rtu.lastKpxSyncMinutesAgo < 60 ? `${rtu.lastKpxSyncMinutesAgo}분 전` : `${Math.floor(rtu.lastKpxSyncMinutesAgo/60)}시간 전`;
+  const certBadge = certExpired ? `<span class="badge badge-fail" style="margin-left:6px;font-size:10px;">만료됨</span>`
+                  : certWarning ? `<span class="badge badge-pending" style="margin-left:6px;font-size:10px;">${daysToExpire}일 후 만료</span>`
+                  : `<span class="badge badge-done" style="margin-left:6px;font-size:10px;">유효</span>`;
+
   $('rtu-d-body').innerHTML = `
-    <!-- 통신 상태 카드 (2채널) -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-      <div class="op-card ${rtu.hzCommStatus === 'OK' ? '' : 'op-card-alert danger'}">
-        <div style="padding:14px 16px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <div style="width:10px;height:10px;border-radius:50%;background:${hzColor};"></div>
-            <div style="font-size:12px;color:var(--text-hint);font-weight:500;">60hz 서버 ↔ RTU</div>
-          </div>
-          <div style="font-size:18px;font-weight:700;color:${hzColor};">${rtu.hzCommStatus === 'OK' ? '정상' : '통신 실패'}</div>
-          <div style="margin-top:8px;font-size:11px;color:var(--text-sub);">
-            마지막 수신: ${rtu.lastHzSyncMinutesAgo < 60 ? `${rtu.lastHzSyncMinutesAgo}분 전` : `${Math.floor(rtu.lastHzSyncMinutesAgo/60)}시간 전`}
-          </div>
-        </div>
+    <!-- [Phase 17-T] 통신 상태 컴팩트 인포 박스 -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${hzColor};"></div>
+        <span style="font-size:12px;color:var(--text-sub);">60hz 서버 ↔ RTU</span>
+        <span style="font-size:13px;font-weight:700;color:${hzColor};">${hzText}</span>
+        <span style="font-size:11px;color:var(--text-hint);">· ${hzMinTxt}</span>
       </div>
-      <div class="op-card ${rtu.kpxCommStatus === 'OK' ? '' : 'op-card-alert danger'}">
-        <div style="padding:14px 16px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <div style="width:10px;height:10px;border-radius:50%;background:${kpxColor};"></div>
-            <div style="font-size:12px;color:var(--text-hint);font-weight:500;">KPX VEN 채널</div>
-          </div>
-          <div style="font-size:18px;font-weight:700;color:${kpxColor};">${rtu.kpxCommStatus === 'OK' ? '정상' : '통신 실패'}</div>
-          <div style="margin-top:8px;font-size:11px;color:var(--text-sub);">
-            마지막 송신: ${rtu.lastKpxSyncMinutesAgo < 60 ? `${rtu.lastKpxSyncMinutesAgo}분 전` : `${Math.floor(rtu.lastKpxSyncMinutesAgo/60)}시간 전`}
-          </div>
-        </div>
+      <div style="width:1px;height:18px;background:var(--border);"></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${kpxColor};"></div>
+        <span style="font-size:12px;color:var(--text-sub);">KPX VEN 채널</span>
+        <span style="font-size:13px;font-weight:700;color:${kpxColor};">${kpxText}</span>
+        <span style="font-size:11px;color:var(--text-hint);">· ${kpxMinTxt}</span>
       </div>
     </div>
 
-    <!-- [Phase 17-S] 사업장 정보 카드 — 비니 요청: 사업장명·담당자·연락처·주소 + [정보 수정] 액션 -->
+    <!-- 사업장 정보 카드 (정보 확인용, 수정 불가) -->
     <div class="r-card" style="margin-bottom:14px;">
-      <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
-        <div class="r-card-title">사업장 정보</div>
-        <button class="btn btn-secondary btn-sm" onclick="rtuOpenEditSite('${r.rtu.id}')">정보 수정</button>
-      </div>
+      <div class="r-card-header"><div class="r-card-title">사업장 정보</div></div>
       <div class="r-card-body">
         <table class="info-table">
           <tbody>
@@ -277,9 +272,12 @@ function rtuOpenDetail(rtuId){
       </div>
     </div>
 
-    <!-- RTU 스펙 카드 -->
+    <!-- [Phase 17-T] RTU 정보 카드 — 스펙 + 통신 설정 + VEN 인증서 통합 + [정보 수정] 운영자 액션 -->
     <div class="r-card" style="margin-bottom:14px;">
-      <div class="r-card-header"><div class="r-card-title">RTU 스펙</div></div>
+      <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="r-card-title">RTU 정보</div>
+        <button class="btn btn-secondary btn-sm" onclick="rtuOpenEditRtu('${r.rtu.id}')">정보 수정</button>
+      </div>
       <div class="r-card-body">
         <table class="info-table">
           <tbody>
@@ -287,47 +285,16 @@ function rtuOpenDetail(rtuId){
             <tr><td>시리얼 번호</td><td style="font-family:monospace;">${rtu.serial}</td></tr>
             <tr><td>모델명</td><td>${rtu.model}</td></tr>
             <tr><td>제조사</td><td>${rtu.manufacturer}</td></tr>
-            <tr><td>펌웨어 버전</td><td>${rtu.firmware} ${rtu.firmware !== '2.4.1' ? '<span style="color:var(--amber);font-size:10px;margin-left:4px;">업데이트 권장</span>' : ''}</td></tr>
+            <tr><td>펌웨어 버전</td><td>${rtu.firmware}</td></tr>
             <tr><td>설치일</td><td>${rtu.installedAt}</td></tr>
             <tr><td>최근 점검일</td><td>${rtu.lastInspectedAt}</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 통신 설정 카드 -->
-    <div class="r-card" style="margin-bottom:14px;">
-      <div class="r-card-header"><div class="r-card-title">통신 설정</div></div>
-      <div class="r-card-body">
-        <table class="info-table">
-          <tbody>
+            <tr><td colspan="2" style="padding-top:14px;font-size:10px;color:var(--text-hint);font-weight:600;">통신 설정</td></tr>
             <tr><td>IP 주소</td><td style="font-family:monospace;">${rtu.ip}</td></tr>
             <tr><td>포트</td><td style="font-family:monospace;">${rtu.port}</td></tr>
             <tr><td>VEN 인증서 ID</td><td style="font-family:monospace;">${rtu.venCertId}</td></tr>
-            <tr><td>VEN 인증서 만료일</td><td>
-              ${rtu.venCertExpires}
-              ${certExpired ? '<span class="badge badge-fail" style="margin-left:8px;font-size:10px;">만료됨</span>'
-                : certWarning ? `<span class="badge badge-pending" style="margin-left:8px;font-size:10px;">${daysToExpire}일 후 만료</span>`
-                : '<span class="badge badge-done" style="margin-left:8px;font-size:10px;">유효</span>'}
-            </td></tr>
+            <tr><td>VEN 인증서 만료일</td><td>${rtu.venCertExpires}${certBadge}</td></tr>
           </tbody>
         </table>
-        ${(certExpired || certWarning) ? `<div style="margin-top:10px;padding:10px 12px;background:var(--amber-light, #fffbf0);border:1px solid var(--amber-border, #f59e0b);border-radius:6px;font-size:11px;color:var(--text-sub);line-height:1.6;">
-          ⚠️ VEN 인증서 ${certExpired ? '갱신이 필요합니다' : '만료가 임박했습니다'}. 운영팀과 협의해 사전 갱신 진행 부탁드립니다.
-        </div>` : ''}
-      </div>
-    </div>
-
-    <!-- 액션 (전력데이터 수집현황 점프는 상단으로 이동) + 설명 hint -->
-    <div style="margin-bottom:14px;">
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-        <button class="btn btn-primary btn-sm" onclick="rtuRetestComm()">통신 재시도</button>
-        <button class="btn btn-secondary btn-sm" onclick="rtuRequestFwUpdate()">펌웨어 업데이트 요청</button>
-        <button class="btn btn-secondary btn-sm" onclick="rtuRenewCert()">VEN 인증서 갱신 요청</button>
-      </div>
-      <div style="padding:10px 12px;background:var(--grey-light,#f8f9fa);border-radius:6px;font-size:11px;color:var(--text-sub);line-height:1.6;">
-        <b>· 펌웨어 업데이트</b> — KPX/한전 통신 프로토콜 변경·보안 패치·버그 수정 시 필수. 옛 펌웨어 RTU는 신규 표준에 송신 실패 가능.<br>
-        <b>· VEN 인증서 갱신</b> — OpenADR 채널 인증서 만료 시 KPX 통신이 즉시 차단됨. 만료 90일 전부터 사전 갱신 필수.
       </div>
     </div>
   `;
@@ -348,75 +315,111 @@ function rtuGetSiteField(r, field){
   return '';
 }
 
-/* [Phase 17-S] 사업장 정보 수정 모달 */
-function rtuOpenEditSite(rtuId){
+/* [Phase 17-T] RTU 정보 수정 — 사업장 정보는 read-only, RTU 스펙·통신 설정만 운영자 편집 가능 */
+function rtuOpenEditRtu(rtuId){
   const rows = rtuCollectRows();
   const r = rows.find(x => x.rtu.id === rtuId);
   if(!r) return;
-  const cur = {
-    siteName: r.siteName,
-    manager:  rtuGetSiteField(r, 'manager'),
-    tel:      rtuGetSiteField(r, 'tel'),
-    addr:     rtuGetSiteField(r, 'addr'),
-  };
-  $('cm-title').textContent = '사업장 정보 수정';
+  const rtu = r.rtu;
+  $('cm-title').textContent = 'RTU 정보 수정';
   $('cm-sub').textContent = `${r.custName} - ${r.siteName}`;
   $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
-    사업장 운영 정보를 수정합니다. 변경 시 감사로그가 기록됩니다.
+    RTU 스펙·통신 설정을 수정합니다. 변경 시 감사로그가 기록됩니다.
+    <br><span style="font-size:10px;color:var(--text-hint);">※ 펌웨어 버전은 제조사가 OTA로 적용하는 값이라 자동 반영됩니다. 수동 수정은 현장 점검 직후에만 권장.</span>
   </div>
-  <div style="display:flex;flex-direction:column;gap:10px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
     <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장명 <span style="color:var(--red);">*</span></label>
-      <input id="rtu-edit-name" type="text" value="${(cur.siteName||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">RTU 번호 <span style="color:var(--red);">*</span></label>
+      <input id="rtu-e-id" type="text" value="${(rtu.id||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">담당자</label>
-      <input id="rtu-edit-manager" type="text" value="${(cur.manager||'').replace(/"/g,'&quot;')}" placeholder="현장 책임자 이름" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">시리얼 번호</label>
+      <input id="rtu-e-serial" type="text" value="${(rtu.serial||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">연락처</label>
-      <input id="rtu-edit-tel" type="text" value="${(cur.tel||'').replace(/"/g,'&quot;')}" placeholder="010-0000-0000" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">모델명</label>
+      <input id="rtu-e-model" type="text" value="${(rtu.model||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">주소</label>
-      <input id="rtu-edit-addr" type="text" value="${(cur.addr||'').replace(/"/g,'&quot;')}" placeholder="시·구·상세주소" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">제조사</label>
+      <input id="rtu-e-mfr" type="text" value="${(rtu.manufacturer||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">설치일</label>
+      <input id="rtu-e-installed" type="date" value="${rtu.installedAt||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">최근 점검일</label>
+      <input id="rtu-e-inspected" type="date" value="${rtu.lastInspectedAt||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">IP 주소</label>
+      <input id="rtu-e-ip" type="text" value="${(rtu.ip||'').replace(/"/g,'&quot;')}" placeholder="예: 10.20.30.40" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">포트</label>
+      <input id="rtu-e-port" type="number" value="${rtu.port||''}" placeholder="예: 8443" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">VEN 인증서 ID</label>
+      <input id="rtu-e-cert-id" type="text" value="${(rtu.venCertId||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">VEN 인증서 만료일</label>
+      <input id="rtu-e-cert-exp" type="date" value="${rtu.venCertExpires||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
     </div>
   </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-primary" onclick="rtuSubmitEditSite('${rtuId}')">저장</button>`;
+    <button class="btn btn-primary" onclick="rtuSubmitEditRtu('${rtuId}')">저장</button>`;
   openModal('commonModal');
 }
 
-function rtuSubmitEditSite(rtuId){
+function rtuSubmitEditRtu(rtuId){
   const rows = rtuCollectRows();
   const r = rows.find(x => x.rtu.id === rtuId);
   if(!r) return;
-  const c = custById(r.custId);
-  const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites || []);
-  const s = sites.find(x => x.id === r.siteId);
-  if(!s){ if(typeof showToast === 'function') showToast('사업장을 찾을 수 없습니다.'); return; }
+  const rtu = r.rtu;
 
-  const newName    = $('rtu-edit-name')?.value?.trim();
-  const newManager = $('rtu-edit-manager')?.value?.trim();
-  const newTel     = $('rtu-edit-tel')?.value?.trim();
-  const newAddr    = $('rtu-edit-addr')?.value?.trim();
-  if(!newName){ alert('사업장명은 필수 입력입니다.'); return; }
+  const newId        = $('rtu-e-id')?.value?.trim();
+  const newSerial    = $('rtu-e-serial')?.value?.trim();
+  const newModel     = $('rtu-e-model')?.value?.trim();
+  const newMfr       = $('rtu-e-mfr')?.value?.trim();
+  const newInstalled = $('rtu-e-installed')?.value;
+  const newInspected = $('rtu-e-inspected')?.value;
+  const newIp        = $('rtu-e-ip')?.value?.trim();
+  const newPort      = parseInt($('rtu-e-port')?.value, 10);
+  const newCertId    = $('rtu-e-cert-id')?.value?.trim();
+  const newCertExp   = $('rtu-e-cert-exp')?.value;
+
+  if(!newId){ alert('RTU 번호는 필수 입력입니다.'); return; }
 
   const changes = [];
-  if(s.siteName !== newName){ changes.push(`사업장명: ${s.siteName} → ${newName}`); s.siteName = newName; }
-  if((s.manager||'') !== newManager){ changes.push(`담당자: ${s.manager||'(미입력)'} → ${newManager||'(미입력)'}`); s.manager = newManager; }
-  if((s.tel||'') !== newTel){ changes.push(`연락처: ${s.tel||'(미입력)'} → ${newTel||'(미입력)'}`); s.tel = newTel; }
-  if((s.addr||'') !== newAddr){ changes.push(`주소: ${s.addr||'(미입력)'} → ${newAddr||'(미입력)'}`); s.addr = newAddr; }
+  const apply = (key, oldVal, newVal, label) => {
+    const a = (oldVal == null ? '' : String(oldVal));
+    const b = (newVal == null ? '' : String(newVal));
+    if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); rtu[key] = newVal; }
+  };
+  apply('id', rtu.id, newId, 'RTU 번호');
+  apply('serial', rtu.serial, newSerial, '시리얼');
+  apply('model', rtu.model, newModel, '모델명');
+  apply('manufacturer', rtu.manufacturer, newMfr, '제조사');
+  apply('installedAt', rtu.installedAt, newInstalled, '설치일');
+  apply('lastInspectedAt', rtu.lastInspectedAt, newInspected, '최근 점검일');
+  apply('ip', rtu.ip, newIp, 'IP');
+  if(!isNaN(newPort)) apply('port', rtu.port, newPort, '포트');
+  apply('venCertId', rtu.venCertId, newCertId, 'VEN 인증서 ID');
+  apply('venCertExpires', rtu.venCertExpires, newCertExp, 'VEN 인증서 만료일');
 
   logAudit?.({
-    objectType:'site', objectId:r.siteId, action:'site_info_updated',
-    title:`사업장 정보 수정 — ${newName}`,
+    objectType:'rtu', objectId: rtuId, action:'rtu_info_updated',
+    title:`RTU 정보 수정 — ${r.siteName}`,
     desc: changes.length ? changes.join(' · ') : '변경 사항 없음',
     actor:'운영자', tone:'info'
   });
   closeModal('commonModal');
-  if(typeof showToast === 'function') showToast(`사업장 정보 저장 — ${newName}`);
-  rtuOpenDetail(rtuId);
+  if(typeof showToast === 'function') showToast(`RTU 정보 저장 — ${changes.length}건 변경`);
+  // RTU id가 변경됐을 수 있으므로 새 id로 재오픈
+  rtuOpenDetail(newId || rtuId);
 }
 
 /* [Phase 17-S] 상단 헤더에서 전력데이터 수집현황으로 점프 */
@@ -557,19 +560,9 @@ function rtuRetestComm(){
   }, 1200);
 }
 
-/* 펌웨어 업데이트 요청 stub */
-function rtuRequestFwUpdate(){
-  if(typeof showToast === 'function') showToast('펌웨어 업데이트 요청 접수 — 운영팀이 일정 협의 후 진행합니다 (목업)');
-  logAudit?.({objectType:'rtu', objectId:rtuState.selectedRtuId, action:'fw_update_requested',
-    title:`펌웨어 업데이트 요청`, desc:'운영팀 협의 대기', actor:'운영자', tone:'info'});
-}
-
-/* VEN 인증서 갱신 요청 stub */
-function rtuRenewCert(){
-  if(typeof showToast === 'function') showToast('VEN 인증서 갱신 요청 접수 — 발급 기관 협의 후 진행합니다 (목업)');
-  logAudit?.({objectType:'rtu', objectId:rtuState.selectedRtuId, action:'cert_renew_requested',
-    title:`VEN 인증서 갱신 요청`, desc:'발급 기관 협의 대기', actor:'운영자', tone:'info'});
-}
+/* [Phase 17-T] 펌웨어 업데이트 / VEN 인증서 갱신 요청 함수 제거.
+   - 펌웨어: 제조사가 OTA로 관리하는 영역, 운영자 트리거 불필요
+   - VEN 인증서: 만료일 표기 + 만료 임박 뱃지로 운영자 인지 가능. 갱신은 운영팀이 외부 별도 절차로 진행 */
 
 /* 전력데이터 수집현황으로 점프 */
 function rtuGoToDataCollect(groupId){
