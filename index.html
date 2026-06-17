@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260616-1426. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260616-1426">
+<!-- css/js 모두 ?v=260617-1343. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260617-1343">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">v260616-1426 · Phase 17-C</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">v260617-1343 · Phase 17-C</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -179,6 +179,11 @@
         <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm4 4h8M8 15h5"></path></svg>
         전력데이터 수집현황
         <span class="sidebar-badge" id="sb-dc-badge" style="display:none;" title="미수신 슬롯 모니터링"></span>
+      </button>
+      <button class="sidebar-item" data-page="rtu" onclick="navigate('rtu')">
+        <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1zM8 8h8M8 12h5M8 16h3M17 16h.01"/></svg>
+        RTU 관리
+        <span class="sidebar-badge" id="sb-rtu-badge" style="display:none;" title="통신 이상 RTU"></span>
       </button>
     </div>
     <div class="sidebar-divider"></div>
@@ -1320,6 +1325,106 @@
 </div>
 
 <!-- ══════════════════════════════════════
+     PAGE 7-B : 데이터 관리 › RTU 관리 (RTU-01)
+     [Phase 17-R] 사업장별 RTU 통신 상태 (60hz·KPX 채널 분리)
+══════════════════════════════════════ -->
+<div class="page" id="page-rtu">
+  <!-- 목록뷰 -->
+  <div id="rtu-list-view" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="page-header">
+      <div class="breadcrumb"><span>데이터 관리</span> › RTU 관리</div>
+      <div class="page-title-row">
+        <div class="page-title">RTU 관리 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">RTU-01</span></div>
+        <div class="page-actions" style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-sm btn-secondary" onclick="rtuExportCsv()" title="현재 조회 범위 RTU 목록 CSV 다운로드">CSV 내보내기</button>
+          <button class="btn btn-sm btn-primary" onclick="rtuRefreshAll()" title="모든 RTU 통신 상태 즉시 확인">통신 상태 새로고침</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI 카드 -->
+    <div class="summary-bar">
+      <div class="summary-card static">
+        <div class="summary-label">전체 RTU</div>
+        <div class="summary-val blue" id="rtu-kpi-total">—</div>
+        <div class="summary-val-sub">등록된 RTU 수</div>
+      </div>
+      <div class="summary-card static">
+        <div class="summary-label">60hz 통신 정상</div>
+        <div class="summary-val green" id="rtu-kpi-hz">—</div>
+        <div class="summary-val-sub">서버 ↔ RTU 연결</div>
+      </div>
+      <div class="summary-card static">
+        <div class="summary-label">KPX 통신 정상</div>
+        <div class="summary-val green" id="rtu-kpi-kpx">—</div>
+        <div class="summary-val-sub">VEN 채널 송신</div>
+      </div>
+      <div class="summary-card static">
+        <div class="summary-label">통신 이상</div>
+        <div class="summary-val red" id="rtu-kpi-bad">—</div>
+        <div class="summary-val-sub">즉시 점검 필요</div>
+      </div>
+    </div>
+
+    <!-- 필터 -->
+    <div class="rp-filter-bar">
+      <input type="text" class="filter-select" id="rtu-q" placeholder="사업자/사업장/RTU번호 검색" oninput="rtuRender()" style="min-width:240px;">
+      <select class="filter-select" id="rtu-status-filter" onchange="rtuRender()">
+        <option value="all">통신 전체</option>
+        <option value="ok">정상 (양쪽 OK)</option>
+        <option value="hz-only">60hz만 OK</option>
+        <option value="kpx-only">KPX만 OK</option>
+        <option value="bad">양쪽 이상</option>
+      </select>
+      <select class="filter-select" id="rtu-type-filter" onchange="rtuRender()">
+        <option value="all">자원유형 전체</option>
+        <option value="standard">표준DR</option>
+        <option value="small">중소형DR</option>
+        <option value="national">국민DR</option>
+        <option value="jeju">제주DR</option>
+      </select>
+      <button class="btn btn-sm btn-primary" onclick="rtuRender()">조회</button>
+      <button class="btn btn-sm btn-secondary" onclick="rtuResetFilters()">초기화</button>
+      <div style="margin-left:auto;font-size:11px;color:var(--text-hint);" id="rtu-count">—</div>
+    </div>
+
+    <!-- 리스트 -->
+    <div id="rtu-list-box" style="flex:1;overflow-y:auto;padding:14px 20px;">
+      <table class="rp-table" id="rtu-table">
+        <thead><tr>
+          <th>사업자</th>
+          <th>사업장</th>
+          <th>RTU 번호</th>
+          <th>모델</th>
+          <th style="text-align:center;">60hz 통신</th>
+          <th style="text-align:center;">KPX 통신</th>
+          <th>최근 수신</th>
+          <th style="text-align:center;">상세</th>
+        </tr></thead>
+        <tbody id="rtu-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 상세뷰 -->
+  <div id="rtu-detail-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="page-header">
+      <div class="breadcrumb">
+        <span style="color:var(--blue);cursor:pointer;" onclick="rtuGotoList()">RTU 관리</span> › <span id="rtu-d-crumb">—</span>
+      </div>
+      <div class="page-title-row">
+        <div class="page-title" id="rtu-d-title">—</div>
+        <div class="page-actions" style="display:flex;gap:6px;">
+          <button class="btn btn-sm btn-secondary" onclick="rtuGotoList()">← 목록</button>
+          <button class="btn btn-sm btn-primary" onclick="rtuRetestComm()">통신 재시도</button>
+        </div>
+      </div>
+    </div>
+    <div id="rtu-d-body" style="flex:1;overflow-y:auto;padding:14px 20px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      PAGE 10 : 시스템 관리 (SYS)
      감사로그 (로그 이력)
 ══════════════════════════════════════ -->
@@ -2095,19 +2200,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260616-1426"></script>
-<script src="data/tips.js?v=260616-1426"></script>
-<script src="js/core.js?v=260616-1426"></script>
-<script src="js/dashboard.js?v=260616-1426"></script>
-<script src="js/precheck.js?v=260616-1426"></script>
-<script src="js/resource.js?v=260616-1426"></script>
-<script src="js/monitoring.js?v=260616-1426"></script>
-<script src="js/report.js?v=260616-1426"></script>
-<script src="js/settlement.js?v=260616-1426"></script>
-<script src="js/datacollect.js?v=260616-1426"></script>
-<script src="js/communication.js?v=260616-1426"></script>
-<script src="js/bidding.js?v=260616-1426"></script>
-<script src="js/account.js?v=260616-1426"></script>
-<script src="js/system.js?v=260616-1426"></script>
+<script src="data/store.js?v=260617-1343"></script>
+<script src="data/tips.js?v=260617-1343"></script>
+<script src="js/core.js?v=260617-1343"></script>
+<script src="js/dashboard.js?v=260617-1343"></script>
+<script src="js/precheck.js?v=260617-1343"></script>
+<script src="js/resource.js?v=260617-1343"></script>
+<script src="js/monitoring.js?v=260617-1343"></script>
+<script src="js/report.js?v=260617-1343"></script>
+<script src="js/settlement.js?v=260617-1343"></script>
+<script src="js/datacollect.js?v=260617-1343"></script>
+<script src="js/rtu.js?v=260617-1343"></script>
+<script src="js/communication.js?v=260617-1343"></script>
+<script src="js/bidding.js?v=260617-1343"></script>
+<script src="js/account.js?v=260617-1343"></script>
+<script src="js/system.js?v=260617-1343"></script>
 
 </body></html>

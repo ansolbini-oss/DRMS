@@ -544,6 +544,7 @@ function navigate(pageKey){
   if(pageKey==='settlement')    stmInit();
   if(pageKey==='bidding')       bidInit();
   if(pageKey==='datacollect')   dcInit();
+  if(pageKey==='rtu')           rtuInit();
   if(pageKey==='accounts')      acctInit();
   if(pageKey==='system')        sysInit();
   refreshSidebarBadges();
