@@ -408,16 +408,19 @@ function pcSelectSite(bizId, siteId){
   }).join('');
 
   $('pc-site-detail').innerHTML = `
-    <!-- 사업장 기본 정보 -->
+    <!-- 사업장 기본 정보 (Phase 17-AB: [수정] 버튼) -->
     <div class="r-card">
-      <div class="r-card-header"><div class="r-card-title">${s.siteName}</div></div>
+      <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="r-card-title">${s.siteName}</div>
+        <button class="btn btn-secondary btn-sm" onclick="pcOpenEditSite('${bizId}','${siteId}')">수정</button>
+      </div>
       <div class="r-card-body">
         <table class="info-table">
           <tbody>
             <tr><td>사업장 책임자</td><td>${s.manager||'—'}</td></tr>
             <tr><td>현장 연락처</td><td>${s.tel||'—'}</td></tr>
             <tr><td>주소</td><td>${s.addr||'—'}</td></tr>
-            <tr><td>KEPCO 고객번호</td><td style="font-family:monospace;">${s.kepco}</td></tr>
+            <tr><td>KEPCO 고객번호</td><td style="font-family:monospace;">${s.kepco||'—'}</td></tr>
             <tr><td>계약전력</td><td>${s.power||'—'} kW</td></tr>
             <tr><td>등록일</td><td>${s.date||'—'}</td></tr>
             <tr><td>데이터 수집</td><td>${s.dataStatus||'—'}</td></tr>
@@ -985,6 +988,169 @@ function pcAddMemo(){
   $('pc-memo-input').value = '';
   pcRenderMemo(c);
   showToast('메모가 저장되었습니다.');
+}
+
+/* [Phase 17-AB] 사업장 추가/수정 — 사전검증 상세 사업장 탭에서 호출 */
+
+// 사업장 추가 모달
+function pcOpenAddSite(){
+  const c = custById(pcState.currentId); if(!c) return;
+  pcRenderSiteForm({
+    title: '사업장 추가',
+    sub: `${c.name} - 새 사업장 등록`,
+    site: { siteName:'', manager:c.ceo||'', tel:c.tel||'', addr:'', kepco:'', power:'' },
+    onSave: pcSubmitAddSite,
+  });
+}
+
+// 사업장 수정 모달
+function pcOpenEditSite(bizId, siteId){
+  const c = custById(bizId); if(!c) return;
+  const sites = pcGetSites(c);
+  const s = sites.find(x => x.id === siteId);
+  if(!s){ showToast('사업장을 찾을 수 없습니다.'); return; }
+  pcRenderSiteForm({
+    title: '사업장 정보 수정',
+    sub: `${c.name} - ${s.siteName}`,
+    site: s,
+    onSave: () => pcSubmitEditSite(bizId, siteId),
+  });
+}
+
+// 공통 폼 렌더
+function pcRenderSiteForm({title, sub, site, onSave}){
+  $('cm-title').textContent = title;
+  $('cm-sub').textContent = sub;
+  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
+    사업장 기본 정보를 입력합니다. 변경 시 감사로그가 기록됩니다.
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장명 <span style="color:var(--red);">*</span></label>
+      <input id="pc-s-name" type="text" value="${(site.siteName||'').replace(/"/g,'&quot;')}" placeholder="예: 수원사업장" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장 책임자</label>
+        <input id="pc-s-manager" type="text" value="${(site.manager||'').replace(/"/g,'&quot;')}" placeholder="현장 책임자 이름" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">현장 연락처</label>
+        <input id="pc-s-tel" type="text" value="${(site.tel||'').replace(/"/g,'&quot;')}" placeholder="010-0000-0000" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">주소</label>
+      <input id="pc-s-addr" type="text" value="${(site.addr||'').replace(/"/g,'&quot;')}" placeholder="시·구·상세주소" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">KEPCO 고객번호</label>
+        <input id="pc-s-kepco" type="text" value="${(site.kepco||'').replace(/"/g,'&quot;')}" placeholder="8자리 숫자" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계약전력 (kW)</label>
+        <input id="pc-s-power" type="number" value="${site.power||''}" placeholder="예: 500" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+  </div>`;
+  // onSave 함수 참조를 위해 전역에 임시 저장
+  window.__pcSiteFormSave = onSave;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="window.__pcSiteFormSave && window.__pcSiteFormSave()">저장</button>`;
+  openModal('commonModal');
+}
+
+// 사업장 추가 저장
+function pcSubmitAddSite(){
+  const c = custById(pcState.currentId); if(!c) return;
+  const newName = $('pc-s-name')?.value?.trim();
+  if(!newName){ alert('사업장명은 필수 입력입니다.'); return; }
+
+  // 사이트 ID 생성 — 사업자 id + 사이트 번호 시퀀스
+  pcGetSites(c); // sites 배열 보장
+  const existingNums = (c.sites||[]).map(s => {
+    const m = String(s.id||'').match(/-S(\d+)$/);
+    return m ? parseInt(m[1], 10) : 0;
+  });
+  const nextNum = Math.max(0, ...existingNums) + 1;
+  const newSiteId = c.id + '-S' + nextNum;
+
+  const today = (() => {
+    const d = new Date(), pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  })();
+
+  const newSite = {
+    id: newSiteId,
+    siteName: newName,
+    manager: $('pc-s-manager')?.value?.trim() || '',
+    tel: $('pc-s-tel')?.value?.trim() || '',
+    addr: $('pc-s-addr')?.value?.trim() || '',
+    kepco: $('pc-s-kepco')?.value?.trim() || '',
+    power: parseInt($('pc-s-power')?.value, 10) || 0,
+    steps: [1,1,1,1],
+    dataStatus: '미수집',
+    verifyStatus: c.status,
+    date: today,
+  };
+  c.sites = c.sites || [];
+  c.sites.push(newSite);
+
+  logAudit?.({
+    objectType:'site', objectId:newSiteId, action:'site_added',
+    title:`사업장 추가 — ${newName}`,
+    desc:`${c.name} 사업자에 사업장 신규 등록 · KEPCO ${newSite.kepco||'(미입력)'}`,
+    actor:'운영자', tone:'info'
+  });
+  pcAddLog(c, '사업장 추가', `${newName} (KEPCO ${newSite.kepco||'-'}) 신규 등록`, 'done');
+  closeModal('commonModal');
+  showToast(`사업장 추가 — ${newName}`);
+  // 화면 갱신
+  pcRenderSitesTab(c);
+  pcSelectSite(c.id, newSiteId);
+  pcRenderTable(); // 목록의 사업장 수도 갱신
+}
+
+// 사업장 수정 저장
+function pcSubmitEditSite(bizId, siteId){
+  const c = custById(bizId); if(!c) return;
+  const sites = pcGetSites(c);
+  const s = sites.find(x => x.id === siteId);
+  if(!s) return;
+
+  const newName    = $('pc-s-name')?.value?.trim();
+  const newManager = $('pc-s-manager')?.value?.trim();
+  const newTel     = $('pc-s-tel')?.value?.trim();
+  const newAddr    = $('pc-s-addr')?.value?.trim();
+  const newKepco   = $('pc-s-kepco')?.value?.trim();
+  const newPower   = parseInt($('pc-s-power')?.value, 10) || 0;
+  if(!newName){ alert('사업장명은 필수 입력입니다.'); return; }
+
+  const changes = [];
+  const apply = (key, oldVal, newVal, label) => {
+    const a = (oldVal == null ? '' : String(oldVal));
+    const b = (newVal == null ? '' : String(newVal));
+    if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); s[key] = newVal; }
+  };
+  apply('siteName', s.siteName, newName, '사업장명');
+  apply('manager', s.manager, newManager, '책임자');
+  apply('tel', s.tel, newTel, '연락처');
+  apply('addr', s.addr, newAddr, '주소');
+  apply('kepco', s.kepco, newKepco, 'KEPCO');
+  if(newPower) apply('power', s.power, newPower, '계약전력');
+
+  logAudit?.({
+    objectType:'site', objectId:siteId, action:'site_info_updated',
+    title:`사업장 정보 수정 — ${newName}`,
+    desc: changes.length ? changes.join(' · ') : '변경 사항 없음',
+    actor:'운영자', tone:'info'
+  });
+  pcAddLog(c, '사업장 정보 수정', `${newName}: ${changes.length ? changes.join(' · ') : '변경 사항 없음'}`, 'done');
+  closeModal('commonModal');
+  showToast(`사업장 정보 저장 — ${newName}`);
+  pcRenderSitesTab(c);
+  pcSelectSite(bizId, siteId);
 }
 
 /* [Phase 17-AA] 사업자 정보 수정 모달 — 사전검증 상세 기본정보 탭에서 호출 */
