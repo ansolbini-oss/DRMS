@@ -134,68 +134,35 @@ function pcBusinessBarHtml(sites){
   return `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;color:var(--text-hint);white-space:nowrap;">${done}/${total}</span></div>`;
 }
 
+/* [Phase 17-AC] 사전검증 목록 — 사업장 단위 평면 리스트
+   옛 아코디언(사업자 펼침 → 사업장) 구조 해제.
+   각 사업장이 독립적인 사전검증 단위라 평면 나열이 운영자 직관에 부합. */
 function pcRenderTable(){
   pcRefreshCards();
   const list = pcFilteredList();
   const tbody = $('pc-tbody'); tbody.innerHTML = '';
   let siteTotal = 0;
-  list.forEach(c=>{
-    const hasSites = Array.isArray(c.sites) && c.sites.length > 0;
-    siteTotal += hasSites ? c.sites.length : 1;
-    // ───── 사업자 행 ─────
-    const tr = document.createElement('tr');
-    tr.className = 'business-row' + (hasSites ? ' has-children' : '');
-    tr.dataset.bizId = c.id;
-    const accordionIcon = hasSites
-      ? `<span class="accordion-icon" style="display:inline-block;width:12px;color:var(--text-hint);font-size:10px;">▶</span> `
-      : '<span style="display:inline-block;width:12px;"></span> ';
-    const siteCountBadge = hasSites
-      ? ` <span style="color:var(--text-hint);font-size:11px;font-weight:400;">· ${c.sites.length}사업장</span>`
-      : '';
-    tr.innerHTML = `
-      <td><span class="company-name">${accordionIcon}${c.name}${siteCountBadge}</span></td>
-      <td>${c.ceo}</td>
-      <td>${c.tel}</td>
-      <td>${c.addr}</td>
-      <td style="font-family:monospace;font-size:11px;">${c.recno}</td>
-      <td style="text-align:center;"><span class="badge badge-gray">${c.drType}</span></td>
-      <td style="text-align:center;">${c.inflow==='사이트'?'<span class="badge badge-progress">사이트</span>':'<span class="badge badge-purple">영업</span>'}</td>
-      <td style="text-align:center;">${hasSites ? pcBusinessBarHtml(c.sites) : pcStepBarHtml(c.steps)}</td>
-      <td style="text-align:center;font-variant-numeric:tabular-nums;">${c.date}</td>
-      <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pcShowDetail('${c.id}')">상세</button></td>`;
-    // 사업장 다수 → 행 클릭 = 아코디언 토글 (상세는 [상세] 버튼으로만)
-    // 사업장 단일 → 행 클릭 = 상세 이동 (기존 동작)
-    tr.style.cursor = 'pointer';
-    if(hasSites){
-      tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON') pcToggleBusiness(c.id); };
-    } else {
-      tr.onclick = (e)=>{ if(e.target.tagName!=='BUTTON') pcShowDetail(c.id); };
-    }
-    tbody.appendChild(tr);
-    // ───── 사업장 자식 행들 (기본 숨김) ─────
-    if(hasSites){
-      c.sites.forEach(s=>{
-        const trSite = document.createElement('tr');
-        trSite.className = 'site-row';
-        trSite.dataset.parentId = c.id;
-        trSite.style.display = 'none';
-        trSite.style.background = 'var(--grey50)';
-        trSite.innerHTML = `
-          <td style="padding-left:32px;color:var(--grey700);">
-            <span style="color:var(--text-hint);">└</span> ${s.siteName}
-          </td>
-          <td style="color:var(--grey700);">${s.manager||'—'}</td>
-          <td style="color:var(--grey700);">${s.tel||'—'}</td>
-          <td style="color:var(--grey700);">${s.addr}</td>
-          <td style="font-family:monospace;font-size:11px;color:var(--grey700);">KEPCO ${s.kepco}</td>
-          <td style="text-align:center;color:var(--text-hint);">—</td>
-          <td style="text-align:center;color:var(--text-hint);">—</td>
-          <td style="text-align:center;">${pcStepBarHtml(s.steps)}</td>
-          <td style="text-align:center;font-variant-numeric:tabular-nums;color:var(--grey700);">${s.date}</td>
-          <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();pcShowDetailWithSite('${c.id}','${s.id}')">상세</button></td>`;
-        tbody.appendChild(trSite);
-      });
-    }
+  list.forEach(c => {
+    const sites = pcGetSites(c);  // 가상 사이트 자동 매핑 보장
+    sites.forEach(s => {
+      siteTotal++;
+      const tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.innerHTML = `
+        <td style="font-weight:600;color:var(--navy);">${s.siteName}</td>
+        <td>${c.name}</td>
+        <td>${s.manager || c.ceo || '—'}</td>
+        <td>${s.tel || c.tel || '—'}</td>
+        <td>${s.addr || '—'}</td>
+        <td style="font-family:monospace;font-size:11px;">${s.kepco || '—'}</td>
+        <td style="text-align:center;">${c.drType ? `<span class="badge badge-gray">${c.drType}</span>` : '<span style="color:var(--text-hint);">—</span>'}</td>
+        <td style="text-align:center;">${c.inflow==='사이트'?'<span class="badge badge-progress">사이트</span>':c.inflow==='영업'?'<span class="badge badge-purple">영업</span>':'<span style="color:var(--text-hint);">—</span>'}</td>
+        <td style="text-align:center;">${pcStepBarHtml(s.steps)}</td>
+        <td style="text-align:center;font-variant-numeric:tabular-nums;">${s.date || c.date || '—'}</td>
+        <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pcShowDetailWithSite('${c.id}','${s.id}')">상세</button></td>`;
+      tr.onclick = (e) => { if(e.target.tagName !== 'BUTTON') pcShowDetailWithSite(c.id, s.id); };
+      tbody.appendChild(tr);
+    });
   });
   $('pc-rowcount').textContent = `총 ${list.length}사업자 · ${siteTotal}사업장`;
 }

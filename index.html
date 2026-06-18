@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260618-1041. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260618-1041">
+<!-- css/js 모두 ?v=260618-1048. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260618-1048">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260618-1041</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260618-1048</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -354,7 +354,7 @@
     </div>
 
     <div class="filter-area">
-      <input class="search-input" type="text" placeholder=" 사업자명 · 대표자 · 접수번호 · 사업장 · KEPCO" id="pc-search" onkeydown="if(event.key==='Enter') pcRenderTable()">
+      <input class="search-input" type="text" placeholder=" 사업장명 · 사업자 · 담당자 · 접수번호 · KEPCO" id="pc-search" onkeydown="if(event.key==='Enter') pcRenderTable()">
       <select class="filter-select" id="pc-filter-type">
         <option value="">DR유형 전체</option>
         <option>표준DR</option><option>중소형DR</option><option>국민DR</option>
@@ -366,15 +366,17 @@
 
     <div class="table-area">
       <table>
+        <!-- [Phase 17-AC] 사업장 단위 평면 리스트 — 사업장명·사업자·담당자·연락처·주소·KEPCO·검증진행·접수일·관리 -->
         <thead><tr>
-          <th style="width:200px;text-align:left;">사업자명</th>
-          <th style="width:80px;text-align:left;">대표자</th>
+          <th style="width:160px;text-align:left;">사업장명</th>
+          <th style="width:140px;text-align:left;">사업자</th>
+          <th style="width:90px;text-align:left;">담당자</th>
           <th style="width:120px;text-align:left;">연락처</th>
           <th style="width:140px;text-align:left;">주소</th>
-          <th style="width:125px;text-align:left;">접수번호</th>
+          <th style="width:110px;text-align:left;">KEPCO</th>
           <th style="width:90px;text-align:center;">DR 유형</th>
-          <th style="width:80px;text-align:center;">유입경로</th>
-          <th style="width:150px;text-align:center;">검증 진행</th>
+          <th style="width:70px;text-align:center;">유입경로</th>
+          <th style="width:140px;text-align:center;">검증 진행</th>
           <th style="width:100px;text-align:center;">접수일</th>
           <th style="width:80px;text-align:center;">관리</th>
         </tr></thead>
@@ -2243,20 +2245,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260618-1041"></script>
-<script src="data/tips.js?v=260618-1041"></script>
-<script src="js/core.js?v=260618-1041"></script>
-<script src="js/dashboard.js?v=260618-1041"></script>
-<script src="js/precheck.js?v=260618-1041"></script>
-<script src="js/resource.js?v=260618-1041"></script>
-<script src="js/monitoring.js?v=260618-1041"></script>
-<script src="js/report.js?v=260618-1041"></script>
-<script src="js/settlement.js?v=260618-1041"></script>
-<script src="js/datacollect.js?v=260618-1041"></script>
-<script src="js/rtu.js?v=260618-1041"></script>
-<script src="js/communication.js?v=260618-1041"></script>
-<script src="js/bidding.js?v=260618-1041"></script>
-<script src="js/account.js?v=260618-1041"></script>
-<script src="js/system.js?v=260618-1041"></script>
+<script src="data/store.js?v=260618-1048"></script>
+<script src="data/tips.js?v=260618-1048"></script>
+<script src="js/core.js?v=260618-1048"></script>
+<script src="js/dashboard.js?v=260618-1048"></script>
+<script src="js/precheck.js?v=260618-1048"></script>
+<script src="js/resource.js?v=260618-1048"></script>
+<script src="js/monitoring.js?v=260618-1048"></script>
+<script src="js/report.js?v=260618-1048"></script>
+<script src="js/settlement.js?v=260618-1048"></script>
+<script src="js/datacollect.js?v=260618-1048"></script>
+<script src="js/rtu.js?v=260618-1048"></script>
+<script src="js/communication.js?v=260618-1048"></script>
+<script src="js/bidding.js?v=260618-1048"></script>
+<script src="js/account.js?v=260618-1048"></script>
+<script src="js/system.js?v=260618-1048"></script>
 
 </body></html>
