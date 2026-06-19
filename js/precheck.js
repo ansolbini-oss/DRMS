@@ -182,16 +182,24 @@ function pcShowDetail(id){
   const badge = $('pc-d-badge');
   badge.className = 'badge ' + statusBadgeClass(c.status);
   badge.textContent = c.status;
-  // [Phase 17-AA] 사업자 정보 6항목: 사업자명·사업자번호·업종/업태·담당자·연락처·유입경로
+  // [Phase 17-AE] 사업자 정보 (상단 가로 카드) + KPI + 사업장 정보 카드 렌더
   $('pc-d-name').textContent = c.name;
   $('pc-d-recno').textContent = c.recno;
   const setText = (id, val) => { const el = $(id); if(el) el.textContent = val; };
   setText('pc-d-bizno', c.bizno || '-');
   setText('pc-d-bizcat', `${c.bizcat || '-'} / ${c.biztype || '-'}`);
+  setText('pc-d-drtype', c.drType || '-');
   setText('pc-d-ceo', c.ceo || '-');
   setText('pc-d-tel', c.tel || '-');
   setText('pc-d-inflow', c.inflow || '-');
-  // 검증 절차·산정 결과·외부데이터 검증 결과는 [사업장] 탭으로 이동됨 (Phase 5-D)
+  // KPI 카드
+  const sitesAll = pcGetSites(c);
+  const totalSteps = pcStepDefs.length;
+  const doneSites = sitesAll.filter(s => pcNormalizeSteps(s.steps).filter(x=>x===2).length === totalSteps).length;
+  setText('pc-d-site-count', `${sitesAll.length}`);
+  setText('pc-d-verify-done', `${doneSites} / ${sitesAll.length}`);
+  // 사업장 정보 카드 (계약 정보 + 서류 업로드)
+  pcRenderSitesInfo(c);
   pcRenderMemo(c);
   pcRenderDetailLog(c);
   pcUpdateContractBtn(c);
@@ -244,6 +252,65 @@ function pcGetSites(c){
 }
 
 // 기본정보 탭 우측의 사업자 요약 카드 렌더링
+/* [Phase 17-AE] 사업장 정보 카드 렌더 — 사업장별 기본 + 계약 정보 + 서류 */
+function pcRenderSitesInfo(c){
+  const el = $('pc-d-sites-info'); if(!el) return;
+  const sites = pcGetSites(c);
+  if(sites.length === 0){
+    el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-hint);font-size:12px;">등록된 사업장이 없습니다. [+ 사업장 추가] 버튼으로 등록하세요.</div>`;
+    return;
+  }
+  const totalSteps = pcStepDefs.length;
+  el.innerHTML = sites.map(s => {
+    const stepsArr = pcNormalizeSteps(s.steps);
+    const done = stepsArr.filter(x=>x===2).length;
+    const verifyBadge = done===totalSteps
+      ? `<span class="badge badge-done" style="font-size:10px;">검증완료</span>`
+      : `<span class="badge badge-progress" style="font-size:10px;">검증중 ${done}/${totalSteps}</span>`;
+    const ct = s.contract || {};
+    const docList = (ct.docs && ct.docs.length)
+      ? `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">${ct.docs.map(d=>`
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;font-size:11px;">
+            <span style="color:var(--blue);">📄</span>
+            <span style="flex:1;color:var(--text-sub);">${d.name}</span>
+            <span style="color:var(--text-hint);font-size:10px;">${d.uploadedAt||''}</span>
+          </div>`).join('')}</div>`
+      : `<div style="font-size:11px;color:var(--text-hint);">업로드된 서류 없음</div>`;
+    return `<div style="padding:14px 16px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;background:#fff;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:14px;font-weight:700;color:var(--navy);">${s.siteName}</div>
+          ${verifyBadge}
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="pcOpenEditSiteInfo('${c.id}','${s.id}')">수정</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;font-size:12px;">
+        <div><div style="font-size:10px;color:var(--text-hint);">담당자</div><div style="font-weight:500;margin-top:2px;">${s.manager||'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text-hint);">연락처</div><div style="font-weight:500;margin-top:2px;">${s.tel||'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text-hint);">주소</div><div style="font-weight:500;margin-top:2px;">${s.addr||'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text-hint);">KEPCO 고객번호</div><div style="font-family:monospace;font-weight:500;margin-top:2px;">${s.kepco||'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text-hint);">한전 계약전력</div><div style="font-weight:500;margin-top:2px;">${s.power?s.power+' kW':'—'}</div></div>
+        <div><div style="font-size:10px;color:var(--text-hint);">검증 진행</div><div style="font-weight:500;margin-top:2px;">${done}/${totalSteps} 단계</div></div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);">
+        <div style="font-size:11px;color:var(--text-hint);font-weight:600;margin-bottom:8px;">60hz 계약 정보</div>
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;font-size:12px;">
+          <div><div style="font-size:10px;color:var(--text-hint);">60hz 계약전력</div><div style="font-weight:500;margin-top:2px;">${ct.power?ct.power+' kW':'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text-hint);">수수료</div><div style="font-weight:500;margin-top:2px;">${ct.feeRate!=null?ct.feeRate+'%':'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text-hint);">계약기간</div><div style="font-weight:500;margin-top:2px;">${ct.startDate&&ct.endDate?`${ct.startDate} ~ ${ct.endDate}`:'—'}</div></div>
+        </div>
+        <div style="margin-top:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+          <div style="flex:1;">
+            <div style="font-size:10px;color:var(--text-hint);margin-bottom:4px;">계약서류</div>
+            ${docList}
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="pcOpenUploadSiteDoc('${c.id}','${s.id}')">서류 업로드</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function pcRenderBusinessSummary(c){
   const el = $('pc-business-summary'); if(!el) return;
   const sites = pcGetSites(c);
@@ -968,6 +1035,183 @@ function pcOpenAddSite(){
     site: { siteName:'', manager:c.ceo||'', tel:c.tel||'', addr:'', kepco:'', power:'' },
     onSave: pcSubmitAddSite,
   });
+}
+
+/* [Phase 17-AE] 사업장 정보 수정 (기본 + 60hz 계약 정보 통합) */
+function pcOpenEditSiteInfo(bizId, siteId){
+  const c = custById(bizId); if(!c) return;
+  const sites = pcGetSites(c);
+  const s = sites.find(x => x.id === siteId);
+  if(!s){ showToast('사업장을 찾을 수 없습니다.'); return; }
+  const ct = s.contract || {};
+  $('cm-title').textContent = '사업장 정보 수정';
+  $('cm-sub').textContent = `${c.name} - ${s.siteName}`;
+  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
+    사업장 기본 정보와 60hz 계약 정보를 함께 관리합니다.
+  </div>
+  <div style="font-size:11px;color:var(--text-hint);font-weight:600;margin-bottom:8px;">사업장 기본 정보</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장명 <span style="color:var(--red);">*</span></label>
+      <input id="pc-si-name" type="text" value="${(s.siteName||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">담당자</label>
+      <input id="pc-si-manager" type="text" value="${(s.manager||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">연락처</label>
+      <input id="pc-si-tel" type="text" value="${(s.tel||'').replace(/"/g,'&quot;')}" placeholder="010-0000-0000" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">한전 계약전력 (kW)</label>
+      <input id="pc-si-power" type="number" value="${s.power||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div style="grid-column:1/-1;">
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">주소</label>
+      <input id="pc-si-addr" type="text" value="${(s.addr||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">KEPCO 고객번호</label>
+      <input id="pc-si-kepco" type="text" value="${(s.kepco||'').replace(/"/g,'&quot;')}" placeholder="8자리" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>
+  <div style="font-size:11px;color:var(--text-hint);font-weight:600;margin-bottom:8px;">60hz 계약 정보</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">60hz 계약전력 (kW)</label>
+      <input id="pc-ci-power" type="number" value="${ct.power||''}" placeholder="예: 400" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">수수료 (%)</label>
+      <input id="pc-ci-fee" type="number" value="${ct.feeRate!=null?ct.feeRate:''}" placeholder="예: 15" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div></div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계약 시작일</label>
+      <input id="pc-ci-start" type="date" value="${ct.startDate||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계약 종료일</label>
+      <input id="pc-ci-end" type="date" value="${ct.endDate||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="pcSubmitEditSiteInfo('${bizId}','${siteId}')">저장</button>`;
+  openModal('commonModal');
+}
+
+function pcSubmitEditSiteInfo(bizId, siteId){
+  const c = custById(bizId); if(!c) return;
+  const sites = pcGetSites(c);
+  const s = sites.find(x => x.id === siteId);
+  if(!s) return;
+  const newName    = $('pc-si-name')?.value?.trim();
+  const newManager = $('pc-si-manager')?.value?.trim();
+  const newTel     = $('pc-si-tel')?.value?.trim();
+  const newAddr    = $('pc-si-addr')?.value?.trim();
+  const newKepco   = $('pc-si-kepco')?.value?.trim();
+  const newPower   = parseInt($('pc-si-power')?.value, 10);
+  const ctPower    = parseInt($('pc-ci-power')?.value, 10);
+  const ctFee      = parseFloat($('pc-ci-fee')?.value);
+  const ctStart    = $('pc-ci-start')?.value;
+  const ctEnd      = $('pc-ci-end')?.value;
+  if(!newName){ alert('사업장명은 필수 입력입니다.'); return; }
+  const changes = [];
+  const apply = (key, oldVal, newVal, label) => {
+    const a = (oldVal == null ? '' : String(oldVal));
+    const b = (newVal == null ? '' : String(newVal));
+    if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); s[key] = newVal; }
+  };
+  apply('siteName', s.siteName, newName, '사업장명');
+  apply('manager', s.manager, newManager, '담당자');
+  apply('tel', s.tel, newTel, '연락처');
+  apply('addr', s.addr, newAddr, '주소');
+  apply('kepco', s.kepco, newKepco, 'KEPCO');
+  if(!isNaN(newPower)) apply('power', s.power, newPower, '한전 계약전력');
+  if(!s.contract) s.contract = {};
+  const ct = s.contract;
+  const applyCt = (key, oldVal, newVal, label) => {
+    const a = (oldVal == null ? '' : String(oldVal));
+    const b = (newVal == null ? '' : String(newVal));
+    if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); ct[key] = newVal; }
+  };
+  if(!isNaN(ctPower)) applyCt('power', ct.power, ctPower, '60hz 계약전력');
+  if(!isNaN(ctFee)) applyCt('feeRate', ct.feeRate, ctFee, '수수료');
+  applyCt('startDate', ct.startDate, ctStart, '계약 시작일');
+  applyCt('endDate', ct.endDate, ctEnd, '계약 종료일');
+  logAudit?.({
+    objectType:'site', objectId:siteId, action:'site_contract_updated',
+    title:`사업장 정보 수정 — ${newName}`,
+    desc: changes.length ? changes.join(' · ') : '변경 사항 없음',
+    actor:'운영자', tone:'info'
+  });
+  pcAddLog(c, '사업장 정보 수정', changes.length ? `${newName} · ${changes.join(' · ')}` : `${newName} · 변경 사항 없음`, 'done');
+  closeModal('commonModal');
+  showToast(`사업장 정보 저장 — ${newName}`);
+  pcShowDetail(c.id);
+}
+
+/* [Phase 17-AE] 계약서류 업로드 — 사업장 단위 */
+function pcOpenUploadSiteDoc(bizId, siteId){
+  const c = custById(bizId); if(!c) return;
+  const sites = pcGetSites(c);
+  const s = sites.find(x => x.id === siteId);
+  if(!s) return;
+  $('cm-title').textContent = '계약서류 업로드';
+  $('cm-sub').textContent = `${c.name} - ${s.siteName}`;
+  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
+    계약서·부속서류 파일을 사업장에 첨부합니다. 변경 시 감사로그가 기록됩니다.
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">파일 <span style="color:var(--red);">*</span></label>
+      <input id="pc-doc-file" type="file" accept=".pdf,.docx,.xlsx,.png,.jpg" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;background:#fff;">
+      <div style="font-size:10px;color:var(--text-hint);margin-top:4px;">.pdf, .docx, .xlsx, .png, .jpg (최대 20MB)</div>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">서류 종류</label>
+      <select id="pc-doc-type" class="filter-select" style="width:100%;">
+        <option value="계약서">계약서</option>
+        <option value="부속서류">부속서류</option>
+        <option value="동의서">개인정보동의서</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>
+  </div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="pcSubmitUploadSiteDoc('${bizId}','${siteId}')">업로드</button>`;
+  openModal('commonModal');
+}
+
+function pcSubmitUploadSiteDoc(bizId, siteId){
+  const c = custById(bizId); if(!c) return;
+  const sites = pcGetSites(c);
+  const s = sites.find(x => x.id === siteId);
+  if(!s) return;
+  const file = $('pc-doc-file')?.files?.[0];
+  const docType = $('pc-doc-type')?.value || '기타';
+  if(!file){ alert('업로드할 파일을 선택하세요.'); return; }
+  if(file.size > 20 * 1024 * 1024){ alert('파일 크기는 20MB 이하여야 합니다.'); return; }
+  if(!s.contract) s.contract = {};
+  if(!Array.isArray(s.contract.docs)) s.contract.docs = [];
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  s.contract.docs.push({
+    name: `[${docType}] ${file.name}`,
+    size: file.size,
+    uploadedAt: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`,
+  });
+  logAudit?.({
+    objectType:'site', objectId:siteId, action:'site_doc_uploaded',
+    title:`계약서류 업로드 — ${s.siteName}`,
+    desc:`${docType} · ${file.name} (${(file.size/1024).toFixed(1)} KB)`,
+    actor:'운영자', tone:'info'
+  });
+  pcAddLog(c, '계약서류 업로드', `${s.siteName} · ${docType} · ${file.name}`, 'done');
+  closeModal('commonModal');
+  showToast(`서류 업로드 완료 — ${file.name}`);
+  pcShowDetail(c.id);
 }
 
 // 사업장 수정 모달

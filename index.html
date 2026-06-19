@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260619-1147. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260619-1147">
+<!-- css/js 모두 ?v=260619-1659. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260619-1659">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260619-1147</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260619-1659</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -410,55 +410,68 @@
       <div class="tab" data-tab="log" onclick="pcSwitchTab('log')">검증 로그</div>
     </div>
 
-    <div class="detail-body" id="pc-tab-info">
-      <!-- LEFT: 사업자 정보 (Phase 17-AA: 6개 항목 + [수정] 버튼) -->
-      <div class="detail-left">
-        <div class="info-section">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--navy);" id="pc-d-name">-</div>
-              <div style="font-size:11px;color:var(--text-hint);margin-top:2px;" id="pc-d-recno">-</div>
-            </div>
-            <button class="btn btn-secondary btn-sm" onclick="pcOpenEditCustomer()">수정</button>
+    <!-- [Phase 17-AE] 기본정보 탭 전면 개편 — 위→아래 4영역 흐름 (계약관리에서도 동일 레이아웃 활용 예정)
+         ① 사업자 정보 (상단 가로) ② 사업장 수·검증 완료 KPI ③ 사업장 정보 (계약 정보 + 서류) ④ 메모 -->
+    <div class="detail-body" id="pc-tab-info" style="display:flex;flex-direction:column;gap:14px;padding:14px 20px;overflow-y:auto;">
+
+      <!-- ① 사업자 정보 (가로형 카드) -->
+      <div class="r-card">
+        <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--navy);" id="pc-d-name">-</div>
+            <div style="font-size:11px;color:var(--text-hint);margin-top:2px;" id="pc-d-recno">-</div>
           </div>
-          <table class="info-table" style="margin-top:10px;">
-            <tbody>
-              <tr><td>사업자번호</td><td id="pc-d-bizno">-</td></tr>
-              <tr><td>업종 / 업태</td><td id="pc-d-bizcat">-</td></tr>
-              <tr><td>담당자 이름</td><td id="pc-d-ceo">-</td></tr>
-              <tr><td>연락처</td><td id="pc-d-tel">-</td></tr>
-              <tr><td>유입경로</td><td id="pc-d-inflow">-</td></tr>
-            </tbody>
-          </table>
+          <button class="btn btn-secondary btn-sm" onclick="pcOpenEditCustomer()">사업자 정보 수정</button>
         </div>
-        <div style="margin-top:14px;padding:10px 12px;background:var(--blue-light);border:1px solid var(--blue-border);border-radius:6px;color:var(--blue);font-size:11px;line-height:1.6;">
-          ※ 검증 절차·산정 결과·외부데이터 검증 결과는<br>
-          <b>[사업장]</b> 탭에서 사업장별로 확인할 수 있습니다.
+        <div class="r-card-body">
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;">
+            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">사업자번호</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-bizno">-</div></div>
+            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">업종 / 업태</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-bizcat">-</div></div>
+            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">DR 유형</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-drtype">-</div></div>
+            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">담당자 이름</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-ceo">-</div></div>
+            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">연락처</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-tel">-</div></div>
+            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">유입경로</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-inflow">-</div></div>
+          </div>
         </div>
       </div>
 
-      <!-- RIGHT: 사업자 요약 + 운영자 메모 -->
-      <div class="detail-right">
-        <div class="r-card">
-          <div class="r-card-header">
-            <div class="r-card-title">사업자 요약</div>
-          </div>
-          <div class="r-card-body" id="pc-business-summary">
-            <!-- pcRenderBusinessSummary() 가 채움 -->
-          </div>
+      <!-- ② KPI: 사업장 수 · 검증 완료 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="r-card" style="padding:16px 18px;">
+          <div style="font-size:11px;color:var(--text-hint);font-weight:500;">사업장 수</div>
+          <div style="font-size:24px;font-weight:700;color:var(--navy);margin-top:6px;" id="pc-d-site-count">-</div>
         </div>
+        <div class="r-card" style="padding:16px 18px;">
+          <div style="font-size:11px;color:var(--text-hint);font-weight:500;">검증 완료</div>
+          <div style="font-size:24px;font-weight:700;color:var(--green);margin-top:6px;" id="pc-d-verify-done">-</div>
+        </div>
+      </div>
 
-        <div class="r-card">
-          <div class="r-card-header"><div class="r-card-title">운영자 메모</div></div>
-          <div id="pc-memo-history" style="max-height:160px;overflow-y:auto;"></div>
-          <div style="padding:12px 18px;border-top:1px solid var(--border);">
-            <textarea id="pc-memo-input" style="width:100%;height:60px;border:1px solid var(--border-dark);border-radius:var(--radius);padding:8px 10px;font-size:12px;font-family:inherit;resize:none;outline:none;line-height:1.5;" placeholder="메모를 입력하세요"></textarea>
-            <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-              <button class="btn btn-primary btn-sm" onclick="pcAddMemo()">메모 저장</button>
-            </div>
+      <!-- ③ 사업장 정보 (각 사업장 카드 N개 + [+ 사업장 추가]) -->
+      <div class="r-card">
+        <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="r-card-title">사업장 정보</div>
+          <button class="btn btn-primary btn-sm" onclick="pcOpenAddSite()">+ 사업장 추가</button>
+        </div>
+        <div class="r-card-body" id="pc-d-sites-info">
+          <!-- pcRenderSitesInfo() 가 채움 — 각 사업장: 기본 정보 + 계약 정보 + 서류 업로드 -->
+        </div>
+      </div>
+
+      <!-- ④ 운영자 메모 -->
+      <div class="r-card">
+        <div class="r-card-header"><div class="r-card-title">운영자 메모</div></div>
+        <div id="pc-memo-history" style="max-height:160px;overflow-y:auto;"></div>
+        <div style="padding:12px 18px;border-top:1px solid var(--border);">
+          <textarea id="pc-memo-input" style="width:100%;height:60px;border:1px solid var(--border-dark);border-radius:var(--radius);padding:8px 10px;font-size:12px;font-family:inherit;resize:none;outline:none;line-height:1.5;" placeholder="메모를 입력하세요"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button class="btn btn-primary btn-sm" onclick="pcAddMemo()">메모 저장</button>
           </div>
         </div>
       </div>
+
+      <!-- 옛 호환 (제거 예정 — id만 유지) -->
+      <div id="pc-business-summary" style="display:none;"></div>
     </div>
 
     <div class="detail-body" id="pc-tab-log" style="display:none;">
@@ -2245,20 +2258,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260619-1147"></script>
-<script src="data/tips.js?v=260619-1147"></script>
-<script src="js/core.js?v=260619-1147"></script>
-<script src="js/dashboard.js?v=260619-1147"></script>
-<script src="js/precheck.js?v=260619-1147"></script>
-<script src="js/resource.js?v=260619-1147"></script>
-<script src="js/monitoring.js?v=260619-1147"></script>
-<script src="js/report.js?v=260619-1147"></script>
-<script src="js/settlement.js?v=260619-1147"></script>
-<script src="js/datacollect.js?v=260619-1147"></script>
-<script src="js/rtu.js?v=260619-1147"></script>
-<script src="js/communication.js?v=260619-1147"></script>
-<script src="js/bidding.js?v=260619-1147"></script>
-<script src="js/account.js?v=260619-1147"></script>
-<script src="js/system.js?v=260619-1147"></script>
+<script src="data/store.js?v=260619-1659"></script>
+<script src="data/tips.js?v=260619-1659"></script>
+<script src="js/core.js?v=260619-1659"></script>
+<script src="js/dashboard.js?v=260619-1659"></script>
+<script src="js/precheck.js?v=260619-1659"></script>
+<script src="js/resource.js?v=260619-1659"></script>
+<script src="js/monitoring.js?v=260619-1659"></script>
+<script src="js/report.js?v=260619-1659"></script>
+<script src="js/settlement.js?v=260619-1659"></script>
+<script src="js/datacollect.js?v=260619-1659"></script>
+<script src="js/rtu.js?v=260619-1659"></script>
+<script src="js/communication.js?v=260619-1659"></script>
+<script src="js/bidding.js?v=260619-1659"></script>
+<script src="js/account.js?v=260619-1659"></script>
+<script src="js/system.js?v=260619-1659"></script>
 
 </body></html>
