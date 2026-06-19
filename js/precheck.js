@@ -1822,70 +1822,43 @@ function ctRenderSummary(){
   $('ct-kpi-approved').textContent = count('계약완료');
   $('ct-kpi-rejected').textContent = count('반려');
 }
+/* [Phase 17-AD] 계약관리 — 사업자 단위 평면 리스트 (아코디언 해제)
+   계약은 사업자 단위로 체결되므로 사업장 자식 행 제거. 사업장 N개 카운트는 사업자명 옆에 표시.
+   상세 모달에서 사업장 미리보기 + 검증 결과 확인 가능. */
 function ctRenderTable(){
   const rows = ctFilteredCustomers();
   const tbody = $('ct-tbody');
   const empty = $('ct-empty');
   let siteTotal = 0;
-  tbody.innerHTML = rows.map(c=>{
+  tbody.innerHTML = rows.map(c => {
     const stage = ctGetStage(c);
     const ci = c.contractInfo || {};
-    const hasSites = Array.isArray(c.sites) && c.sites.length > 0;
-    siteTotal += hasSites ? c.sites.length : 1;
-    const accordionIcon = hasSites
-      ? `<span class="accordion-icon" style="display:inline-block;width:12px;color:var(--text-hint);font-size:10px;">▶</span> `
-      : `<span style="display:inline-block;width:12px;"></span> `;
-    const siteCountBadge = hasSites
-      ? ` <span style="color:var(--text-hint);font-size:11px;font-weight:400;">· ${c.sites.length}사업장</span>`
+    const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (Array.isArray(c.sites) ? c.sites : []);
+    const siteCount = sites.length || 1;
+    siteTotal += siteCount;
+    const siteCountBadge = siteCount > 1
+      ? `<span style="color:var(--text-hint);font-size:11px;font-weight:400;margin-left:6px;">· ${siteCount}사업장</span>`
       : '';
-    // ───── 사업자 행 ─────
-    const bizRow = `<tr class="ct-business-row" data-biz-id="${c.id}" style="cursor:pointer;">
+    return `<tr class="ct-business-row" data-biz-id="${c.id}" style="cursor:pointer;">
       <td>
-        <div class="ct-name">${accordionIcon}${c.name}${siteCountBadge}</div>
+        <div class="ct-name">${c.name}${siteCountBadge}</div>
         <div class="ct-sub">${c.recno} · 고객번호 ${c.kepco||'-'}</div>
       </td>
-      <td>${c.drType}</td>
+      <td>${c.drType||'—'}</td>
       <td><span class="badge ${statusBadgeClass(c.status)}">${c.status}</span></td>
       <td><span class="badge ${ctStageBadge(stage)}">${stage}</span></td>
       <td>${(ci.mandatoryCapacity||0).toLocaleString()} kW</td>
       <td>${ci.startDate||'-'} ~ ${ci.endDate||'-'}</td>
       <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
     </tr>`;
-    // ───── 사업장 자식 행들 (기본 숨김) ─────
-    const siteRows = hasSites ? c.sites.map(s=>{
-      // [Phase 17-L] 4단계 정규화 후 진행도 표기
-      const stepsArr = pcNormalizeSteps(s.steps);
-      const totalSteps = pcStepDefs.length;
-      const stepsDone = stepsArr.filter(x=>x===2).length;
-      const verifyLabel = stepsDone===totalSteps ? '검증완료' : (stepsDone===0 ? '검증대기' : `검증중 (${stepsDone}/${totalSteps})`);
-      const verifyCls = stepsDone===totalSteps ? 'badge-done' : (stepsDone===0 ? 'badge-gray' : 'badge-progress');
-      return `<tr class="ct-site-row" data-parent-id="${c.id}" style="display:none;background:var(--grey50);">
-        <td style="padding-left:32px;">
-          <div class="ct-name" style="color:var(--grey700);font-weight:500;">
-            <span style="color:var(--text-hint);">└</span> ${s.siteName}
-          </div>
-          <div class="ct-sub" style="color:var(--text-hint);">KEPCO ${s.kepco} · ${s.addr||''}</div>
-        </td>
-        <td style="color:var(--text-hint);">—</td>
-        <td><span class="badge ${verifyCls}">${verifyLabel}</span></td>
-        <td style="color:var(--text-hint);">—</td>
-        <td style="color:var(--text-hint);">—</td>
-        <td style="color:var(--text-hint);">—</td>
-        <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}','${s.id}')">상세보기</button></td>
-      </tr>`;
-    }).join('') : '';
-    return bizRow + siteRows;
   }).join('');
 
-  // 행 클릭 이벤트: 사업장 다수 → 아코디언 토글, 단일 → 모달 오픈
-  tbody.querySelectorAll('tr.ct-business-row').forEach(tr=>{
+  // 행 클릭 → 상세 모달 (모든 사업자가 동일 동작)
+  tbody.querySelectorAll('tr.ct-business-row').forEach(tr => {
     const bizId = tr.dataset.bizId;
-    const c = store.customers.find(x=>x.id===bizId);
-    const hasSites = c && Array.isArray(c.sites) && c.sites.length > 0;
-    tr.onclick = (e)=>{
-      if(e.target.tagName==='BUTTON') return;
-      if(hasSites) ctToggleBusiness(bizId);
-      else ctOpenDetail(bizId);
+    tr.onclick = (e) => {
+      if(e.target.tagName === 'BUTTON') return;
+      ctOpenDetail(bizId);
     };
   });
 
