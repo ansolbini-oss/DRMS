@@ -2192,6 +2192,7 @@ function ctOpenDetail(id, siteId){
   const c = store.customers.find(x=>x.id===id); if(!c) return;
   ctEnsureCustomerMeta(c);
   ctCurrentId = id;
+  ctCustEditing = false;  // [Phase 17-AO] 진입 시 편집 모드 초기화
   // 페이지뷰 전환
   const listV = document.getElementById('ct-list-view');
   const detV  = document.getElementById('ct-detail-view');
@@ -2347,7 +2348,9 @@ function ctGotoList(){
   ctCurrentId = null;
 }
 
-/* [Phase 17-AN] 계약관리 상세 페이지 본문 렌더 — 사업자 정보 + 요약 + 사업장 계약 카드 (와이어 형태) */
+/* [Phase 17-AN/AO] 계약관리 상세 페이지 본문 렌더 — 사업자 정보(인라인 편집) + 요약 + 사업장 계약 카드 + 운영자 메모 */
+let ctCustEditing = false;
+
 function ctRenderDetailPage(c){
   const body = document.getElementById('ct-d-body');
   if(!body) return;
@@ -2359,22 +2362,59 @@ function ctRenderDetailPage(c){
   const rowLast   = 'display:grid;grid-template-columns:140px 1fr;';
   const labelCell = 'padding:12px 14px;background:var(--grey50);font-size:12px;color:var(--text-sub);font-weight:600;display:flex;align-items:center;';
   const valCell   = 'padding:12px 14px;font-size:13px;font-weight:500;color:var(--navy);display:flex;align-items:center;';
+  const inpCell   = 'padding:8px 14px;display:flex;align-items:center;gap:6px;';
+  const inpStyle  = 'flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);box-sizing:border-box;';
   const tableWrap = 'border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;';
+  const req = `<span style="color:var(--red);">*</span>`;
+  const esc = (v) => String(v||'').replace(/"/g,'&quot;');
 
-  // ① 사업자 정보 카드
+  // ① 사업자 정보 카드 — 인라인 편집 토글
+  let custInner, custBtn;
+  if(!ctCustEditing){
+    custInner = `<div style="${tableWrap}">
+      <div style="${rowStyle}"><div style="${labelCell}">사업자등록번호</div><div style="${valCell}">${c.bizno || '-'}</div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">상호명</div><div style="${valCell}">${c.name || '-'}</div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">담당자 이름</div><div style="${valCell}">${c.ceo || '-'}</div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">담당자 연락처</div><div style="${valCell}">${c.tel || '-'}</div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">업종</div><div style="${valCell}">${c.bizcat || '-'}</div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">업태</div><div style="${valCell}">${c.biztype || '-'}</div></div>
+      <div style="${rowLast}"><div style="${labelCell}">사업자 주소</div><div style="${valCell}">${c.addr || '-'}</div></div>
+    </div>`;
+    custBtn = `<button class="btn btn-secondary btn-sm" onclick="ctEnterCustEdit()">사업자 정보 수정</button>`;
+  } else {
+    custInner = `<div style="${tableWrap}">
+      <div style="${rowStyle}"><div style="${labelCell}">사업자등록번호 ${req}</div><div style="${inpCell}">
+        <input id="ct-ec-bizno" type="text" value="${esc(c.bizno)}" placeholder="000-00-00000" style="${inpStyle}">
+        <button class="btn btn-secondary btn-sm" type="button" onclick="ctEcLookupBizno()">조회</button>
+      </div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">상호명 ${req}</div><div style="${inpCell}">
+        <input id="ct-ec-name" type="text" value="${esc(c.name)}" placeholder="상호명을 입력해 주세요" style="${inpStyle}">
+      </div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">담당자 이름 ${req}</div><div style="${inpCell}">
+        <input id="ct-ec-ceo" type="text" value="${esc(c.ceo)}" placeholder="담당자 성함" style="${inpStyle}">
+      </div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">담당자 연락처 ${req}</div><div style="${inpCell}">
+        <input id="ct-ec-tel" type="text" value="${esc(c.tel)}" placeholder="010-0000-0000" style="${inpStyle}">
+      </div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">업종</div><div style="${inpCell}">
+        <input id="ct-ec-bizcat" type="text" value="${esc(c.bizcat)}" placeholder="조회 시 자동 입력" style="${inpStyle};background:#f8fafc;" readonly>
+      </div></div>
+      <div style="${rowStyle}"><div style="${labelCell}">업태</div><div style="${inpCell}">
+        <input id="ct-ec-biztype" type="text" value="${esc(c.biztype)}" placeholder="조회 시 자동 입력" style="${inpStyle};background:#f8fafc;" readonly>
+      </div></div>
+      <div style="${rowLast}"><div style="${labelCell}">사업자 주소</div><div style="${inpCell}">
+        <input id="ct-ec-addr" type="text" value="${esc(c.addr)}" placeholder="시·구·상세주소" style="${inpStyle}">
+      </div></div>
+    </div>`;
+    custBtn = `<button class="btn btn-secondary btn-sm" onclick="ctCancelCustEdit()">취소</button>
+               <button class="btn btn-primary btn-sm" onclick="ctSaveCustEdit()">정보 저장하기</button>`;
+  }
   const custCard = `<div class="r-card">
-    <div class="r-card-header"><div class="r-card-title">사업자 정보</div></div>
-    <div class="r-card-body">
-      <div style="${tableWrap}">
-        <div style="${rowStyle}"><div style="${labelCell}">사업자등록번호</div><div style="${valCell}">${c.bizno || '-'}</div></div>
-        <div style="${rowStyle}"><div style="${labelCell}">상호명</div><div style="${valCell}">${c.name || '-'}</div></div>
-        <div style="${rowStyle}"><div style="${labelCell}">담당자 이름</div><div style="${valCell}">${c.ceo || '-'}</div></div>
-        <div style="${rowStyle}"><div style="${labelCell}">담당자 연락처</div><div style="${valCell}">${c.tel || '-'}</div></div>
-        <div style="${rowStyle}"><div style="${labelCell}">업종</div><div style="${valCell}">${c.bizcat || '-'}</div></div>
-        <div style="${rowStyle}"><div style="${labelCell}">업태</div><div style="${valCell}">${c.biztype || '-'}</div></div>
-        <div style="${rowLast}"><div style="${labelCell}">사업자 주소</div><div style="${valCell}">${c.addr || '-'}</div></div>
-      </div>
+    <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="r-card-title">사업자 정보</div>
+      <div style="display:flex;gap:6px;">${custBtn}</div>
     </div>
+    <div class="r-card-body">${custInner}</div>
   </div>`;
 
   // ② 요약 카드 (사업장 수 / 계약 완료)
@@ -2397,7 +2437,117 @@ function ctRenderDetailPage(c){
   // ③ 사업장별 계약 카드 (와이어 형태)
   const siteCards = sites.map(s => ctRenderSiteContractCard(c, s, {rowStyle, rowLast, labelCell, valCell, tableWrap})).join('');
 
-  body.innerHTML = custCard + summaryCard + siteCards;
+  // ④ 운영자 메모 카드
+  const memoCard = `<div class="r-card">
+    <div class="r-card-header"><div class="r-card-title">운영자 메모</div></div>
+    <div id="ct-d-memo-history" style="max-height:200px;overflow-y:auto;"></div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);">
+      <textarea id="ct-d-memo-input" style="width:100%;height:60px;border:1px solid var(--border-dark);border-radius:var(--radius);padding:8px 10px;font-size:12px;font-family:inherit;resize:none;outline:none;line-height:1.5;box-sizing:border-box;" placeholder="메모를 입력하세요"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-primary btn-sm" onclick="ctAddMemo()">메모 저장</button>
+      </div>
+    </div>
+  </div>`;
+
+  body.innerHTML = custCard + summaryCard + siteCards + memoCard;
+  // 메모 히스토리 렌더
+  ctRenderMemoHistory(c);
+}
+
+/* [Phase 17-AO] 계약관리 메모 — 사전검증과 동일 store.memos[c.recno] 공유 (운영자가 양쪽에서 같은 메모 확인) */
+function ctRenderMemoHistory(c){
+  const el = document.getElementById('ct-d-memo-history');
+  if(!el) return;
+  const memos = (store.memos && store.memos[c.recno]) || [];
+  if(memos.length === 0){
+    el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-hint);font-size:12px;">작성된 메모가 없습니다.</div>`;
+    return;
+  }
+  el.innerHTML = memos.map(m => `<div style="padding:10px 18px;border-bottom:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <span style="font-size:11px;font-weight:600;color:var(--navy);">${m.user || '운영자'}</span>
+      <span style="font-size:10px;color:var(--text-hint);">${m.at || ''}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-sub);line-height:1.5;white-space:pre-wrap;">${(m.text||'').replace(/</g,'&lt;')}</div>
+  </div>`).join('');
+}
+
+function ctAddMemo(){
+  const c = store.customers.find(x => x.id === ctCurrentId); if(!c) return;
+  const input = document.getElementById('ct-d-memo-input');
+  const text = input?.value?.trim();
+  if(!text){ if(typeof showToast === 'function') showToast('메모 내용을 입력하세요.'); return; }
+  if(!store.memos) store.memos = {};
+  if(!store.memos[c.recno]) store.memos[c.recno] = [];
+  store.memos[c.recno].unshift({ user:'현진영', at: (typeof nowStr==='function'?nowStr():new Date().toISOString().slice(0,16).replace('T',' ')), text });
+  if(input) input.value = '';
+  if(typeof showToast === 'function') showToast('메모가 저장되었습니다.');
+  ctRenderMemoHistory(c);
+}
+
+/* [Phase 17-AO] 계약관리 — 사업자 정보 인라인 편집 토글 */
+function ctEnterCustEdit(){
+  ctCustEditing = true;
+  const c = store.customers.find(x => x.id === ctCurrentId); if(!c) return;
+  ctRenderDetailPage(c);
+}
+function ctCancelCustEdit(){
+  ctCustEditing = false;
+  const c = store.customers.find(x => x.id === ctCurrentId); if(!c) return;
+  ctRenderDetailPage(c);
+}
+function ctSaveCustEdit(){
+  const c = store.customers.find(x => x.id === ctCurrentId); if(!c) return;
+  const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+  const newBizno   = getVal('ct-ec-bizno');
+  const newName    = getVal('ct-ec-name');
+  const newCeo     = getVal('ct-ec-ceo');
+  const newTel     = getVal('ct-ec-tel');
+  const newBizcat  = getVal('ct-ec-bizcat');
+  const newBiztype = getVal('ct-ec-biztype');
+  const newAddr    = getVal('ct-ec-addr');
+  if(!newBizno || !newName || !newCeo || !newTel){
+    alert('필수 항목(사업자등록번호·상호명·담당자·연락처)을 모두 입력하세요.');
+    return;
+  }
+  const changes = [];
+  const apply = (key, oldVal, newVal, label) => {
+    const a = (oldVal == null ? '' : String(oldVal));
+    const b = (newVal == null ? '' : String(newVal));
+    if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); c[key] = newVal; }
+  };
+  apply('bizno', c.bizno, newBizno, '사업자등록번호');
+  apply('name', c.name, newName, '상호명');
+  apply('ceo', c.ceo, newCeo, '담당자 이름');
+  apply('tel', c.tel, newTel, '담당자 연락처');
+  apply('bizcat', c.bizcat, newBizcat, '업종');
+  apply('biztype', c.biztype, newBiztype, '업태');
+  apply('addr', c.addr, newAddr, '사업자 주소');
+  logAudit?.({
+    objectType:'customer', objectId:c.id, action:'customer_info_updated',
+    title:`사업자 정보 수정 — ${c.name}`,
+    desc: changes.length ? changes.join(' · ') : '변경 사항 없음',
+    actor:'운영자', tone:'info'
+  });
+  ctCustEditing = false;
+  if(typeof showToast === 'function') showToast(changes.length ? `정보가 변경되었습니다 (${changes.length}건)` : '변경 사항 없음');
+  // 상세 페이지 헤더(타이틀) 갱신
+  const titleEl = document.getElementById('ct-d-page-title');
+  if(titleEl) titleEl.textContent = c.name;
+  ctRenderDetailPage(c);
+  if(typeof ctRenderTable === 'function') ctRenderTable();
+}
+function ctEcLookupBizno(){
+  const bizno = document.getElementById('ct-ec-bizno')?.value?.trim();
+  if(!bizno){ if(typeof showToast === 'function') showToast('사업자등록번호를 입력하세요.'); return; }
+  const lastDigit = parseInt(bizno.replace(/\D/g,'').slice(-1), 10) || 0;
+  const bizcatMap  = ['제조업','도매업','서비스업','정보통신업','전기·가스','건설업','부동산업','운수업','금융업','교육서비스'];
+  const biztypeMap = ['반도체','종합도매','데이터센터','SI개발','발전사업','종합건설','임대업','물류운송','은행','학원'];
+  const bizcatEl  = document.getElementById('ct-ec-bizcat');
+  const biztypeEl = document.getElementById('ct-ec-biztype');
+  if(bizcatEl)  bizcatEl.value  = bizcatMap[lastDigit]  || '제조업';
+  if(biztypeEl) biztypeEl.value = biztypeMap[lastDigit] || '일반';
+  if(typeof showToast === 'function') showToast('사업자등록번호 조회 완료');
 }
 
 /* 사업장별 계약 카드 (비니 와이어 형태 — 사업장 정보 + 서류 업로드) */
