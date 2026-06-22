@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260622-1418. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260622-1418">
+<!-- css/js 모두 ?v=260622-1429. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260622-1429">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1418</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1429</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -460,14 +460,15 @@
         </div>
       </div>
 
-      <!-- ③ 사업장 정보 (계약정보) — 각 사업장 카드 N개 + [+ 사업장 추가] -->
-      <div class="r-card">
+      <!-- [Phase 17-AM] 사전검증 상세에선 사업장 정보(계약정보) 카드 제거.
+           계약 정보·서류는 계약관리 상세 페이지에서 관리. 사업장 메타는 사업장 탭에서 확인. -->
+      <div style="display:none;" class="r-card">
         <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
           <div class="r-card-title">사업장 정보 (계약정보)</div>
           <button class="btn btn-primary btn-sm" onclick="pcOpenAddSite()">+ 사업장 추가</button>
         </div>
         <div class="r-card-body" id="pc-d-sites-info">
-          <!-- pcRenderSitesInfo() 가 채움 — 각 사업장: 기본 정보 + 계약 정보 + 서류 업로드 -->
+          <!-- 비활성 -->
         </div>
       </div>
 
@@ -1149,66 +1150,99 @@
 <!-- ═══════════════════════════════════════
      PAGE — 계약관리
 ═══════════════════════════════════════ -->
+<!-- [Phase 17-AN] 계약관리 — 사이드 패널 → 페이지(list-view + detail-view) 구조 -->
 <div class="page" id="page-contract">
-  <div class="page-header">
-    <div class="breadcrumb"><span>고객 · 자원</span> › 계약관리</div>
-    <div class="page-title-row">
-      <div class="page-title">계약관리</div>
-      <div class="page-actions">
-        <span class="page-purpose-chip">사전검증 완료 고객의 계약 확정 · 자원 등록 전환</span>
+  <!-- 목록뷰 -->
+  <div id="ct-list-view" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="page-header">
+      <div class="breadcrumb"><span>고객 · 자원</span> › 계약관리</div>
+      <div class="page-title-row">
+        <div class="page-title">계약관리</div>
+        <div class="page-actions">
+          <span class="page-purpose-chip">사전검증 완료 고객의 계약 확정 · 자원 등록 전환</span>
+        </div>
       </div>
+    </div>
+
+    <div class="ct-kpi-grid">
+      <div class="ct-kpi"><div class="ct-kpi-label">전체 계약 대상</div><div class="ct-kpi-val" id="ct-kpi-total">0</div><div class="ct-kpi-sub">계약 처리 이력 포함</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">계약대기</div><div class="ct-kpi-val" id="ct-kpi-pending" style="color:var(--amber);">0</div><div class="ct-kpi-sub">검증완료 후 미처리</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">검토중</div><div class="ct-kpi-val" id="ct-kpi-review" style="color:var(--blue);">0</div><div class="ct-kpi-sub">서류/조건 검토 진행</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">계약완료</div><div class="ct-kpi-val" id="ct-kpi-approved" style="color:var(--green);">0</div><div class="ct-kpi-sub">자원관리 매핑 가능</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">반려</div><div class="ct-kpi-val" id="ct-kpi-rejected" style="color:var(--red);">0</div><div class="ct-kpi-sub">재검토 필요</div></div>
+    </div>
+
+    <div class="ct-toolbar">
+      <input class="ct-search" id="ct-search" placeholder="참여고객명, 접수번호, 고객번호 검색" oninput="ctRenderTable()">
+      <select class="ct-select" id="ct-filter-type" onchange="ctRenderTable()">
+        <option value="">DR유형 전체</option>
+        <option>국민DR</option>
+        <option>표준DR</option>
+        <option>중소형DR</option>
+        <option>제주DR</option>
+        <option>플러스DR</option>
+        <option>주파수DR</option>
+      </select>
+      <select class="ct-select" id="ct-filter-status" onchange="ctRenderTable()">
+        <option value="">계약상태 전체</option>
+        <option>계약대기</option>
+        <option>검토중</option>
+        <option>계약완료</option>
+        <option>반려</option>
+      </select>
+      <button class="btn btn-secondary" onclick="ctResetFilters()">초기화</button>
+    </div>
+
+    <div class="ct-table-area">
+      <table class="ct-table">
+        <thead>
+          <tr>
+            <th>참여고객</th>
+            <th>DR유형</th>
+            <th>사전검증 상태</th>
+            <th>계약상태</th>
+            <th>의무감축용량</th>
+            <th>계약기간</th>
+            <th style="text-align:center;">상세</th>
+          </tr>
+        </thead>
+        <tbody id="ct-tbody"></tbody>
+      </table>
+      <div class="ct-empty" id="ct-empty" style="display:none;">조건에 맞는 계약 대상이 없습니다.</div>
+    </div>
+    <div class="ct-table-footer">
+      <span class="row-count" id="ct-row-count">총 0건</span>
+      <div style="font-size:11px;color:var(--text-hint);">계약완료 시 자원관리 페이지와 즉시 연동됩니다.</div>
     </div>
   </div>
 
-  <div class="ct-kpi-grid">
-    <div class="ct-kpi"><div class="ct-kpi-label">전체 계약 대상</div><div class="ct-kpi-val" id="ct-kpi-total">0</div><div class="ct-kpi-sub">계약 처리 이력 포함</div></div>
-    <div class="ct-kpi"><div class="ct-kpi-label">계약대기</div><div class="ct-kpi-val" id="ct-kpi-pending" style="color:var(--amber);">0</div><div class="ct-kpi-sub">검증완료 후 미처리</div></div>
-    <div class="ct-kpi"><div class="ct-kpi-label">검토중</div><div class="ct-kpi-val" id="ct-kpi-review" style="color:var(--blue);">0</div><div class="ct-kpi-sub">서류/조건 검토 진행</div></div>
-    <div class="ct-kpi"><div class="ct-kpi-label">계약완료</div><div class="ct-kpi-val" id="ct-kpi-approved" style="color:var(--green);">0</div><div class="ct-kpi-sub">자원관리 매핑 가능</div></div>
-    <div class="ct-kpi"><div class="ct-kpi-label">반려</div><div class="ct-kpi-val" id="ct-kpi-rejected" style="color:var(--red);">0</div><div class="ct-kpi-sub">재검토 필요</div></div>
-  </div>
-
-  <div class="ct-toolbar">
-    <input class="ct-search" id="ct-search" placeholder="참여고객명, 접수번호, 고객번호 검색" oninput="ctRenderTable()">
-    <select class="ct-select" id="ct-filter-type" onchange="ctRenderTable()">
-      <option value="">DR유형 전체</option>
-      <option>국민DR</option>
-      <option>표준DR</option>
-      <option>중소형DR</option>
-      <option>제주DR</option>
-      <option>플러스DR</option>
-      <option>주파수DR</option>
-    </select>
-    <select class="ct-select" id="ct-filter-status" onchange="ctRenderTable()">
-      <option value="">계약상태 전체</option>
-      <option>계약대기</option>
-      <option>검토중</option>
-      <option>계약완료</option>
-      <option>반려</option>
-    </select>
-    <button class="btn btn-secondary" onclick="ctResetFilters()">초기화</button>
-  </div>
-
-  <div class="ct-table-area">
-    <table class="ct-table">
-      <thead>
-        <tr>
-          <th>참여고객</th>
-          <th>DR유형</th>
-          <th>사전검증 상태</th>
-          <th>계약상태</th>
-          <th>의무감축용량</th>
-          <th>계약기간</th>
-          <th style="text-align:center;">상세</th>
-        </tr>
-      </thead>
-      <tbody id="ct-tbody"></tbody>
-    </table>
-    <div class="ct-empty" id="ct-empty" style="display:none;">조건에 맞는 계약 대상이 없습니다.</div>
-  </div>
-  <div class="ct-table-footer">
-    <span class="row-count" id="ct-row-count">총 0건</span>
-    <div style="font-size:11px;color:var(--text-hint);">계약완료 시 자원관리 페이지와 즉시 연동됩니다.</div>
+  <!-- 상세뷰 (새 페이지 형태) -->
+  <div id="ct-detail-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="page-header">
+      <div class="breadcrumb">
+        <span style="color:var(--blue);cursor:pointer;" onclick="ctGotoList()">계약관리</span> › <span id="ct-d-crumb">—</span>
+      </div>
+      <div class="page-title-row">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="ctGotoList()" title="목록으로"
+            style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;color:var(--text-sub);"
+            onmouseover="this.style.background='var(--grey50)';this.style.color='var(--navy)';"
+            onmouseout="this.style.background='#fff';this.style.color='var(--text-sub)';">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <div>
+            <div class="page-title" id="ct-d-page-title">—</div>
+            <div style="font-size:11px;color:var(--text-hint);margin-top:2px;" id="ct-d-page-sub">—</div>
+          </div>
+        </div>
+        <div class="page-actions" style="display:flex;gap:6px;align-items:center;">
+          <span id="ct-d-stage-badge"></span>
+        </div>
+      </div>
+    </div>
+    <div id="ct-d-body" style="flex:1;overflow-y:auto;padding:14px 20px;background:var(--grey50);display:flex;flex-direction:column;gap:14px;">
+      <!-- ctRenderDetailPage() 가 채움 -->
+    </div>
   </div>
 </div>
 
@@ -2269,20 +2303,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260622-1418"></script>
-<script src="data/tips.js?v=260622-1418"></script>
-<script src="js/core.js?v=260622-1418"></script>
-<script src="js/dashboard.js?v=260622-1418"></script>
-<script src="js/precheck.js?v=260622-1418"></script>
-<script src="js/resource.js?v=260622-1418"></script>
-<script src="js/monitoring.js?v=260622-1418"></script>
-<script src="js/report.js?v=260622-1418"></script>
-<script src="js/settlement.js?v=260622-1418"></script>
-<script src="js/datacollect.js?v=260622-1418"></script>
-<script src="js/rtu.js?v=260622-1418"></script>
-<script src="js/communication.js?v=260622-1418"></script>
-<script src="js/bidding.js?v=260622-1418"></script>
-<script src="js/account.js?v=260622-1418"></script>
-<script src="js/system.js?v=260622-1418"></script>
+<script src="data/store.js?v=260622-1429"></script>
+<script src="data/tips.js?v=260622-1429"></script>
+<script src="js/core.js?v=260622-1429"></script>
+<script src="js/dashboard.js?v=260622-1429"></script>
+<script src="js/precheck.js?v=260622-1429"></script>
+<script src="js/resource.js?v=260622-1429"></script>
+<script src="js/monitoring.js?v=260622-1429"></script>
+<script src="js/report.js?v=260622-1429"></script>
+<script src="js/settlement.js?v=260622-1429"></script>
+<script src="js/datacollect.js?v=260622-1429"></script>
+<script src="js/rtu.js?v=260622-1429"></script>
+<script src="js/communication.js?v=260622-1429"></script>
+<script src="js/bidding.js?v=260622-1429"></script>
+<script src="js/account.js?v=260622-1429"></script>
+<script src="js/system.js?v=260622-1429"></script>
 
 </body></html>

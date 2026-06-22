@@ -537,7 +537,7 @@ function navigate(pageKey){
   if(pageKey==='dashboard')     renderDashboard();
   if(pageKey==='precheck')      { pcGotoList(); pcRenderTable(); pcRefreshCards(); }
   if(pageKey==='resource')      { rmApplyFilter(); rmRefreshSummary(); }
-  if(pageKey==='contract')      ctInit();
+  if(pageKey==='contract')      { if(typeof ctGotoList==='function') ctGotoList(); ctInit(); }
   if(pageKey==='communication') comInit();
   if(pageKey==='monitoring')    monInit();
   if(pageKey==='report')        rpInit();

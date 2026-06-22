@@ -2187,14 +2187,34 @@ function ctResetFilters(){
   $('ct-filter-status').value = '';
   ctRenderTable();
 }
+/* [Phase 17-AN] 계약관리 상세 — 사이드 패널 → 페이지뷰 라우팅 */
 function ctOpenDetail(id, siteId){
   const c = store.customers.find(x=>x.id===id); if(!c) return;
   ctEnsureCustomerMeta(c);
   ctCurrentId = id;
-  // 사업장 진입 시 — 헤더에 사업자명 - 사업장명 표시 (컨텍스트 명시)
+  // 페이지뷰 전환
+  const listV = document.getElementById('ct-list-view');
+  const detV  = document.getElementById('ct-detail-view');
+  if(listV && detV){
+    listV.style.display = 'none';
+    detV.style.display = 'flex';
+    // 새 페이지뷰 헤더 채우기
+    const stage = ctGetStage(c);
+    const titleEl = document.getElementById('ct-d-page-title');
+    const subEl   = document.getElementById('ct-d-page-sub');
+    const crumbEl = document.getElementById('ct-d-crumb');
+    const badgeEl = document.getElementById('ct-d-stage-badge');
+    if(titleEl) titleEl.textContent = c.name;
+    if(subEl)   subEl.textContent   = `${c.recno} · 접수일 ${c.date||'-'}`;
+    if(crumbEl) crumbEl.textContent = c.name;
+    if(badgeEl) badgeEl.innerHTML   = `<span class="badge ${ctStageBadge(stage)}">${stage}</span>`;
+    // 본문 렌더 (사업자 정보 + 요약 + 사업장 계약 카드)
+    if(typeof ctRenderDetailPage === 'function') ctRenderDetailPage(c);
+    return;
+  }
+  // 옛 사이드 패널 fallback (호환성)
   const site = siteId && Array.isArray(c.sites) ? c.sites.find(s=>s.id===siteId) : null;
   $('ct-d-title').textContent = site ? `${c.name} - ${site.siteName}` : c.name;
-  // 모달 헤더 부정보: 식별자(접수번호) + 계약 상태 배지만 — DR 유형/계약 정보는 탭 안에서 확인
   $('ct-d-sub').innerHTML = `${c.recno} · <span class="badge ${ctStageBadge(ctGetStage(c))}">${ctGetStage(c)}</span>`;
   $('ct-tab-basic').style.display = '';
   $('ct-tab-docs').style.display = 'none';
@@ -2317,6 +2337,246 @@ function ctOpenDetail(id, siteId){
   $('ctDetailPanel').classList.add('open');
 }
 function ctCloseDetail(){ $('ctDetailPanel').classList.remove('open'); }
+
+/* [Phase 17-AN] 계약관리 — 페이지뷰 목록 복귀 */
+function ctGotoList(){
+  const listV = document.getElementById('ct-list-view');
+  const detV  = document.getElementById('ct-detail-view');
+  if(listV) listV.style.display = 'flex';
+  if(detV)  detV.style.display  = 'none';
+  ctCurrentId = null;
+}
+
+/* [Phase 17-AN] 계약관리 상세 페이지 본문 렌더 — 사업자 정보 + 요약 + 사업장 계약 카드 (와이어 형태) */
+function ctRenderDetailPage(c){
+  const body = document.getElementById('ct-d-body');
+  if(!body) return;
+  const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (Array.isArray(c.sites) ? c.sites : []);
+  const contractedCount = sites.filter(s => s.contract && s.contract.startDate && s.contract.endDate).length;
+
+  // 공통 row 스타일 (와이어 형태)
+  const rowStyle  = 'display:grid;grid-template-columns:140px 1fr;border-bottom:1px solid var(--border);';
+  const rowLast   = 'display:grid;grid-template-columns:140px 1fr;';
+  const labelCell = 'padding:12px 14px;background:var(--grey50);font-size:12px;color:var(--text-sub);font-weight:600;display:flex;align-items:center;';
+  const valCell   = 'padding:12px 14px;font-size:13px;font-weight:500;color:var(--navy);display:flex;align-items:center;';
+  const tableWrap = 'border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;';
+
+  // ① 사업자 정보 카드
+  const custCard = `<div class="r-card">
+    <div class="r-card-header"><div class="r-card-title">사업자 정보</div></div>
+    <div class="r-card-body">
+      <div style="${tableWrap}">
+        <div style="${rowStyle}"><div style="${labelCell}">사업자등록번호</div><div style="${valCell}">${c.bizno || '-'}</div></div>
+        <div style="${rowStyle}"><div style="${labelCell}">상호명</div><div style="${valCell}">${c.name || '-'}</div></div>
+        <div style="${rowStyle}"><div style="${labelCell}">담당자 이름</div><div style="${valCell}">${c.ceo || '-'}</div></div>
+        <div style="${rowStyle}"><div style="${labelCell}">담당자 연락처</div><div style="${valCell}">${c.tel || '-'}</div></div>
+        <div style="${rowStyle}"><div style="${labelCell}">업종</div><div style="${valCell}">${c.bizcat || '-'}</div></div>
+        <div style="${rowStyle}"><div style="${labelCell}">업태</div><div style="${valCell}">${c.biztype || '-'}</div></div>
+        <div style="${rowLast}"><div style="${labelCell}">사업자 주소</div><div style="${valCell}">${c.addr || '-'}</div></div>
+      </div>
+    </div>
+  </div>`;
+
+  // ② 요약 카드 (사업장 수 / 계약 완료)
+  const summaryCard = `<div class="r-card">
+    <div class="r-card-header"><div class="r-card-title">사업자 요약</div></div>
+    <div class="r-card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <div style="font-size:11px;color:var(--text-hint);font-weight:500;">사업장 수</div>
+          <div style="font-size:22px;font-weight:700;color:var(--navy);margin-top:4px;">${sites.length}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-hint);font-weight:500;">계약 정보 입력 완료</div>
+          <div style="font-size:22px;font-weight:700;color:var(--green);margin-top:4px;">${contractedCount} / ${sites.length}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // ③ 사업장별 계약 카드 (와이어 형태)
+  const siteCards = sites.map(s => ctRenderSiteContractCard(c, s, {rowStyle, rowLast, labelCell, valCell, tableWrap})).join('');
+
+  body.innerHTML = custCard + summaryCard + siteCards;
+}
+
+/* 사업장별 계약 카드 (비니 와이어 형태 — 사업장 정보 + 서류 업로드) */
+function ctRenderSiteContractCard(c, s, styles){
+  const ct = s.contract || {};
+  const docs = ct.docs || {};
+  const inpStyle = 'flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);box-sizing:border-box;';
+  const inpCell  = 'padding:8px 14px;display:flex;align-items:center;gap:6px;';
+  const esc = (v) => String(v||'').replace(/"/g,'&quot;');
+  const req = `<span style="color:var(--red);">*</span>`;
+
+  // 서류 업로드 영역 — 4종 (사업자등록증·대표자 신분증·통장 사본·기타 서류)
+  const docTypes = [
+    {key:'bizReg',   label:'사업자등록증',   req:true},
+    {key:'idCard',   label:'대표자 신분증',  req:true},
+    {key:'bankBook', label:'통장 사본',     req:false},
+    {key:'etc',      label:'기타 서류',     req:false},
+  ];
+  const docRow = (def) => {
+    const d = docs[def.key];
+    const uploaded = !!d;
+    const fileLabel = uploaded ? `<span style="color:var(--green);font-weight:600;">📄 ${d.name}</span>` : '';
+    return `<div style="${styles.rowStyle}">
+      <div style="${styles.labelCell}">${def.label} ${def.req?req:''}</div>
+      <div style="${styles.inpCell || 'padding:14px;'};flex-direction:column;align-items:stretch;">
+        <div onclick="ctTriggerDocUpload('${c.id}','${s.id}','${def.key}')"
+             style="border:2px dashed var(--border-dark);border-radius:8px;padding:24px;text-align:center;cursor:pointer;background:var(--grey50);transition:all .15s ease;"
+             onmouseover="this.style.background='#fff';this.style.borderColor='var(--blue)';"
+             onmouseout="this.style.background='var(--grey50)';this.style.borderColor='var(--border-dark)';">
+          <div style="font-size:20px;color:var(--text-hint);margin-bottom:6px;">☁️</div>
+          <div style="font-size:12px;color:var(--text-sub);font-weight:500;">파일을 끌어다 놓거나 클릭하여 업로드</div>
+          <div style="font-size:10px;color:var(--text-hint);margin-top:3px;">.pdf .jpg .png (최대 10MB)</div>
+          ${uploaded ? `<div style="margin-top:10px;padding:6px 10px;background:var(--green-light,#ecfdf5);border:1px solid var(--green-border,#86efac);border-radius:4px;display:inline-block;font-size:11px;">${fileLabel}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  return `<div class="r-card">
+    <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="r-card-title">${s.siteName}</div>
+      <button class="btn btn-primary btn-sm" onclick="ctSaveSiteContract('${c.id}','${s.id}')">저장</button>
+    </div>
+    <div class="r-card-body">
+      <!-- 사업장 정보 -->
+      <div style="font-size:11px;color:var(--text-hint);font-weight:600;margin-bottom:8px;">사업장 정보</div>
+      <div style="${styles.tableWrap};margin-bottom:18px;">
+        <div style="${styles.rowStyle}">
+          <div style="${styles.labelCell}">사업장명 ${req}</div>
+          <div style="${inpCell}"><input id="ct-s-name-${s.id}" type="text" value="${esc(s.siteName)}" placeholder="사업장명을 입력해 주세요" style="${inpStyle}"></div>
+        </div>
+        <div style="${styles.rowStyle}">
+          <div style="${styles.labelCell}">담당자 ${req}</div>
+          <div style="${inpCell}"><input id="ct-s-manager-${s.id}" type="text" value="${esc(s.manager)}" placeholder="담당자 성함을 입력해 주세요" style="${inpStyle}"></div>
+        </div>
+        <div style="${styles.rowStyle}">
+          <div style="${styles.labelCell}">담당자 연락처 ${req}</div>
+          <div style="${inpCell}"><input id="ct-s-tel-${s.id}" type="text" value="${esc(s.tel)}" placeholder="000-0000-0000" style="${inpStyle}"></div>
+        </div>
+        <div style="${styles.rowStyle}">
+          <div style="${styles.labelCell}">주소 ${req}</div>
+          <div style="padding:8px 14px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;gap:6px;">
+              <input id="ct-s-addr-${s.id}" type="text" value="${esc(s.addr)}" placeholder="주소를 검색해 주세요" style="${inpStyle}">
+              <button class="btn btn-secondary btn-sm" type="button" onclick="ctSearchAddr('${s.id}')">주소 검색</button>
+            </div>
+            <input id="ct-s-addrDetail-${s.id}" type="text" value="${esc(s.addrDetail)}" placeholder="상세 주소를 입력해 주세요" style="${inpStyle}">
+          </div>
+        </div>
+        <div style="${styles.rowStyle}">
+          <div style="${styles.labelCell}">계약기간 ${req}</div>
+          <div style="${inpCell}">
+            <input id="ct-s-start-${s.id}" type="date" value="${esc(ct.startDate)}" style="${inpStyle}">
+            <span style="color:var(--text-hint);">~</span>
+            <input id="ct-s-end-${s.id}" type="date" value="${esc(ct.endDate)}" style="${inpStyle}">
+          </div>
+        </div>
+        <div style="${styles.rowStyle}">
+          <div style="${styles.labelCell}">계약전력</div>
+          <div style="${inpCell}">
+            <input id="ct-s-power-${s.id}" type="number" value="${ct.power||0}" style="max-width:200px;${inpStyle}">
+            <span style="color:var(--text-sub);font-size:13px;">kW</span>
+          </div>
+        </div>
+        <div style="${styles.rowLast}">
+          <div style="${styles.labelCell}">수수료</div>
+          <div style="${inpCell}">
+            <input id="ct-s-fee-${s.id}" type="number" value="${ct.feeRate||0}" style="max-width:200px;${inpStyle}">
+            <span style="color:var(--text-sub);font-size:13px;">%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 서류 업로드 -->
+      <div style="font-size:11px;color:var(--text-hint);font-weight:600;margin-bottom:8px;">서류 업로드</div>
+      <div style="${styles.tableWrap}">
+        ${docTypes.map(docRow).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* 사업장 계약 카드 — 저장 */
+function ctSaveSiteContract(bizId, siteId){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites || []);
+  const s = sites.find(x => x.id === siteId); if(!s) return;
+  const getVal = (id) => document.getElementById(id)?.value?.trim() || '';
+  const newName = getVal(`ct-s-name-${siteId}`);
+  const newManager = getVal(`ct-s-manager-${siteId}`);
+  const newTel = getVal(`ct-s-tel-${siteId}`);
+  const newAddr = getVal(`ct-s-addr-${siteId}`);
+  const newAddrDetail = getVal(`ct-s-addrDetail-${siteId}`);
+  const newStart = getVal(`ct-s-start-${siteId}`);
+  const newEnd = getVal(`ct-s-end-${siteId}`);
+  const newPower = parseInt(getVal(`ct-s-power-${siteId}`), 10) || 0;
+  const newFee = parseFloat(getVal(`ct-s-fee-${siteId}`)) || 0;
+  if(!newName || !newManager || !newTel || !newAddr || !newStart || !newEnd){
+    alert('필수 항목(사업장명·담당자·담당자 연락처·주소·계약기간)을 모두 입력하세요.');
+    return;
+  }
+  s.siteName = newName;
+  s.manager = newManager;
+  s.tel = newTel;
+  s.addr = newAddr;
+  s.addrDetail = newAddrDetail;
+  if(!s.contract) s.contract = {};
+  s.contract.startDate = newStart;
+  s.contract.endDate = newEnd;
+  s.contract.power = newPower;
+  s.contract.feeRate = newFee;
+  logAudit?.({
+    objectType:'site_contract', objectId:siteId, action:'contract_saved',
+    title:`사업장 계약 정보 저장 — ${newName}`,
+    desc:`${newStart} ~ ${newEnd} · ${newPower} kW · 수수료 ${newFee}%`,
+    actor:'운영자', tone:'info'
+  });
+  if(typeof showToast === 'function') showToast(`${newName} 계약 정보 저장 완료`);
+  ctRenderDetailPage(c);  // 화면 갱신
+}
+
+/* 주소 검색 stub */
+function ctSearchAddr(siteId){
+  if(typeof showToast === 'function') showToast('주소 검색 — 다음/카카오 주소 API 연동 예정 (목업)');
+}
+
+/* 서류 업로드 트리거 — 파일 input을 동적 생성해서 클릭 */
+function ctTriggerDocUpload(bizId, siteId, docKey){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.jpg,.png';
+  input.onchange = (e) => {
+    const file = e.target.files?.[0];
+    if(!file) return;
+    if(file.size > 10 * 1024 * 1024){ alert('파일 크기는 10MB 이하여야 합니다.'); return; }
+    const c = store.customers.find(x => x.id === bizId); if(!c) return;
+    const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites || []);
+    const s = sites.find(x => x.id === siteId); if(!s) return;
+    if(!s.contract) s.contract = {};
+    if(!s.contract.docs) s.contract.docs = {};
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    s.contract.docs[docKey] = {
+      name: file.name,
+      size: file.size,
+      uploadedAt: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`,
+    };
+    const docLabel = ({bizReg:'사업자등록증', idCard:'대표자 신분증', bankBook:'통장 사본', etc:'기타 서류'})[docKey] || docKey;
+    logAudit?.({
+      objectType:'site_contract', objectId:siteId, action:'doc_uploaded',
+      title:`${docLabel} 업로드 — ${s.siteName}`,
+      desc:`${file.name} (${(file.size/1024).toFixed(1)} KB)`,
+      actor:'운영자', tone:'info'
+    });
+    if(typeof showToast === 'function') showToast(`${docLabel} 업로드 완료 — ${file.name}`);
+    ctRenderDetailPage(c);
+  };
+  input.click();
+}
 function ctSwitchTab(tab, el){
   $$('#ctDetailPanel [data-ct-tab]').forEach(x=>x.classList.remove('active'));
   if(el) el.classList.add('active');
