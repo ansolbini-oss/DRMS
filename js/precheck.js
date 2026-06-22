@@ -2080,13 +2080,17 @@ function ctEnsureCustomerMeta(c){
 }
 function ctGetStage(c){
   ctEnsureCustomerMeta(c);
-  return c.contractStage || (c.status==='계약완료' ? '계약완료' : c.status==='반려' ? '반려' : c.status==='검증완료' ? '계약대기' : '');
+  if(c.contractStage) return c.contractStage;
+  if(c.status==='계약완료') return '계약완료';
+  if(c.status==='반려')     return '계약만료';   // [Phase 17-AR] 반려→계약만료 매핑
+  if(c.status==='검증완료') return '계약대기';
+  return '';
 }
 function ctStageBadge(stage){
   if(stage==='계약대기') return 'badge-pending';
-  if(stage==='검토중') return 'badge-progress';
+  if(stage==='계약진행') return 'badge-progress';
   if(stage==='계약완료') return 'badge-done';
-  if(stage==='반려') return 'badge-fail';
+  if(stage==='계약만료') return 'badge-gray';
   return 'badge-gray';
 }
 function ctEligibleCustomers(){
@@ -2101,10 +2105,10 @@ function ctFilteredCustomers(){
   const stage = $('ct-filter-status')?.value || '';
   return ctEligibleCustomers().filter(c=>{
     const s = ctGetStage(c);
-    // 사업자 + 사업장 정보 모두 검색 hay에 포함 (Phase 8)
-    const hayParts = [c.name, c.recno, c.kepco, c.id, c.addr];
+    // 사업자 + 사업장 정보 모두 검색 hay에 포함 (Phase 8 + 17-AR: 대표자/연락처 추가)
+    const hayParts = [c.name, c.ceo, c.tel, c.recno, c.kepco, c.id, c.addr];
     if(Array.isArray(c.sites)){
-      c.sites.forEach(site => hayParts.push(site.siteName||'', site.kepco||''));
+      c.sites.forEach(site => hayParts.push(site.siteName||'', site.kepco||'', site.manager||'', site.tel||''));
     }
     const matchQ = !q || hayParts.join(' ').toLowerCase().includes(q);
     const matchType = !type || c.drType===type;
@@ -2133,10 +2137,10 @@ function ctRenderSummary(){
   const rows = ctEligibleCustomers();
   const count = (stage)=>rows.filter(c=>ctGetStage(c)===stage).length;
   $('ct-kpi-total').textContent = rows.length;
-  $('ct-kpi-pending').textContent = count('계약대기');
-  $('ct-kpi-review').textContent = count('검토중');
+  $('ct-kpi-pending').textContent  = count('계약대기');
+  $('ct-kpi-review').textContent   = count('계약진행');
   $('ct-kpi-approved').textContent = count('계약완료');
-  $('ct-kpi-rejected').textContent = count('반려');
+  $('ct-kpi-rejected').textContent = count('계약만료');
 }
 /* [Phase 17-AD] 계약관리 — 사업자 단위 평면 리스트 (아코디언 해제)
    계약은 사업자 단위로 체결되므로 사업장 자식 행 제거. 사업장 N개 카운트는 사업자명 옆에 표시.
@@ -2148,23 +2152,18 @@ function ctRenderTable(){
   let siteTotal = 0;
   tbody.innerHTML = rows.map(c => {
     const stage = ctGetStage(c);
-    const ci = c.contractInfo || {};
     const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (Array.isArray(c.sites) ? c.sites : []);
     const siteCount = sites.length || 1;
     siteTotal += siteCount;
-    const siteCountBadge = siteCount > 1
-      ? `<span style="color:var(--text-hint);font-size:11px;font-weight:400;margin-left:6px;">· ${siteCount}사업장</span>`
-      : '';
     return `<tr class="ct-business-row" data-biz-id="${c.id}" style="cursor:pointer;">
       <td>
-        <div class="ct-name">${c.name}${siteCountBadge}</div>
-        <div class="ct-sub">${c.recno} · 고객번호 ${c.kepco||'-'}</div>
+        <div class="ct-name">${c.name||'—'}</div>
+        <div class="ct-sub">${c.recno||'-'} · 고객번호 ${c.kepco||'-'}</div>
       </td>
-      <td>${c.drType||'—'}</td>
-      <td><span class="badge ${statusBadgeClass(c.status)}">${c.status}</span></td>
-      <td><span class="badge ${ctStageBadge(stage)}">${stage}</span></td>
-      <td>${(ci.mandatoryCapacity||0).toLocaleString()} kW</td>
-      <td>${ci.startDate||'-'} ~ ${ci.endDate||'-'}</td>
+      <td>${c.ceo||'—'}</td>
+      <td>${c.tel||'—'}</td>
+      <td>${siteCount}개</td>
+      <td><span class="badge ${ctStageBadge(stage)}">${stage||'—'}</span></td>
       <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
     </tr>`;
   }).join('');
@@ -2182,9 +2181,9 @@ function ctRenderTable(){
   $('ct-row-count').textContent = `총 ${rows.length}사업자 · ${siteTotal}사업장`;
 }
 function ctResetFilters(){
-  $('ct-search').value = '';
-  $('ct-filter-type').value = '';
-  $('ct-filter-status').value = '';
+  const s = $('ct-search');         if(s) s.value = '';
+  const ft = $('ct-filter-type');   if(ft) ft.value = '';
+  const fs = $('ct-filter-status'); if(fs) fs.value = '';
   ctRenderTable();
 }
 /* [Phase 17-AN] 계약관리 상세 — 사이드 패널 → 페이지뷰 라우팅 */
