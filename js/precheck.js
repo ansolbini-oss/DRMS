@@ -1375,47 +1375,105 @@ function pcSubmitEditSite(bizId, siteId){
 /* [Phase 17-AK] 사업자 정보 인라인 편집 — 모달 X, 같은 카드에서 [수정]↔[저장]/[취소] 토글 */
 let pcCustEditing = false;
 
+/* [Phase 17-AL] 비니 와이어프레임 반영 — 좌측 라벨 + 우측 입력 row 형태 (table-like) */
 function pcRenderCustomerInfo(c){
   if(!c) return;
   const body = $('pc-d-cust-body');
   const actions = $('pc-d-cust-actions');
   if(!body || !actions) return;
-  // 공통 셀 스타일
-  const labelStyle = 'font-size:11px;color:var(--text-hint);font-weight:500;';
-  const valStyle   = 'font-size:13px;font-weight:600;margin-top:3px;';
-  const inpStyle   = 'width:100%;padding:8px 10px;margin-top:3px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);box-sizing:border-box;';
+  // 공통 row 스타일
+  const rowStyle  = 'display:grid;grid-template-columns:140px 1fr;border-bottom:1px solid var(--border);';
+  const labelCell = 'padding:12px 14px;background:var(--grey50);font-size:12px;color:var(--text-sub);font-weight:600;display:flex;align-items:center;';
+  const valCell   = 'padding:12px 14px;font-size:13px;font-weight:500;color:var(--navy);display:flex;align-items:center;';
+  const inpCell   = 'padding:8px 14px;display:flex;align-items:center;gap:6px;';
+  const inpStyle  = 'flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);box-sizing:border-box;';
+  const req = `<span style="color:var(--red);">*</span>`;
+  const tableWrap = 'border:1px solid var(--border);border-radius:8px;overflow:hidden;';
+
   if(!pcCustEditing){
-    // 텍스트뷰
-    body.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-      <div style="grid-column:1/-1;"><div style="${labelStyle}">사업자번호</div><div style="${valStyle}">${c.bizno || '-'}</div></div>
-      <div><div style="${labelStyle}">담당자 이름</div><div style="${valStyle}">${c.ceo || '-'}</div></div>
-      <div><div style="${labelStyle}">담당자 연락처</div><div style="${valStyle}">${c.tel || '-'}</div></div>
-      <div><div style="${labelStyle}">업종</div><div style="${valStyle}">${c.bizcat || '-'}</div></div>
-      <div><div style="${labelStyle}">업태</div><div style="${valStyle}">${c.biztype || '-'}</div></div>
-      <div style="grid-column:1/-1;"><div style="${labelStyle}">주소</div><div style="${valStyle}">${c.addr || '-'}</div></div>
+    // 텍스트뷰 (와이어 형태)
+    body.innerHTML = `<div style="${tableWrap}">
+      <div style="${rowStyle}">
+        <div style="${labelCell}">사업자등록번호</div>
+        <div style="${valCell}">${c.bizno || '-'}</div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">상호명</div>
+        <div style="${valCell}">${c.name || '-'}</div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">담당자 이름</div>
+        <div style="${valCell}">${c.ceo || '-'}</div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">담당자 연락처</div>
+        <div style="${valCell}">${c.tel || '-'}</div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">업종</div>
+        <div style="${valCell}">${c.bizcat || '-'}</div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">업태</div>
+        <div style="${valCell}">${c.biztype || '-'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:140px 1fr;">
+        <div style="${labelCell}">사업자 주소</div>
+        <div style="${valCell}">${c.addr || '-'}</div>
+      </div>
     </div>`;
     actions.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="pcEnterCustEdit()">사업자 정보 수정</button>`;
   } else {
-    // input폼 (편집 모드)
+    // input 폼 (편집 모드, 와이어 형태)
     const esc = (v) => String(v||'').replace(/"/g,'&quot;');
-    body.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-      <div style="grid-column:1/-1;">
-        <div style="${labelStyle}">사업자번호 <span style="color:var(--red);">*</span></div>
-        <div style="display:flex;gap:6px;margin-top:3px;">
-          <input id="pc-ec-bizno" type="text" value="${esc(c.bizno)}" placeholder="000-00-00000" style="${inpStyle};margin-top:0;flex:1;">
+    body.innerHTML = `<div style="${tableWrap}">
+      <div style="${rowStyle}">
+        <div style="${labelCell}">사업자등록번호 ${req}</div>
+        <div style="${inpCell}">
+          <input id="pc-ec-bizno" type="text" value="${esc(c.bizno)}" placeholder="000-00-00000" style="${inpStyle}">
           <button class="btn btn-secondary btn-sm" type="button" onclick="pcEcLookupBizno()">조회</button>
         </div>
       </div>
-      <div><div style="${labelStyle}">담당자 이름 <span style="color:var(--red);">*</span></div><input id="pc-ec-ceo" type="text" value="${esc(c.ceo)}" style="${inpStyle}"></div>
-      <div><div style="${labelStyle}">담당자 연락처 <span style="color:var(--red);">*</span></div><input id="pc-ec-tel" type="text" value="${esc(c.tel)}" placeholder="010-0000-0000" style="${inpStyle}"></div>
-      <div><div style="${labelStyle}">업종</div><input id="pc-ec-bizcat" type="text" value="${esc(c.bizcat)}" style="${inpStyle};background:#f8fafc;" readonly></div>
-      <div><div style="${labelStyle}">업태</div><input id="pc-ec-biztype" type="text" value="${esc(c.biztype)}" style="${inpStyle};background:#f8fafc;" readonly></div>
-      <div style="grid-column:1/-1;"><div style="${labelStyle}">주소</div><input id="pc-ec-addr" type="text" value="${esc(c.addr)}" placeholder="시·구·상세주소" style="${inpStyle}"></div>
-      <input id="pc-ec-name" type="hidden" value="${esc(c.name)}">
+      <div style="${rowStyle}">
+        <div style="${labelCell}">상호명 ${req}</div>
+        <div style="${inpCell}">
+          <input id="pc-ec-name" type="text" value="${esc(c.name)}" placeholder="상호명(법인명)을 입력하세요" style="${inpStyle}">
+        </div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">담당자 이름 ${req}</div>
+        <div style="${inpCell}">
+          <input id="pc-ec-ceo" type="text" value="${esc(c.ceo)}" placeholder="담당자 성함" style="${inpStyle}">
+        </div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">담당자 연락처 ${req}</div>
+        <div style="${inpCell}">
+          <input id="pc-ec-tel" type="text" value="${esc(c.tel)}" placeholder="010-0000-0000" style="${inpStyle}">
+        </div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">업종</div>
+        <div style="${inpCell}">
+          <input id="pc-ec-bizcat" type="text" value="${esc(c.bizcat)}" placeholder="예: 제조업, 서비스업" style="${inpStyle};background:#f8fafc;" readonly>
+        </div>
+      </div>
+      <div style="${rowStyle}">
+        <div style="${labelCell}">업태</div>
+        <div style="${inpCell}">
+          <input id="pc-ec-biztype" type="text" value="${esc(c.biztype)}" placeholder="예: 반도체, 도소매" style="${inpStyle};background:#f8fafc;" readonly>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:140px 1fr;">
+        <div style="${labelCell}">사업자 주소</div>
+        <div style="${inpCell}">
+          <input id="pc-ec-addr" type="text" value="${esc(c.addr)}" placeholder="시·구·상세주소" style="${inpStyle}">
+        </div>
+      </div>
       <input id="pc-ec-inflow" type="hidden" value="${esc(c.inflow)}">
     </div>`;
     actions.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="pcCancelCustEdit()">취소</button>
-                         <button class="btn btn-primary btn-sm" onclick="pcSaveCustEdit()">저장</button>`;
+                         <button class="btn btn-primary btn-sm" onclick="pcSaveCustEdit()">정보 저장하기</button>`;
   }
 }
 
@@ -1439,8 +1497,8 @@ function pcSaveCustEdit(){
   const newTel     = $('pc-ec-tel')?.value?.trim();
   const newAddr    = $('pc-ec-addr')?.value?.trim();
   const newInflow  = $('pc-ec-inflow')?.value || c.inflow;
-  if(!newBizno || !newCeo || !newTel){
-    alert('필수 항목(사업자번호·담당자 이름·담당자 연락처)을 모두 입력하세요.');
+  if(!newName || !newBizno || !newCeo || !newTel){
+    alert('필수 항목(사업자번호·상호명·담당자 이름·담당자 연락처)을 모두 입력하세요.');
     return;
   }
   const changes = [];
@@ -1449,6 +1507,7 @@ function pcSaveCustEdit(){
     const b = (newVal == null ? '' : String(newVal));
     if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); c[key] = newVal; }
   };
+  apply('name', c.name, newName, '상호명');
   apply('bizno', c.bizno, newBizno, '사업자번호');
   apply('bizcat', c.bizcat, newBizcat, '업종');
   apply('biztype', c.biztype, newBiztype, '업태');
