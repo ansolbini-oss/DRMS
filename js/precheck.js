@@ -182,9 +182,12 @@ function pcShowDetail(id){
   const badge = $('pc-d-badge');
   badge.className = 'badge ' + statusBadgeClass(c.status);
   badge.textContent = c.status;
-  // [Phase 17-AJ] 사업자 정보 — 4행 2컬럼 (사업자번호/담당자·연락처/업종·업태/주소)
+  // [Phase 17-AK] 사업자 정보 — 인라인 편집 (모달 X). pcCustEditing 상태로 텍스트뷰↔input폼 토글
   $('pc-d-name').textContent = c.name;
   $('pc-d-recno').textContent = c.recno;
+  pcCustEditing = false;  // 사업자 전환 시 항상 비편집 모드로 시작
+  pcRenderCustomerInfo(c);
+  // 옛 호환 (hidden 필드)
   const setText = (id, val) => { const el = $(id); if(el) el.textContent = val; };
   setText('pc-d-bizno', c.bizno || '-');
   setText('pc-d-ceo', c.ceo || '-');
@@ -192,7 +195,6 @@ function pcShowDetail(id){
   setText('pc-d-bizcat-only', c.bizcat || '-');
   setText('pc-d-biztype-only', c.biztype || '-');
   setText('pc-d-addr', c.addr || '-');
-  // 옛 호환 (hidden)
   setText('pc-d-bizcat', `${c.bizcat || '-'} / ${c.biztype || '-'}`);
   setText('pc-d-drtype', c.drType || '-');
   setText('pc-d-inflow', c.inflow || '-');
@@ -1370,84 +1372,75 @@ function pcSubmitEditSite(bizId, siteId){
 }
 
 /* [Phase 17-AA] 사업자 정보 수정 모달 — 사전검증 상세 기본정보 탭에서 호출 */
-function pcOpenEditCustomer(){
-  const id = pcState.currentId;
-  const c = custById(id); if(!c) return;
-  $('cm-title').textContent = '사업자 정보 수정';
-  $('cm-sub').textContent = `${c.name} (${c.recno})`;
-  $('cm-body').innerHTML = `<div class="info-box" style="margin-bottom:12px;">
-    사업자·담당자 정보를 수정합니다. 변경 시 감사로그가 기록됩니다.
-  </div>
-  <div style="display:flex;flex-direction:column;gap:10px;">
-    <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업자명 <span style="color:var(--red);">*</span></label>
-      <input id="pc-ec-name" type="text" value="${(c.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
-    </div>
-    <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업자번호 <span style="color:var(--red);">*</span></label>
-      <div style="display:flex;gap:6px;">
-        <input id="pc-ec-bizno" type="text" value="${(c.bizno||'').replace(/"/g,'&quot;')}" placeholder="000-00-00000" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
-        <button class="btn btn-secondary btn-sm" type="button" onclick="pcEcLookupBizno()">조회</button>
+/* [Phase 17-AK] 사업자 정보 인라인 편집 — 모달 X, 같은 카드에서 [수정]↔[저장]/[취소] 토글 */
+let pcCustEditing = false;
+
+function pcRenderCustomerInfo(c){
+  if(!c) return;
+  const body = $('pc-d-cust-body');
+  const actions = $('pc-d-cust-actions');
+  if(!body || !actions) return;
+  // 공통 셀 스타일
+  const labelStyle = 'font-size:11px;color:var(--text-hint);font-weight:500;';
+  const valStyle   = 'font-size:13px;font-weight:600;margin-top:3px;';
+  const inpStyle   = 'width:100%;padding:8px 10px;margin-top:3px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);box-sizing:border-box;';
+  if(!pcCustEditing){
+    // 텍스트뷰
+    body.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="grid-column:1/-1;"><div style="${labelStyle}">사업자번호</div><div style="${valStyle}">${c.bizno || '-'}</div></div>
+      <div><div style="${labelStyle}">담당자 이름</div><div style="${valStyle}">${c.ceo || '-'}</div></div>
+      <div><div style="${labelStyle}">담당자 연락처</div><div style="${valStyle}">${c.tel || '-'}</div></div>
+      <div><div style="${labelStyle}">업종</div><div style="${valStyle}">${c.bizcat || '-'}</div></div>
+      <div><div style="${labelStyle}">업태</div><div style="${valStyle}">${c.biztype || '-'}</div></div>
+      <div style="grid-column:1/-1;"><div style="${labelStyle}">주소</div><div style="${valStyle}">${c.addr || '-'}</div></div>
+    </div>`;
+    actions.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="pcEnterCustEdit()">사업자 정보 수정</button>`;
+  } else {
+    // input폼 (편집 모드)
+    const esc = (v) => String(v||'').replace(/"/g,'&quot;');
+    body.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="grid-column:1/-1;">
+        <div style="${labelStyle}">사업자번호 <span style="color:var(--red);">*</span></div>
+        <div style="display:flex;gap:6px;margin-top:3px;">
+          <input id="pc-ec-bizno" type="text" value="${esc(c.bizno)}" placeholder="000-00-00000" style="${inpStyle};margin-top:0;flex:1;">
+          <button class="btn btn-secondary btn-sm" type="button" onclick="pcEcLookupBizno()">조회</button>
+        </div>
       </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div>
-        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">업종</label>
-        <input id="pc-ec-bizcat" type="text" value="${(c.bizcat||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#f8fafc;" readonly>
-      </div>
-      <div>
-        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">업태</label>
-        <input id="pc-ec-biztype" type="text" value="${(c.biztype||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#f8fafc;" readonly>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div>
-        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">담당자 이름 <span style="color:var(--red);">*</span></label>
-        <input id="pc-ec-ceo" type="text" value="${(c.ceo||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
-      </div>
-      <div>
-        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">연락처 <span style="color:var(--red);">*</span></label>
-        <input id="pc-ec-tel" type="text" value="${(c.tel||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
-      </div>
-    </div>
-    <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">유입경로</label>
-      <select id="pc-ec-inflow" class="filter-select" style="width:100%;">
-        <option value="사이트" ${c.inflow==='사이트'?'selected':''}>사이트</option>
-        <option value="영업" ${c.inflow==='영업'?'selected':''}>영업</option>
-      </select>
-    </div>
-  </div>`;
-  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-primary" onclick="pcSubmitEditCustomer()">저장</button>`;
-  openModal('commonModal');
+      <div><div style="${labelStyle}">담당자 이름 <span style="color:var(--red);">*</span></div><input id="pc-ec-ceo" type="text" value="${esc(c.ceo)}" style="${inpStyle}"></div>
+      <div><div style="${labelStyle}">담당자 연락처 <span style="color:var(--red);">*</span></div><input id="pc-ec-tel" type="text" value="${esc(c.tel)}" placeholder="010-0000-0000" style="${inpStyle}"></div>
+      <div><div style="${labelStyle}">업종</div><input id="pc-ec-bizcat" type="text" value="${esc(c.bizcat)}" style="${inpStyle};background:#f8fafc;" readonly></div>
+      <div><div style="${labelStyle}">업태</div><input id="pc-ec-biztype" type="text" value="${esc(c.biztype)}" style="${inpStyle};background:#f8fafc;" readonly></div>
+      <div style="grid-column:1/-1;"><div style="${labelStyle}">주소</div><input id="pc-ec-addr" type="text" value="${esc(c.addr)}" placeholder="시·구·상세주소" style="${inpStyle}"></div>
+      <input id="pc-ec-name" type="hidden" value="${esc(c.name)}">
+      <input id="pc-ec-inflow" type="hidden" value="${esc(c.inflow)}">
+    </div>`;
+    actions.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="pcCancelCustEdit()">취소</button>
+                         <button class="btn btn-primary btn-sm" onclick="pcSaveCustEdit()">저장</button>`;
+  }
 }
 
-/* 수정 모달용 사업자번호 조회 */
-function pcEcLookupBizno(){
-  const bizno = $('pc-ec-bizno')?.value?.trim();
-  if(!bizno){ showToast('사업자번호를 입력하세요.'); return; }
-  const lastDigit = parseInt(bizno.replace(/\D/g,'').slice(-1), 10) || 0;
-  const bizcatMap   = ['제조업','도매업','서비스업','정보통신업','전기·가스','건설업','부동산업','운수업','금융업','교육서비스'];
-  const biztypeMap = ['반도체','종합도매','데이터센터','SI개발','발전사업','종합건설','임대업','물류운송','은행','학원'];
-  $('pc-ec-bizcat').value = bizcatMap[lastDigit] || '제조업';
-  $('pc-ec-biztype').value = biztypeMap[lastDigit] || '일반';
-  showToast(`사업자번호 조회 완료`);
+function pcEnterCustEdit(){
+  pcCustEditing = true;
+  pcRenderCustomerInfo(custById(pcState.currentId));
 }
 
-/* 수정 모달 저장 */
-function pcSubmitEditCustomer(){
-  const id = pcState.currentId;
-  const c = custById(id); if(!c) return;
-  const newName    = $('pc-ec-name')?.value?.trim();
+function pcCancelCustEdit(){
+  pcCustEditing = false;
+  pcRenderCustomerInfo(custById(pcState.currentId));
+}
+
+function pcSaveCustEdit(){
+  const c = custById(pcState.currentId); if(!c) return;
+  const newName    = $('pc-ec-name')?.value?.trim() || c.name;
   const newBizno   = $('pc-ec-bizno')?.value?.trim();
   const newBizcat  = $('pc-ec-bizcat')?.value?.trim();
   const newBiztype = $('pc-ec-biztype')?.value?.trim();
   const newCeo     = $('pc-ec-ceo')?.value?.trim();
   const newTel     = $('pc-ec-tel')?.value?.trim();
-  const newInflow  = $('pc-ec-inflow')?.value;
-  if(!newName || !newBizno || !newCeo || !newTel){
-    alert('필수 항목(사업자명·사업자번호·담당자 이름·연락처)을 모두 입력하세요.');
+  const newAddr    = $('pc-ec-addr')?.value?.trim();
+  const newInflow  = $('pc-ec-inflow')?.value || c.inflow;
+  if(!newBizno || !newCeo || !newTel){
+    alert('필수 항목(사업자번호·담당자 이름·담당자 연락처)을 모두 입력하세요.');
     return;
   }
   const changes = [];
@@ -1456,25 +1449,40 @@ function pcSubmitEditCustomer(){
     const b = (newVal == null ? '' : String(newVal));
     if(a !== b){ changes.push(`${label}: ${a||'(미입력)'} → ${b||'(미입력)'}`); c[key] = newVal; }
   };
-  apply('name', c.name, newName, '사업자명');
   apply('bizno', c.bizno, newBizno, '사업자번호');
   apply('bizcat', c.bizcat, newBizcat, '업종');
   apply('biztype', c.biztype, newBiztype, '업태');
   apply('ceo', c.ceo, newCeo, '담당자 이름');
-  apply('tel', c.tel, newTel, '연락처');
-  apply('inflow', c.inflow, newInflow, '유입경로');
+  apply('tel', c.tel, newTel, '담당자 연락처');
+  apply('addr', c.addr, newAddr, '주소');
   logAudit?.({
     objectType:'customer', objectId:c.id, action:'customer_info_updated',
-    title:`사업자 정보 수정 — ${newName}`,
+    title:`사업자 정보 수정 — ${c.name}`,
     desc: changes.length ? changes.join(' · ') : '변경 사항 없음',
     actor:'운영자', tone:'info'
   });
-  pcAddLog(c, '사업자 정보 수정', changes.length ? changes.join(' · ') : '변경 사항 없음', 'done');
-  closeModal('commonModal');
-  showToast(`사업자 정보 저장 — ${newName}`);
-  pcShowDetail(c.id);  // 화면 갱신
-  pcRenderTable();      // 리스트 사업자명도 갱신
+  if(changes.length) pcAddLog(c, '사업자 정보 수정', changes.join(' · '), 'done');
+  pcCustEditing = false;
+  showToast(changes.length ? `정보가 변경되었습니다 (${changes.length}건)` : '변경 사항 없음');
+  pcShowDetail(c.id);   // 전체 화면 갱신 (옛 hidden 필드도 동기화)
+  pcRenderTable();
 }
+
+/* 인라인 편집용 사업자번호 조회 (옛 함수명 유지 — 호환) */
+function pcEcLookupBizno(){
+  const bizno = $('pc-ec-bizno')?.value?.trim();
+  if(!bizno){ showToast('사업자번호를 입력하세요.'); return; }
+  const lastDigit = parseInt(bizno.replace(/\D/g,'').slice(-1), 10) || 0;
+  const bizcatMap  = ['제조업','도매업','서비스업','정보통신업','전기·가스','건설업','부동산업','운수업','금융업','교육서비스'];
+  const biztypeMap = ['반도체','종합도매','데이터센터','SI개발','발전사업','종합건설','임대업','물류운송','은행','학원'];
+  if($('pc-ec-bizcat')) $('pc-ec-bizcat').value = bizcatMap[lastDigit] || '제조업';
+  if($('pc-ec-biztype')) $('pc-ec-biztype').value = biztypeMap[lastDigit] || '일반';
+  showToast('사업자번호 조회 완료');
+}
+
+/* 옛 모달 함수 alias — 호환성 유지 (다른 곳에서 호출 가능성) */
+function pcOpenEditCustomer(){ pcEnterCustEdit(); }
+function pcSubmitEditCustomer(){ pcSaveCustEdit(); }
 
 /* [Phase 17-Y] 사업자번호 조회 — 업종·업태 자동 입력 stub */
 function pcLookupBizno(){

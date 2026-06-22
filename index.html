@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260622-1405. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260622-1405">
+<!-- css/js 모두 ?v=260622-1413. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260622-1413">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1405</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1413</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -414,33 +414,30 @@
          detail-body class 제거(.detail-body의 grid 강제 회피). pc-tab-info id로 동작 식별. -->
     <div id="pc-tab-info" style="flex:1;display:flex;flex-direction:column;gap:14px;padding:14px 20px;overflow-y:auto;background:var(--grey50);">
 
-      <!-- ① 사업자 정보 (2 컬럼 grid, 비니 요청 순서) -->
-      <div class="r-card">
+      <!-- ① 사업자 정보 (인라인 편집 — [수정]↔[저장]/[취소] 토글) -->
+      <div class="r-card" id="pc-d-cust-card">
         <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div style="font-size:15px;font-weight:700;color:var(--navy);" id="pc-d-name">-</div>
             <div style="font-size:11px;color:var(--text-hint);margin-top:2px;" id="pc-d-recno">-</div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="pcOpenEditCustomer()">사업자 정보 수정</button>
-        </div>
-        <div class="r-card-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-            <!-- 1행: 사업자번호 (단독) -->
-            <div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-hint);font-weight:500;">사업자번호</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-bizno">-</div></div>
-            <!-- 2행: 담당자 이름 / 담당자 연락처 -->
-            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">담당자 이름</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-ceo">-</div></div>
-            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">담당자 연락처</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-tel">-</div></div>
-            <!-- 3행: 업종 / 업태 -->
-            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">업종</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-bizcat-only">-</div></div>
-            <div><div style="font-size:11px;color:var(--text-hint);font-weight:500;">업태</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-biztype-only">-</div></div>
-            <!-- 4행: 주소 (단독) -->
-            <div style="grid-column:1/-1;"><div style="font-size:11px;color:var(--text-hint);font-weight:500;">주소</div><div style="font-size:13px;font-weight:600;margin-top:3px;" id="pc-d-addr">-</div></div>
-            <!-- 옛 호환 (제거 예정 - 화면 외 hidden) -->
-            <div style="display:none;" id="pc-d-bizcat">-</div>
-            <div style="display:none;" id="pc-d-drtype">-</div>
-            <div style="display:none;" id="pc-d-inflow">-</div>
+          <div style="display:flex;gap:6px;" id="pc-d-cust-actions">
+            <!-- pcRenderCustomerInfo()가 동적 렌더 -->
           </div>
         </div>
+        <div class="r-card-body" id="pc-d-cust-body">
+          <!-- pcRenderCustomerInfo()가 텍스트뷰 또는 input폼 동적 렌더 -->
+        </div>
+        <!-- 옛 호환 hidden ids -->
+        <div style="display:none;" id="pc-d-bizno">-</div>
+        <div style="display:none;" id="pc-d-ceo">-</div>
+        <div style="display:none;" id="pc-d-tel">-</div>
+        <div style="display:none;" id="pc-d-bizcat-only">-</div>
+        <div style="display:none;" id="pc-d-biztype-only">-</div>
+        <div style="display:none;" id="pc-d-addr">-</div>
+        <div style="display:none;" id="pc-d-bizcat">-</div>
+        <div style="display:none;" id="pc-d-drtype">-</div>
+        <div style="display:none;" id="pc-d-inflow">-</div>
       </div>
 
       <!-- ② 사업자 요약 (사업장 수 / 검증 완료) -->
@@ -2272,20 +2269,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260622-1405"></script>
-<script src="data/tips.js?v=260622-1405"></script>
-<script src="js/core.js?v=260622-1405"></script>
-<script src="js/dashboard.js?v=260622-1405"></script>
-<script src="js/precheck.js?v=260622-1405"></script>
-<script src="js/resource.js?v=260622-1405"></script>
-<script src="js/monitoring.js?v=260622-1405"></script>
-<script src="js/report.js?v=260622-1405"></script>
-<script src="js/settlement.js?v=260622-1405"></script>
-<script src="js/datacollect.js?v=260622-1405"></script>
-<script src="js/rtu.js?v=260622-1405"></script>
-<script src="js/communication.js?v=260622-1405"></script>
-<script src="js/bidding.js?v=260622-1405"></script>
-<script src="js/account.js?v=260622-1405"></script>
-<script src="js/system.js?v=260622-1405"></script>
+<script src="data/store.js?v=260622-1413"></script>
+<script src="data/tips.js?v=260622-1413"></script>
+<script src="js/core.js?v=260622-1413"></script>
+<script src="js/dashboard.js?v=260622-1413"></script>
+<script src="js/precheck.js?v=260622-1413"></script>
+<script src="js/resource.js?v=260622-1413"></script>
+<script src="js/monitoring.js?v=260622-1413"></script>
+<script src="js/report.js?v=260622-1413"></script>
+<script src="js/settlement.js?v=260622-1413"></script>
+<script src="js/datacollect.js?v=260622-1413"></script>
+<script src="js/rtu.js?v=260622-1413"></script>
+<script src="js/communication.js?v=260622-1413"></script>
+<script src="js/bidding.js?v=260622-1413"></script>
+<script src="js/account.js?v=260622-1413"></script>
+<script src="js/system.js?v=260622-1413"></script>
 
 </body></html>
