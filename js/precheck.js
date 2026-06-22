@@ -2591,7 +2591,7 @@ function ctRenderSitesTable(c, sites){
       <td style="padding:14px 12px;color:var(--text-hint);width:40px;text-align:center;">${arrowSvg}</td>
     </tr>`;
     if(!isExpanded) return headerRow;
-    // [Phase 17-AQ] 확장 콘텐츠 — 사업장 정보(라벨 위/값 아래 2열) + 증빙 서류 현황(테이블)
+    // [Phase 17-AQ] 확장 콘텐츠 — 사업장 정보(단일 컬럼 row) + 증빙 서류 현황(테이블)
     const docTypes = [
       {key:'bizReg',   label:'사업자등록증',   required:true},
       {key:'idCard',   label:'대표자 신분증', required:true},
@@ -2599,27 +2599,36 @@ function ctRenderSitesTable(c, sites){
       {key:'etc',      label:'기타 서류',     required:false},
     ];
     const docs = ct.docs || {};
-    // 사업장 정보 — 라벨 위(작게) / 값 아래(굵게) 2열 그리드
-    const infoField = (label, val) => `<div>
-      <div style="font-size:11px;color:var(--text-hint);font-weight:500;margin-bottom:6px;">${label}</div>
-      <div style="font-size:14px;font-weight:600;color:var(--navy);">${val||'—'}</div>
-    </div>`;
     const addrText = s.addr ? `${s.addr}${s.addrDetail?` ${s.addrDetail}`:''}` : '—';
-    const siteInfoGrid = `<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:48px;row-gap:22px;">
-      ${infoField('사업장명', s.siteName)}
-      ${infoField('담당자', s.manager)}
-      ${infoField('담당자 연락처', s.tel)}
-      ${infoField('주소', addrText)}
-      ${infoField('계약기간', period === '—' ? '—' : period)}
-      ${infoField('계약전력', power === '—' ? '—' : power)}
-      ${infoField('수수료', fee === '—' ? '—' : fee)}
+    // 사업장 정보 — 한 줄씩 (라벨 좌 회색 중앙정렬 / 값 우)
+    const siteFields = [
+      ['사업장명', s.siteName],
+      ['담당자', s.manager],
+      ['담당자 연락처', s.tel],
+      ['주소', addrText],
+      ['계약기간', period],
+      ['계약전력', power],
+      ['수수료', fee],
+    ];
+    const siteInfoRows = siteFields.map(([label, val], i) => {
+      const last = (i === siteFields.length - 1);
+      const bb = last ? '' : 'border-bottom:1px solid var(--border);';
+      return `<tr>
+        <td style="width:160px;padding:14px 16px;background:var(--grey50);color:var(--text-sub);font-size:12px;font-weight:500;text-align:center;${bb}">${label}</td>
+        <td style="padding:14px 18px;color:var(--navy);font-size:13px;font-weight:500;${bb}">${val||'—'}</td>
+      </tr>`;
+    }).join('');
+    const siteInfoTable = `<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tbody>${siteInfoRows}</tbody>
+      </table>
     </div>`;
     // 증빙 서류 현황 — 테이블 (서류명 | 파일/상태)
     const docRows = docTypes.map((def, i) => {
       const d = docs[def.key];
       const last = (i === docTypes.length - 1);
       const reqMark = def.required ? `<span style="color:var(--red);margin-left:3px;">*</span>` : '';
-      const cellBase = `padding:14px 16px;${last?'':'border-bottom:1px solid var(--border);'}`;
+      const bb = last ? '' : 'border-bottom:1px solid var(--border);';
       let fileCell;
       if(d){
         fileCell = `<span style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text-sub);">
@@ -2627,13 +2636,11 @@ function ctRenderSitesTable(c, sites){
           <span style="cursor:pointer;color:var(--text-hint);font-size:13px;" onclick="ctRemoveDoc('${c.id}','${s.id}','${def.key}')" title="삭제">⊗</span>
         </span>`;
       } else {
-        fileCell = `<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:#fff;border:1px dashed var(--border-dark);border-radius:6px;font-size:12px;color:var(--text-hint);cursor:pointer;" onclick="ctTriggerDocUpload('${c.id}','${s.id}','${def.key}')">
-          + ${def.label} 업로드
-        </span><span style="color:var(--text-hint);font-size:12px;margin-left:8px;">미첨부</span>`;
+        fileCell = `<span style="color:var(--text-hint);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;" onclick="ctTriggerDocUpload('${c.id}','${s.id}','${def.key}')">미첨부</span>`;
       }
       return `<tr>
-        <td style="${cellBase}width:200px;color:var(--text-sub);font-weight:500;font-size:12px;">${def.label}${reqMark}</td>
-        <td style="${cellBase}">${fileCell}</td>
+        <td style="width:200px;padding:14px 18px;color:var(--navy);font-size:12px;font-weight:500;${bb}">${def.label}${reqMark}</td>
+        <td style="padding:14px 18px;${bb}">${fileCell}</td>
       </tr>`;
     }).join('');
     const docsTable = `<div style="font-size:13px;font-weight:700;color:var(--navy);margin:24px 0 12px;">증빙 서류 현황</div>
@@ -2641,8 +2648,8 @@ function ctRenderSitesTable(c, sites){
         <table style="width:100%;border-collapse:collapse;">
           <thead>
             <tr style="background:var(--grey50);border-bottom:1px solid var(--border);">
-              <th style="padding:12px 16px;text-align:left;color:var(--text-sub);font-weight:600;font-size:12px;">서류명</th>
-              <th style="padding:12px 16px;text-align:left;color:var(--text-sub);font-weight:600;font-size:12px;">파일/상태</th>
+              <th style="padding:12px 18px;text-align:left;color:var(--text-sub);font-weight:600;font-size:12px;">서류명</th>
+              <th style="padding:12px 18px;text-align:left;color:var(--text-sub);font-weight:600;font-size:12px;">파일/상태</th>
             </tr>
           </thead>
           <tbody>${docRows}</tbody>
@@ -2651,7 +2658,7 @@ function ctRenderSitesTable(c, sites){
     const expandRow = `<tr style="background:var(--blue-light, #eff6ff);">
       <td colspan="9" style="padding:18px 28px 22px;">
         <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:24px 28px;">
-          ${siteInfoGrid}
+          ${siteInfoTable}
           ${docsTable}
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:22px;">
             <button class="btn btn-secondary btn-sm" onclick="ctOpenSiteEdit('${c.id}','${s.id}')">수정</button>
