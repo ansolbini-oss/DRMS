@@ -149,8 +149,8 @@ function pcRenderTable(){
       const tr = document.createElement('tr');
       tr.style.cursor = 'pointer';
       tr.innerHTML = `
-        <td style="font-weight:600;color:var(--navy);">${s.siteName}</td>
         <td>${c.name}</td>
+        <td style="font-weight:600;color:var(--navy);">${s.siteName}</td>
         <td>${s.manager || c.ceo || '—'}</td>
         <td>${s.tel || c.tel || '—'}</td>
         <td>${s.addr || '—'}</td>
