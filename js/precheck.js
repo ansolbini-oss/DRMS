@@ -339,7 +339,8 @@ function pcShowDetailWithSite(bizId, siteId){
 
 function pcSwitchTab(tab){
   $$('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  $('pc-tab-info').style.display = tab==='info'?'grid':'none';
+  // [Phase 17-AI] 기본정보 탭은 flex column (4영역 세로), 사업장·로그 탭은 grid 유지
+  $('pc-tab-info').style.display = tab==='info'?'flex':'none';
   $('pc-tab-log').style.display  = tab==='log' ?'grid':'none';
   const sitesTab = $('pc-tab-sites');
   if(sitesTab) sitesTab.style.display = tab==='sites'?'grid':'none';

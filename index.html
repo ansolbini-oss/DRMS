@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260622-1336. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260622-1336">
+<!-- css/js 모두 ?v=260622-1358. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260622-1358">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1336</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1358</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -410,9 +410,9 @@
       <div class="tab" data-tab="log" onclick="pcSwitchTab('log')">검증 로그</div>
     </div>
 
-    <!-- [Phase 17-AE] 기본정보 탭 전면 개편 — 위→아래 4영역 흐름 (계약관리에서도 동일 레이아웃 활용 예정)
-         ① 사업자 정보 (상단 가로) ② 사업장 수·검증 완료 KPI ③ 사업장 정보 (계약 정보 + 서류) ④ 메모 -->
-    <div class="detail-body" id="pc-tab-info" style="display:flex;flex-direction:column;gap:14px;padding:14px 20px;overflow-y:auto;">
+    <!-- [Phase 17-AE / AI] 기본정보 탭 — 4영역 풀 너비 세로 흐름.
+         detail-body class 제거(.detail-body의 grid 강제 회피). pc-tab-info id로 동작 식별. -->
+    <div id="pc-tab-info" style="flex:1;display:flex;flex-direction:column;gap:14px;padding:14px 20px;overflow-y:auto;background:var(--grey50);">
 
       <!-- ① 사업자 정보 (가로형 카드) -->
       <div class="r-card">
@@ -2269,20 +2269,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260622-1336"></script>
-<script src="data/tips.js?v=260622-1336"></script>
-<script src="js/core.js?v=260622-1336"></script>
-<script src="js/dashboard.js?v=260622-1336"></script>
-<script src="js/precheck.js?v=260622-1336"></script>
-<script src="js/resource.js?v=260622-1336"></script>
-<script src="js/monitoring.js?v=260622-1336"></script>
-<script src="js/report.js?v=260622-1336"></script>
-<script src="js/settlement.js?v=260622-1336"></script>
-<script src="js/datacollect.js?v=260622-1336"></script>
-<script src="js/rtu.js?v=260622-1336"></script>
-<script src="js/communication.js?v=260622-1336"></script>
-<script src="js/bidding.js?v=260622-1336"></script>
-<script src="js/account.js?v=260622-1336"></script>
-<script src="js/system.js?v=260622-1336"></script>
+<script src="data/store.js?v=260622-1358"></script>
+<script src="data/tips.js?v=260622-1358"></script>
+<script src="js/core.js?v=260622-1358"></script>
+<script src="js/dashboard.js?v=260622-1358"></script>
+<script src="js/precheck.js?v=260622-1358"></script>
+<script src="js/resource.js?v=260622-1358"></script>
+<script src="js/monitoring.js?v=260622-1358"></script>
+<script src="js/report.js?v=260622-1358"></script>
+<script src="js/settlement.js?v=260622-1358"></script>
+<script src="js/datacollect.js?v=260622-1358"></script>
+<script src="js/rtu.js?v=260622-1358"></script>
+<script src="js/communication.js?v=260622-1358"></script>
+<script src="js/bidding.js?v=260622-1358"></script>
+<script src="js/account.js?v=260622-1358"></script>
+<script src="js/system.js?v=260622-1358"></script>
 
 </body></html>
