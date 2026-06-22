@@ -2077,14 +2077,47 @@ function ctEnsureCustomerMeta(c){
       logAudit({objectType:'contract', objectId:c.id, action:'created', title:seedTitle, desc:seedDesc, actor:'시스템', tone:seedTone});
     }
   }
+  // [Phase 17-AS] 사업장 siteStatus 자동 부여 (운영자가 한 번도 안 건드린 사업장만)
+  if(typeof pcGetSites === 'function') pcGetSites(c);
+  if(Array.isArray(c.sites)){
+    const today = (new Date()).toISOString().slice(0,10);
+    c.sites.forEach(s => {
+      if(s.siteStatus) return;  // 운영자 manual override 보존
+      const ct = s.contract || {};
+      if(ct.startDate && ct.endDate){
+        s.siteStatus = (today > ct.endDate) ? '계약만료' : '계약완료';
+      } else if(c.status === '반려'){
+        s.siteStatus = '계약만료';
+      } else {
+        s.siteStatus = '계약대기';
+      }
+    });
+  }
+}
+/* [Phase 17-AS] 사업자 종합 상태 — 사업장 siteStatus 기반 파생(저장 X, 계산 O) */
+function ctComputeBizStatus(c){
+  ctEnsureCustomerMeta(c);
+  const sites = Array.isArray(c.sites) ? c.sites : [];
+  if(sites.length === 0) return { status:'계약대기', expiringCount:0 };
+  const counts = { '계약대기':0, '계약완료':0, '계약만료':0 };
+  let expiringCount = 0;
+  const now = new Date();
+  const sixtyDaysLater = new Date(now.getTime() + 60*86400000).toISOString().slice(0,10);
+  sites.forEach(s => {
+    const st = s.siteStatus || '계약대기';
+    counts[st] = (counts[st] || 0) + 1;
+    if(st === '계약완료' && s.contract && s.contract.endDate && s.contract.endDate <= sixtyDaysLater){
+      expiringCount++;
+    }
+  });
+  let status;
+  if(counts['계약대기'] >= 1) status = '계약대기';
+  else if(counts['계약만료'] === sites.length) status = '계약만료';
+  else status = '계약완료';
+  return { status, expiringCount, counts };
 }
 function ctGetStage(c){
-  ctEnsureCustomerMeta(c);
-  if(c.contractStage) return c.contractStage;
-  if(c.status==='계약완료') return '계약완료';
-  if(c.status==='반려')     return '계약만료';   // [Phase 17-AR] 반려→계약만료 매핑
-  if(c.status==='검증완료') return '계약대기';
-  return '';
+  return ctComputeBizStatus(c).status;
 }
 function ctStageBadge(stage){
   if(stage==='계약대기') return 'badge-pending';
@@ -2105,8 +2138,8 @@ function ctFilteredCustomers(){
   const stage = $('ct-filter-status')?.value || '';
   return ctEligibleCustomers().filter(c=>{
     const s = ctGetStage(c);
-    // 사업자 + 사업장 정보 모두 검색 hay에 포함 (Phase 8 + 17-AR: 대표자/연락처 추가)
-    const hayParts = [c.name, c.ceo, c.tel, c.recno, c.kepco, c.id, c.addr];
+    // 사업자 + 사업장 정보 모두 검색 hay에 포함 (Phase 17-AS: 사업자명·사업자번호 중심)
+    const hayParts = [c.name, c.bizno, c.ceo, c.tel, c.recno, c.kepco, c.id, c.addr];
     if(Array.isArray(c.sites)){
       c.sites.forEach(site => hayParts.push(site.siteName||'', site.kepco||'', site.manager||'', site.tel||''));
     }
@@ -2135,11 +2168,13 @@ function ctInit(){
 }
 function ctRenderSummary(){
   const rows = ctEligibleCustomers();
-  const count = (stage)=>rows.filter(c=>ctGetStage(c)===stage).length;
-  $('ct-kpi-total').textContent = rows.length;
+  const bizList = rows.map(c => ({ c, biz: ctComputeBizStatus(c) }));
+  const count = (st)=> bizList.filter(x => x.biz.status === st).length;
+  const expiringBizCount = bizList.filter(x => x.biz.expiringCount > 0).length;
+  $('ct-kpi-total').textContent    = rows.length;
   $('ct-kpi-pending').textContent  = count('계약대기');
-  $('ct-kpi-review').textContent   = count('계약진행');
   $('ct-kpi-approved').textContent = count('계약완료');
+  $('ct-kpi-review').textContent   = expiringBizCount;   // [Phase 17-AS] 만료 예정 사업자
   $('ct-kpi-rejected').textContent = count('계약만료');
 }
 /* [Phase 17-AD] 계약관리 — 사업자 단위 평면 리스트 (아코디언 해제)
@@ -2151,19 +2186,19 @@ function ctRenderTable(){
   const empty = $('ct-empty');
   let siteTotal = 0;
   tbody.innerHTML = rows.map(c => {
-    const stage = ctGetStage(c);
+    const biz = ctComputeBizStatus(c);
+    const stage = biz.status;
     const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (Array.isArray(c.sites) ? c.sites : []);
     const siteCount = sites.length || 1;
     siteTotal += siteCount;
+    const expiringIcon = biz.expiringCount > 0
+      ? `<span title="만료 예정 ${biz.expiringCount}건 (60일 내 종료)" style="margin-left:6px;color:var(--amber);font-size:14px;line-height:1;">⚠</span>`
+      : '';
     return `<tr class="ct-business-row" data-biz-id="${c.id}" style="cursor:pointer;">
-      <td>
-        <div class="ct-name">${c.name||'—'}</div>
-        <div class="ct-sub">${c.recno||'-'} · 고객번호 ${c.kepco||'-'}</div>
-      </td>
-      <td>${c.ceo||'—'}</td>
-      <td>${c.tel||'—'}</td>
+      <td><div class="ct-name">${c.name||'—'}</div></td>
+      <td style="font-family:monospace;">${c.bizno||'—'}</td>
       <td>${siteCount}개</td>
-      <td><span class="badge ${ctStageBadge(stage)}">${stage||'—'}</span></td>
+      <td><span class="badge ${ctStageBadge(stage)}">${stage||'—'}</span>${expiringIcon}</td>
       <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
     </tr>`;
   }).join('');
@@ -2600,6 +2635,12 @@ function ctRenderSitesTable(c, sites){
     const docs = ct.docs || {};
     const addrText = s.addr ? `${s.addr}${s.addrDetail?` ${s.addrDetail}`:''}` : '—';
     // 사업장 정보 — 한 줄씩 (라벨 좌 회색 중앙정렬 / 값 우)
+    const curStatus = s.siteStatus || '계약대기';
+    const statusSelect = ['계약대기','계약완료','계약만료'].map(opt =>
+      `<option value="${opt}"${opt===curStatus?' selected':''}>${opt}</option>`
+    ).join('');
+    const statusDropdown = `<select onchange="ctSetSiteStatus('${c.id}','${s.id}', this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;">${statusSelect}</select>
+      <span style="margin-left:8px;font-size:11px;color:var(--text-hint);">운영자 직접 변경 가능</span>`;
     const siteFields = [
       ['사업장명', s.siteName],
       ['담당자', s.manager],
@@ -2608,6 +2649,7 @@ function ctRenderSitesTable(c, sites){
       ['계약기간', period],
       ['계약전력', power],
       ['수수료', fee],
+      ['계약상태', statusDropdown],   // [Phase 17-AS] manual override
     ];
     const siteInfoRows = siteFields.map(([label, val], i) => {
       const last = (i === siteFields.length - 1);
@@ -2699,6 +2741,24 @@ function ctToggleSiteExpand(bizId, siteId){
   ctExpandedSiteId = (ctExpandedSiteId === siteId) ? null : siteId;
   const c = store.customers.find(x => x.id === bizId); if(!c) return;
   ctRenderDetailPage(c);
+}
+
+/* [Phase 17-AS] 사업장 계약상태 manual override — 즉시 저장 + 감사로그 */
+function ctSetSiteStatus(bizId, siteId, newStatus){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  const s = (c.sites||[]).find(x => x.id === siteId); if(!s) return;
+  const old = s.siteStatus || '계약대기';
+  if(old === newStatus) return;
+  s.siteStatus = newStatus;
+  logAudit?.({objectType:'site', objectId:s.id, action:'site_status_changed',
+    title:`사업장 계약상태 변경 — ${s.siteName}`,
+    desc:`${old} → ${newStatus} (${c.name})`,
+    actor:'운영자', tone:'info'});
+  if(typeof showToast === 'function') showToast(`사업장 계약상태가 '${newStatus}'(으)로 변경되었습니다.`);
+  // 사업자 종합 상태·KPI·목록 갱신
+  ctRenderDetailPage(c);
+  if(typeof ctRenderTable === 'function')   ctRenderTable();
+  if(typeof ctRenderSummary === 'function') ctRenderSummary();
 }
 
 /* 사업장 추가 — 비어있는 사업장 신규 생성 */
