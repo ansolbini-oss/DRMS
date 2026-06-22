@@ -50,9 +50,42 @@ const store = {
     {id:'C023',name:'GS파워',           ceo:'허연수',tel:'031-400-1114',addr:'경기 안산시',  recno:'DR-2024-0402',date:'2024-11-03',power:500, kepco:'40023023',drType:'주파수DR',     status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'485kW',reduction:250,rrmseVal:'8%',infraS:'완료'},
     {id:'C024',name:'카카오모빌리티',   ceo:'류긍선',tel:'1544-5005',addr:'경기 성남시',  recno:'DR-2024-0501',date:'2024-11-25',power:1200, kepco:'50024024',drType:'플러스DR',     status:'계약완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'1150kW',reduction:800,rrmseVal:'6%',infraS:'완료'},
     {id:'C025',name:'쏘카',             ceo:'박재욱',tel:'1588-0000',addr:'서울 성동구',  recno:'DR-2024-0502',date:'2024-11-27',power:1100, kepco:'50025025',drType:'플러스DR',     status:'계약완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'1050kW',reduction:700,rrmseVal:'7%',infraS:'완료'},
-    // 검증완료 - 계약전환 대기
-    {id:'C100',name:'(주)태양광에너텍', ceo:'윤서연',tel:'061-567-8901',addr:'전남 여수시',  recno:'DR-2026-0011',date:'2026-04-10',power:380, kepco:'11223344',drType:'국민DR',       status:'검증완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'352kW',reduction:76,rrmseVal:'7%',infraS:'완료'},
-    {id:'C101',name:'(주)동성산업',     ceo:'강민호',tel:'054-678-9012',addr:'경북 포항시',  recno:'DR-2026-0012',date:'2026-04-12',power:560, kepco:'22334455',drType:'중소형DR',     status:'검증완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'521kW',reduction:112,rrmseVal:'9%',infraS:'완료'},
+    // 검증완료 - 계약전환 대기 [Phase 17-AU] 시연용 시드 보강 — 사업장 1:N + DR유형/유입경로 다양화
+    {id:'C100',name:'(주)태양광에너텍', ceo:'윤서연',tel:'061-567-8901',addr:'전남 여수시',  recno:'DR-2026-0011',date:'2026-04-10',power:380, kepco:'11223344',drType:'국민DR',       status:'검증완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'352kW',reduction:76,rrmseVal:'7%',infraS:'완료',
+     bizno:'612-81-11223', bizcat:'전기·가스', biztype:'발전사업',
+     sites:[
+       {id:'C100-S1', siteName:'여수태양광1호', kepco:'11223344', addr:'전남 여수시 학동',     power:200, tel:'061-567-8901', manager:'윤서연', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-04-10'},
+       {id:'C100-S2', siteName:'광양태양광2호', kepco:'11223345', addr:'전남 광양시 광영동',   power:180, tel:'061-567-8902', manager:'강여수', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-04-10'}
+     ]},
+    {id:'C101',name:'(주)동성산업',     ceo:'강민호',tel:'054-678-9012',addr:'경북 포항시',  recno:'DR-2026-0012',date:'2026-04-12',power:560, kepco:'22334455',drType:'중소형DR',     status:'검증완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'521kW',reduction:112,rrmseVal:'9%',infraS:'완료',
+     bizno:'511-86-22334', bizcat:'제조업', biztype:'금속가공',
+     sites:[
+       {id:'C101-S1', siteName:'포항 본사', kepco:'22334455', addr:'경북 포항시 남구 호동', power:560, tel:'054-678-9012', manager:'강민호', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-04-12'}
+     ]},
+    {id:'C113',name:'인천스마트팩토리',  ceo:'한지원',tel:'032-555-3300',addr:'인천 부평구',  recno:'DR-2026-0021',date:'2026-05-10',power:1100,kepco:'33445500',drType:'표준DR',       status:'검증완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'1040kW',reduction:560,rrmseVal:'6%',infraS:'완료',
+     bizno:'131-86-33445', bizcat:'제조업', biztype:'전자부품',
+     sites:[
+       {id:'C113-S1', siteName:'부평공장',  kepco:'33445500', addr:'인천 부평구 산곡동',    power:400, tel:'032-555-3301', manager:'민부평', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-10'},
+       {id:'C113-S2', siteName:'송도공장',  kepco:'33445501', addr:'인천 연수구 송도동',    power:380, tel:'032-555-3302', manager:'이송도', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-11'},
+       {id:'C113-S3', siteName:'남동공장',  kepco:'33445502', addr:'인천 남동구 고잔동',    power:320, tel:'032-555-3303', manager:'박남동', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-12'}
+     ]},
+    {id:'C114',name:'부산물류허브',      ceo:'정수아',tel:'051-446-7700',addr:'부산 강서구',  recno:'DR-2026-0022',date:'2026-05-15',power:680, kepco:'44556600',drType:'중소형DR',     status:'검증완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'645kW',reduction:340,rrmseVal:'8%',infraS:'완료',
+     bizno:'617-81-44556', bizcat:'운수업', biztype:'물류운송',
+     sites:[
+       {id:'C114-S1', siteName:'강서물류센터', kepco:'44556600', addr:'부산 강서구 대저1동',  power:380, tel:'051-446-7701', manager:'송강서', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-15'},
+       {id:'C114-S2', siteName:'사상물류센터', kepco:'44556601', addr:'부산 사상구 학장동',    power:300, tel:'051-446-7702', manager:'한사상', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-16'}
+     ]},
+    {id:'C115',name:'제주에너지조합',    ceo:'고지훈',tel:'064-779-2200',addr:'제주 제주시',  recno:'DR-2026-0023',date:'2026-05-20',power:240, kepco:'55667700',drType:'제주DR',       status:'검증완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'225kW',reduction:120,rrmseVal:'9%',infraS:'완료',
+     bizno:'616-82-55667', bizcat:'전기·가스', biztype:'발전사업',
+     sites:[
+       {id:'C115-S1', siteName:'제주 본사 발전소', kepco:'55667700', addr:'제주 제주시 노형동', power:240, tel:'064-779-2201', manager:'고지훈', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-20'}
+     ]},
+    {id:'C116',name:'(주)대구첨단소재',  ceo:'배은영',tel:'053-588-4400',addr:'대구 달성군',  recno:'DR-2026-0024',date:'2026-05-25',power:920, kepco:'66778800',drType:'표준DR',       status:'검증완료',dataStatus:'수집완료',inflow:'추천',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'870kW',reduction:480,rrmseVal:'7%',infraS:'완료',
+     bizno:'502-81-66778', bizcat:'제조업', biztype:'첨단소재',
+     sites:[
+       {id:'C116-S1', siteName:'달성 본사 공장', kepco:'66778800', addr:'대구 달성군 논공읍',  power:520, tel:'053-588-4401', manager:'배은영', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-25'},
+       {id:'C116-S2', siteName:'성서 R&D센터',   kepco:'66778801', addr:'대구 달서구 성서로',  power:400, tel:'053-588-4402', manager:'정성서', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-26'}
+     ]},
     // 검증중
     {id:'C102',name:'(주)한국에너지솔루션',ceo:'김철수',tel:'02-1234-5678',addr:'서울 강남구', recno:'DR-2026-0013',date:'2026-04-14',power:500, kepco:'12345678',drType:'표준DR', status:'검증중',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,3],extS:'통과',rrmseS:'완료',cblS:'진행중',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'8%',infraS:'완료'},
     {id:'C103',name:'(주)미래서비스코리아',ceo:'최지수',tel:'051-345-6789',addr:'부산 해운대구',recno:'DR-2026-0014',date:'2026-04-15',power:150, kepco:'45678901',drType:'중소형DR',status:'검증중',dataStatus:'수집중',inflow:'영업',steps:[2,2,2,3,1,1],extS:'통과',rrmseS:'진행중',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'완료'},
