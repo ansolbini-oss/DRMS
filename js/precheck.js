@@ -342,30 +342,30 @@ function pcSwitchTab(tab){
 }
 
 // 사업장 탭 렌더링: 좌측 리스트 + 첫 사업장 자동 선택
-/* [Phase 17-AF] 사업장 탭 — 좌우 분할 → 세로 흐름. 사업장 셀렉터를 칩(가로) 형태로 변경 */
 function pcRenderSitesTab(c){
   const list = $('pc-sites-list'); list.innerHTML = '';
   const sites = pcGetSites(c);
-  if(sites.length === 0){
-    $('pc-sites-count').textContent = '등록된 사업장 없음';
-    return;
-  }
+  if(sites.length===0) return;
   $('pc-sites-count').textContent = `총 ${sites.length}사업장`;
-  const total = pcStepDefs.length;
-  sites.forEach(s => {
+  sites.forEach((s, idx) => {
+    // [Phase 17-L] 단계 수 동적 — 정규화 후 4단계 기준
     const stepsArr = pcNormalizeSteps(s.steps);
+    const total = pcStepDefs.length;
     const done = stepsArr.filter(x=>x===2).length;
-    const isDone = done === total;
-    const chip = document.createElement('div');
-    chip.className = 'site-list-item';
-    chip.dataset.siteId = s.id;
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--border);border-radius:20px;cursor:pointer;background:#fff;transition:all .15s ease;font-size:12px;';
-    chip.innerHTML = `
-      <span style="font-weight:600;color:var(--navy);">${s.siteName}</span>
-      <span class="badge ${isDone?'badge-done':'badge-progress'}" style="font-size:10px;">${done}/${total}</span>
+    const isDone = done===total;
+    const item = document.createElement('div');
+    item.className = 'site-list-item';
+    item.dataset.siteId = s.id;
+    item.style.cssText = 'padding:10px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:#fff;transition:all .15s ease;';
+    item.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <div style="font-weight:600;font-size:13px;color:var(--navy);">${s.siteName}</div>
+        <span class="badge ${isDone?'badge-done':'badge-progress'}" style="font-size:10px;">${done}/${total}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:3px;font-family:monospace;">KEPCO ${s.kepco}</div>
     `;
-    chip.onclick = () => pcSelectSite(c.id, s.id);
-    list.appendChild(chip);
+    item.onclick = () => pcSelectSite(c.id, s.id);
+    list.appendChild(item);
   });
   // 첫 사업장 자동 선택
   pcSelectSite(c.id, sites[0].id);
@@ -375,14 +375,11 @@ function pcSelectSite(bizId, siteId){
   const c = custById(bizId); if(!c) return;
   const sites = pcGetSites(c);
   const s = sites.find(x=>x.id===siteId); if(!s) return;
-  // [Phase 17-AF] 칩 active 스타일 토글
+  // active 스타일 토글
   document.querySelectorAll('.site-list-item').forEach(el => {
     const isActive = el.dataset.siteId === siteId;
-    el.style.background = isActive ? 'var(--blue)' : '#fff';
-    el.style.color = isActive ? '#fff' : 'inherit';
+    el.style.background = isActive ? 'var(--blue-light)' : '#fff';
     el.style.borderColor = isActive ? 'var(--blue)' : 'var(--border)';
-    const txt = el.querySelector('span');
-    if(txt) txt.style.color = isActive ? '#fff' : 'var(--navy)';
   });
   // 우측 상세 렌더 — 사업장 기본정보 + 검증 절차 + 산정 결과 + 외부데이터 검증 결과
   // [Phase 17-L] 4단계 정규화 + 동적 카운트
