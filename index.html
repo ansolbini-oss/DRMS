@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260622-1034. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260622-1034">
+<!-- css/js 모두 ?v=260622-1336. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260622-1336">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1034</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260622-1336</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -435,22 +435,35 @@
         </div>
       </div>
 
-      <!-- ② KPI: 사업장 수 · 검증 완료 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="r-card" style="padding:16px 18px;">
-          <div style="font-size:11px;color:var(--text-hint);font-weight:500;">사업장 수</div>
-          <div style="font-size:24px;font-weight:700;color:var(--navy);margin-top:6px;" id="pc-d-site-count">-</div>
-        </div>
-        <div class="r-card" style="padding:16px 18px;">
-          <div style="font-size:11px;color:var(--text-hint);font-weight:500;">검증 완료</div>
-          <div style="font-size:24px;font-weight:700;color:var(--green);margin-top:6px;" id="pc-d-verify-done">-</div>
+      <!-- ② 사업자 요약 (풀 너비 카드 — 사업장 수·검증 완료·용량 통계) -->
+      <div class="r-card">
+        <div class="r-card-header"><div class="r-card-title">사업자 요약</div></div>
+        <div class="r-card-body">
+          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;">
+            <div>
+              <div style="font-size:11px;color:var(--text-hint);font-weight:500;">사업장 수</div>
+              <div style="font-size:22px;font-weight:700;color:var(--navy);margin-top:4px;" id="pc-d-site-count">-</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-hint);font-weight:500;">검증 완료</div>
+              <div style="font-size:22px;font-weight:700;color:var(--green);margin-top:4px;" id="pc-d-verify-done">-</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-hint);font-weight:500;">한전 계약전력 합계</div>
+              <div style="font-size:22px;font-weight:700;color:var(--navy);margin-top:4px;" id="pc-d-kepco-power">-</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-hint);font-weight:500;">60hz 계약전력 합계</div>
+              <div style="font-size:22px;font-weight:700;color:var(--blue);margin-top:4px;" id="pc-d-hz-power">-</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- ③ 사업장 정보 (각 사업장 카드 N개 + [+ 사업장 추가]) -->
+      <!-- ③ 사업장 정보 (계약정보) — 각 사업장 카드 N개 + [+ 사업장 추가] -->
       <div class="r-card">
         <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="r-card-title">사업장 정보</div>
+          <div class="r-card-title">사업장 정보 (계약정보)</div>
           <button class="btn btn-primary btn-sm" onclick="pcOpenAddSite()">+ 사업장 추가</button>
         </div>
         <div class="r-card-body" id="pc-d-sites-info">
@@ -2256,20 +2269,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260622-1034"></script>
-<script src="data/tips.js?v=260622-1034"></script>
-<script src="js/core.js?v=260622-1034"></script>
-<script src="js/dashboard.js?v=260622-1034"></script>
-<script src="js/precheck.js?v=260622-1034"></script>
-<script src="js/resource.js?v=260622-1034"></script>
-<script src="js/monitoring.js?v=260622-1034"></script>
-<script src="js/report.js?v=260622-1034"></script>
-<script src="js/settlement.js?v=260622-1034"></script>
-<script src="js/datacollect.js?v=260622-1034"></script>
-<script src="js/rtu.js?v=260622-1034"></script>
-<script src="js/communication.js?v=260622-1034"></script>
-<script src="js/bidding.js?v=260622-1034"></script>
-<script src="js/account.js?v=260622-1034"></script>
-<script src="js/system.js?v=260622-1034"></script>
+<script src="data/store.js?v=260622-1336"></script>
+<script src="data/tips.js?v=260622-1336"></script>
+<script src="js/core.js?v=260622-1336"></script>
+<script src="js/dashboard.js?v=260622-1336"></script>
+<script src="js/precheck.js?v=260622-1336"></script>
+<script src="js/resource.js?v=260622-1336"></script>
+<script src="js/monitoring.js?v=260622-1336"></script>
+<script src="js/report.js?v=260622-1336"></script>
+<script src="js/settlement.js?v=260622-1336"></script>
+<script src="js/datacollect.js?v=260622-1336"></script>
+<script src="js/rtu.js?v=260622-1336"></script>
+<script src="js/communication.js?v=260622-1336"></script>
+<script src="js/bidding.js?v=260622-1336"></script>
+<script src="js/account.js?v=260622-1336"></script>
+<script src="js/system.js?v=260622-1336"></script>
 
 </body></html>

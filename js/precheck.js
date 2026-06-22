@@ -192,12 +192,16 @@ function pcShowDetail(id){
   setText('pc-d-ceo', c.ceo || '-');
   setText('pc-d-tel', c.tel || '-');
   setText('pc-d-inflow', c.inflow || '-');
-  // KPI 카드
+  // [Phase 17-AH] 사업자 요약 — 사업장 수·검증 완료·한전 계약전력 합계·60hz 계약전력 합계
   const sitesAll = pcGetSites(c);
   const totalSteps = pcStepDefs.length;
   const doneSites = sitesAll.filter(s => pcNormalizeSteps(s.steps).filter(x=>x===2).length === totalSteps).length;
+  const kepcoPowerSum = sitesAll.reduce((sum, s) => sum + (parseInt(s.power, 10) || 0), 0);
+  const hzPowerSum    = sitesAll.reduce((sum, s) => sum + (parseInt(s.contract?.power, 10) || 0), 0);
   setText('pc-d-site-count', `${sitesAll.length}`);
   setText('pc-d-verify-done', `${doneSites} / ${sitesAll.length}`);
+  setText('pc-d-kepco-power', kepcoPowerSum > 0 ? `${kepcoPowerSum.toLocaleString()} kW` : '—');
+  setText('pc-d-hz-power',    hzPowerSum > 0    ? `${hzPowerSum.toLocaleString()} kW`    : '—');
   // 사업장 정보 카드 (계약 정보 + 서류 업로드)
   pcRenderSitesInfo(c);
   pcRenderMemo(c);
