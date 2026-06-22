@@ -2434,8 +2434,8 @@ function ctRenderDetailPage(c){
     </div>
   </div>`;
 
-  // ③ 사업장별 계약 카드 (와이어 형태)
-  const siteCards = sites.map(s => ctRenderSiteContractCard(c, s, {rowStyle, rowLast, labelCell, valCell, tableWrap})).join('');
+  // ③ 사업장 관리 테이블 (비니 와이어 — 행 + 아코디언 확장)
+  const siteCards = ctRenderSitesTable(c, sites);
 
   // ④ 운영자 메모 카드
   const memoCard = `<div class="r-card">
@@ -2550,7 +2550,184 @@ function ctEcLookupBizno(){
   if(typeof showToast === 'function') showToast('사업자등록번호 조회 완료');
 }
 
-/* 사업장별 계약 카드 (비니 와이어 형태 — 사업장 정보 + 서류 업로드) */
+/* [Phase 17-AP] 사업장 관리 — 테이블 + 아코디언 확장 (비니 와이어 형태) */
+let ctExpandedSiteId = null;
+
+function ctRenderSitesTable(c, sites){
+  // 상태 계산 헬퍼 — 계약기간 기준
+  const today = new Date().toISOString().slice(0, 10);
+  const calcStatus = (s) => {
+    const ct = s.contract || {};
+    if(!ct.startDate || !ct.endDate) return {label:'계약 미입력', color:'var(--text-hint)', bg:'var(--grey50)'};
+    if(today < ct.startDate) return {label:'계약 예정', color:'var(--blue)', bg:'var(--blue-light, #eff6ff)'};
+    if(today > ct.endDate)   return {label:'계약만료', color:'var(--text-hint)', bg:'var(--grey50)'};
+    return {label:'계약중', color:'var(--green)', bg:'var(--green-light, #ecfdf5)'};
+  };
+  const fmtDate = (d) => d || '—';
+  const escAttr = (v) => String(v||'').replace(/"/g,'&quot;');
+
+  const rows = sites.map(s => {
+    const ct = s.contract || {};
+    const st = calcStatus(s);
+    const period = ct.startDate && ct.endDate ? `${ct.startDate} ~ ${ct.endDate}` : '—';
+    const power  = ct.power ? `${ct.power.toLocaleString()} kW` : '—';
+    const fee    = ct.feeRate != null ? `${ct.feeRate}%` : '—';
+    const isExpanded = ctExpandedSiteId === s.id;
+    const arrowSvg = isExpanded
+      ? `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 15l-6-6-6 6"/></svg>`
+      : `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>`;
+    const headBg = isExpanded ? 'var(--blue-light, #eff6ff)' : '';
+    const headerRow = `<tr style="cursor:pointer;background:${headBg};border-bottom:1px solid var(--border);" onclick="ctToggleSiteExpand('${c.id}','${s.id}')">
+      <td style="padding:14px 12px;width:40px;"><input type="checkbox" onclick="event.stopPropagation();" style="cursor:pointer;"></td>
+      <td style="padding:14px 12px;font-weight:600;color:var(--navy);">${s.siteName || '-'}</td>
+      <td style="padding:14px 12px;">${s.manager || '—'}</td>
+      <td style="padding:14px 12px;color:var(--text-sub);">${s.tel || '—'}</td>
+      <td style="padding:14px 12px;font-size:12px;color:var(--text-sub);">${period}</td>
+      <td style="padding:14px 12px;font-weight:500;">${power}</td>
+      <td style="padding:14px 12px;">${fee}</td>
+      <td style="padding:14px 12px;"><span class="badge" style="background:${st.bg};color:${st.color};font-size:11px;padding:3px 8px;border-radius:10px;">${st.label}</span></td>
+      <td style="padding:14px 12px;color:var(--text-hint);width:40px;text-align:center;">${arrowSvg}</td>
+    </tr>`;
+    if(!isExpanded) return headerRow;
+    // 확장 콘텐츠 (비니 와이어)
+    const docTypes = [
+      {key:'bizReg',   label:'사업자등록증'},
+      {key:'idCard',   label:'대표자 신분증'},
+      {key:'bankBook', label:'통장 사본'},
+      {key:'etc',      label:'기타 서류'},
+    ];
+    const docs = ct.docs || {};
+    const docChips = docTypes.map(def => {
+      const d = docs[def.key];
+      if(d){
+        return `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text-sub);">
+          📄 ${d.name}
+          <span style="cursor:pointer;color:var(--text-hint);" onclick="ctRemoveDoc('${c.id}','${s.id}','${def.key}')" title="삭제">⊗</span>
+        </span>`;
+      }
+      return `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border:1px dashed var(--border-dark);border-radius:6px;font-size:11px;color:var(--text-hint);cursor:pointer;" onclick="ctTriggerDocUpload('${c.id}','${s.id}','${def.key}')">
+        + ${def.label}
+      </span>`;
+    }).join('');
+
+    const expandRow = `<tr style="background:var(--blue-light, #eff6ff);">
+      <td colspan="9" style="padding:16px 24px;">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px 22px;">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">사업장 정보</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <tbody>
+              <tr><td style="width:140px;padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">사업장명</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.siteName||'-'}</td></tr>
+              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">담당자</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.manager||'-'}</td></tr>
+              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">담당자 연락처</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.tel||'-'}</td></tr>
+              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">주소</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.addr||'-'}${s.addrDetail?` (상세: ${s.addrDetail})`:''}</td></tr>
+              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">계약기간</td><td style="padding:10px 12px;border:1px solid var(--border);">${period}</td></tr>
+              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">계약전력</td><td style="padding:10px 12px;border:1px solid var(--border);">${power}</td></tr>
+              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">수수료</td><td style="padding:10px 12px;border:1px solid var(--border);">${fee}</td></tr>
+            </tbody>
+          </table>
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin:18px 0 10px;">서류</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">${docChips}</div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
+            <button class="btn btn-secondary btn-sm" onclick="ctOpenSiteEdit('${c.id}','${s.id}')">수정</button>
+            <button class="btn btn-danger btn-sm" onclick="ctDeleteSite('${c.id}','${s.id}')">삭제</button>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+    return headerRow + expandRow;
+  }).join('');
+
+  return `<div class="r-card">
+    <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="r-card-title">사업장 관리</div>
+      <button class="btn btn-primary btn-sm" onclick="ctOpenAddSite('${c.id}')">+ 사업장 추가</button>
+    </div>
+    <div class="r-card-body" style="padding:0;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:var(--grey50);border-bottom:1px solid var(--border);">
+            <th style="padding:12px;width:40px;"><input type="checkbox" style="cursor:pointer;"></th>
+            <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">사업장명</th>
+            <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">담당자</th>
+            <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">담당자 연락처</th>
+            <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">계약기간</th>
+            <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">계약전력</th>
+            <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">수수료</th>
+            <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">상태</th>
+            <th style="padding:12px;width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>${rows || `<tr><td colspan="9" style="padding:30px;text-align:center;color:var(--text-hint);font-size:12px;">등록된 사업장이 없습니다. [+ 사업장 추가] 버튼으로 등록하세요.</td></tr>`}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function ctToggleSiteExpand(bizId, siteId){
+  ctExpandedSiteId = (ctExpandedSiteId === siteId) ? null : siteId;
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  ctRenderDetailPage(c);
+}
+
+/* 사업장 추가 — 비어있는 사업장 신규 생성 */
+function ctOpenAddSite(bizId){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  if(!Array.isArray(c.sites)) c.sites = [];
+  const idx = c.sites.length + 1;
+  const newSite = {
+    id: `${c.id}-S${Date.now().toString().slice(-6)}`,
+    siteName: `신규 사업장 ${idx}`,
+    manager: '',
+    tel: '',
+    addr: '',
+    addrDetail: '',
+    kepco: '',
+    power: 0,
+    steps: [1,1,1,1],
+    contract: { startDate:'', endDate:'', power:0, feeRate:0, docs:{} },
+  };
+  c.sites.push(newSite);
+  ctExpandedSiteId = newSite.id;  // 신규 사업장 자동 확장
+  if(typeof showToast === 'function') showToast(`${newSite.siteName} 추가 완료 — 정보를 입력하세요`);
+  logAudit?.({objectType:'site', objectId:newSite.id, action:'site_added',
+    title:`사업장 추가 — ${newSite.siteName}`, desc:`${c.name}`, actor:'운영자', tone:'info'});
+  ctRenderDetailPage(c);
+}
+
+/* 사업장 삭제 */
+function ctDeleteSite(bizId, siteId){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  if(!Array.isArray(c.sites)) return;
+  const s = c.sites.find(x => x.id === siteId); if(!s) return;
+  if(!confirm(`'${s.siteName}' 사업장을 삭제할까요? 계약 정보·서류도 함께 삭제됩니다.`)) return;
+  c.sites = c.sites.filter(x => x.id !== siteId);
+  ctExpandedSiteId = null;
+  logAudit?.({objectType:'site', objectId:siteId, action:'site_deleted',
+    title:`사업장 삭제 — ${s.siteName}`, desc:`${c.name}`, actor:'운영자', tone:'warn'});
+  if(typeof showToast === 'function') showToast(`${s.siteName} 삭제 완료`);
+  ctRenderDetailPage(c);
+}
+
+/* 사업장 정보 수정 — TODO: 인라인 편집 추가 예정 */
+function ctOpenSiteEdit(bizId, siteId){
+  if(typeof showToast === 'function') showToast('사업장 정보 수정 — 인라인 편집 다음 단계 예정');
+}
+
+/* 서류 제거 */
+function ctRemoveDoc(bizId, siteId, docKey){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  const s = (c.sites||[]).find(x => x.id === siteId); if(!s) return;
+  if(!s.contract || !s.contract.docs || !s.contract.docs[docKey]) return;
+  if(!confirm('이 서류를 삭제할까요?')) return;
+  const removed = s.contract.docs[docKey];
+  delete s.contract.docs[docKey];
+  logAudit?.({objectType:'site_contract', objectId:siteId, action:'doc_removed',
+    title:`서류 삭제 — ${s.siteName}`, desc:`${docKey} · ${removed.name}`, actor:'운영자', tone:'warn'});
+  if(typeof showToast === 'function') showToast(`서류 삭제 완료`);
+  ctRenderDetailPage(c);
+}
+
+/* 옛 함수 — 호환성 위해 빈 stub (호출처가 있을 수 있어서 에러 방지) */
 function ctRenderSiteContractCard(c, s, styles){
   const ct = s.contract || {};
   const docs = ct.docs || {};
