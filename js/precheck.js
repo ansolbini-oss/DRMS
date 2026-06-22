@@ -2357,13 +2357,13 @@ function ctRenderDetailPage(c){
   const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (Array.isArray(c.sites) ? c.sites : []);
   const contractedCount = sites.filter(s => s.contract && s.contract.startDate && s.contract.endDate).length;
 
-  // 공통 row 스타일 (와이어 형태)
-  const rowStyle  = 'display:grid;grid-template-columns:140px 1fr;border-bottom:1px solid var(--border);';
-  const rowLast   = 'display:grid;grid-template-columns:140px 1fr;';
-  const labelCell = 'padding:12px 14px;background:var(--grey50);font-size:12px;color:var(--text-sub);font-weight:600;display:flex;align-items:center;';
-  const valCell   = 'padding:12px 14px;font-size:13px;font-weight:500;color:var(--navy);display:flex;align-items:center;';
-  const inpCell   = 'padding:8px 14px;display:flex;align-items:center;gap:6px;';
-  const inpStyle  = 'flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);box-sizing:border-box;';
+  // 공통 row 스타일 (와이어 형태) — [Phase 17-AQ] 가독성 패딩 +
+  const rowStyle  = 'display:grid;grid-template-columns:160px 1fr;border-bottom:1px solid var(--border);';
+  const rowLast   = 'display:grid;grid-template-columns:160px 1fr;';
+  const labelCell = 'padding:16px 18px;background:var(--grey50);font-size:12px;color:var(--text-sub);font-weight:600;display:flex;align-items:center;';
+  const valCell   = 'padding:16px 18px;font-size:13px;font-weight:500;color:var(--navy);display:flex;align-items:center;';
+  const inpCell   = 'padding:10px 18px;display:flex;align-items:center;gap:6px;';
+  const inpStyle  = 'flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);box-sizing:border-box;';
   const tableWrap = 'border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;';
   const req = `<span style="color:var(--red);">*</span>`;
   const esc = (v) => String(v||'').replace(/"/g,'&quot;');
@@ -2531,9 +2531,11 @@ function ctSaveCustEdit(){
   });
   ctCustEditing = false;
   if(typeof showToast === 'function') showToast(changes.length ? `정보가 변경되었습니다 (${changes.length}건)` : '변경 사항 없음');
-  // 상세 페이지 헤더(타이틀) 갱신
+  // 상세 페이지 헤더(타이틀 + breadcrumb) 갱신
   const titleEl = document.getElementById('ct-d-page-title');
   if(titleEl) titleEl.textContent = c.name;
+  const crumbEl = document.getElementById('ct-d-crumb');
+  if(crumbEl) crumbEl.textContent = c.name;
   ctRenderDetailPage(c);
   if(typeof ctRenderTable === 'function') ctRenderTable();
 }
@@ -2589,45 +2591,69 @@ function ctRenderSitesTable(c, sites){
       <td style="padding:14px 12px;color:var(--text-hint);width:40px;text-align:center;">${arrowSvg}</td>
     </tr>`;
     if(!isExpanded) return headerRow;
-    // 확장 콘텐츠 (비니 와이어)
+    // [Phase 17-AQ] 확장 콘텐츠 — 사업장 정보(라벨 위/값 아래 2열) + 증빙 서류 현황(테이블)
     const docTypes = [
-      {key:'bizReg',   label:'사업자등록증'},
-      {key:'idCard',   label:'대표자 신분증'},
-      {key:'bankBook', label:'통장 사본'},
-      {key:'etc',      label:'기타 서류'},
+      {key:'bizReg',   label:'사업자등록증',   required:true},
+      {key:'idCard',   label:'대표자 신분증', required:true},
+      {key:'bankBook', label:'통장 사본',     required:false},
+      {key:'etc',      label:'기타 서류',     required:false},
     ];
     const docs = ct.docs || {};
-    const docChips = docTypes.map(def => {
+    // 사업장 정보 — 라벨 위(작게) / 값 아래(굵게) 2열 그리드
+    const infoField = (label, val) => `<div>
+      <div style="font-size:11px;color:var(--text-hint);font-weight:500;margin-bottom:6px;">${label}</div>
+      <div style="font-size:14px;font-weight:600;color:var(--navy);">${val||'—'}</div>
+    </div>`;
+    const addrText = s.addr ? `${s.addr}${s.addrDetail?` ${s.addrDetail}`:''}` : '—';
+    const siteInfoGrid = `<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:48px;row-gap:22px;">
+      ${infoField('사업장명', s.siteName)}
+      ${infoField('담당자', s.manager)}
+      ${infoField('담당자 연락처', s.tel)}
+      ${infoField('주소', addrText)}
+      ${infoField('계약기간', period === '—' ? '—' : period)}
+      ${infoField('계약전력', power === '—' ? '—' : power)}
+      ${infoField('수수료', fee === '—' ? '—' : fee)}
+    </div>`;
+    // 증빙 서류 현황 — 테이블 (서류명 | 파일/상태)
+    const docRows = docTypes.map((def, i) => {
       const d = docs[def.key];
+      const last = (i === docTypes.length - 1);
+      const reqMark = def.required ? `<span style="color:var(--red);margin-left:3px;">*</span>` : '';
+      const cellBase = `padding:14px 16px;${last?'':'border-bottom:1px solid var(--border);'}`;
+      let fileCell;
       if(d){
-        return `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text-sub);">
-          📄 ${d.name}
-          <span style="cursor:pointer;color:var(--text-hint);" onclick="ctRemoveDoc('${c.id}','${s.id}','${def.key}')" title="삭제">⊗</span>
+        fileCell = `<span style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text-sub);">
+          <span style="color:var(--blue);">📄</span> ${d.name}
+          <span style="cursor:pointer;color:var(--text-hint);font-size:13px;" onclick="ctRemoveDoc('${c.id}','${s.id}','${def.key}')" title="삭제">⊗</span>
         </span>`;
+      } else {
+        fileCell = `<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:#fff;border:1px dashed var(--border-dark);border-radius:6px;font-size:12px;color:var(--text-hint);cursor:pointer;" onclick="ctTriggerDocUpload('${c.id}','${s.id}','${def.key}')">
+          + ${def.label} 업로드
+        </span><span style="color:var(--text-hint);font-size:12px;margin-left:8px;">미첨부</span>`;
       }
-      return `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border:1px dashed var(--border-dark);border-radius:6px;font-size:11px;color:var(--text-hint);cursor:pointer;" onclick="ctTriggerDocUpload('${c.id}','${s.id}','${def.key}')">
-        + ${def.label}
-      </span>`;
+      return `<tr>
+        <td style="${cellBase}width:200px;color:var(--text-sub);font-weight:500;font-size:12px;">${def.label}${reqMark}</td>
+        <td style="${cellBase}">${fileCell}</td>
+      </tr>`;
     }).join('');
-
+    const docsTable = `<div style="font-size:13px;font-weight:700;color:var(--navy);margin:24px 0 12px;">증빙 서류 현황</div>
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--grey50);border-bottom:1px solid var(--border);">
+              <th style="padding:12px 16px;text-align:left;color:var(--text-sub);font-weight:600;font-size:12px;">서류명</th>
+              <th style="padding:12px 16px;text-align:left;color:var(--text-sub);font-weight:600;font-size:12px;">파일/상태</th>
+            </tr>
+          </thead>
+          <tbody>${docRows}</tbody>
+        </table>
+      </div>`;
     const expandRow = `<tr style="background:var(--blue-light, #eff6ff);">
-      <td colspan="9" style="padding:16px 24px;">
-        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:18px 22px;">
-          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">사업장 정보</div>
-          <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <tbody>
-              <tr><td style="width:140px;padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">사업장명</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.siteName||'-'}</td></tr>
-              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">담당자</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.manager||'-'}</td></tr>
-              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">담당자 연락처</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.tel||'-'}</td></tr>
-              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">주소</td><td style="padding:10px 12px;border:1px solid var(--border);">${s.addr||'-'}${s.addrDetail?` (상세: ${s.addrDetail})`:''}</td></tr>
-              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">계약기간</td><td style="padding:10px 12px;border:1px solid var(--border);">${period}</td></tr>
-              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">계약전력</td><td style="padding:10px 12px;border:1px solid var(--border);">${power}</td></tr>
-              <tr><td style="padding:10px 12px;color:var(--text-sub);background:var(--grey50);border:1px solid var(--border);font-weight:500;">수수료</td><td style="padding:10px 12px;border:1px solid var(--border);">${fee}</td></tr>
-            </tbody>
-          </table>
-          <div style="font-size:13px;font-weight:700;color:var(--navy);margin:18px 0 10px;">서류</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">${docChips}</div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px;">
+      <td colspan="9" style="padding:18px 28px 22px;">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:24px 28px;">
+          ${siteInfoGrid}
+          ${docsTable}
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:22px;">
             <button class="btn btn-secondary btn-sm" onclick="ctOpenSiteEdit('${c.id}','${s.id}')">수정</button>
             <button class="btn btn-danger btn-sm" onclick="ctDeleteSite('${c.id}','${s.id}')">삭제</button>
           </div>
