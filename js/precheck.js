@@ -182,26 +182,26 @@ function pcShowDetail(id){
   const badge = $('pc-d-badge');
   badge.className = 'badge ' + statusBadgeClass(c.status);
   badge.textContent = c.status;
-  // [Phase 17-AE] 사업자 정보 (상단 가로 카드) + KPI + 사업장 정보 카드 렌더
+  // [Phase 17-AJ] 사업자 정보 — 4행 2컬럼 (사업자번호/담당자·연락처/업종·업태/주소)
   $('pc-d-name').textContent = c.name;
   $('pc-d-recno').textContent = c.recno;
   const setText = (id, val) => { const el = $(id); if(el) el.textContent = val; };
   setText('pc-d-bizno', c.bizno || '-');
-  setText('pc-d-bizcat', `${c.bizcat || '-'} / ${c.biztype || '-'}`);
-  setText('pc-d-drtype', c.drType || '-');
   setText('pc-d-ceo', c.ceo || '-');
   setText('pc-d-tel', c.tel || '-');
+  setText('pc-d-bizcat-only', c.bizcat || '-');
+  setText('pc-d-biztype-only', c.biztype || '-');
+  setText('pc-d-addr', c.addr || '-');
+  // 옛 호환 (hidden)
+  setText('pc-d-bizcat', `${c.bizcat || '-'} / ${c.biztype || '-'}`);
+  setText('pc-d-drtype', c.drType || '-');
   setText('pc-d-inflow', c.inflow || '-');
-  // [Phase 17-AH] 사업자 요약 — 사업장 수·검증 완료·한전 계약전력 합계·60hz 계약전력 합계
+  // [Phase 17-AJ] 사업자 요약 — 사업장 수·검증 완료 (한전·60hz 계약전력 합계 제거)
   const sitesAll = pcGetSites(c);
   const totalSteps = pcStepDefs.length;
   const doneSites = sitesAll.filter(s => pcNormalizeSteps(s.steps).filter(x=>x===2).length === totalSteps).length;
-  const kepcoPowerSum = sitesAll.reduce((sum, s) => sum + (parseInt(s.power, 10) || 0), 0);
-  const hzPowerSum    = sitesAll.reduce((sum, s) => sum + (parseInt(s.contract?.power, 10) || 0), 0);
   setText('pc-d-site-count', `${sitesAll.length}`);
   setText('pc-d-verify-done', `${doneSites} / ${sitesAll.length}`);
-  setText('pc-d-kepco-power', kepcoPowerSum > 0 ? `${kepcoPowerSum.toLocaleString()} kW` : '—');
-  setText('pc-d-hz-power',    hzPowerSum > 0    ? `${hzPowerSum.toLocaleString()} kW`    : '—');
   // 사업장 정보 카드 (계약 정보 + 서류 업로드)
   pcRenderSitesInfo(c);
   pcRenderMemo(c);
