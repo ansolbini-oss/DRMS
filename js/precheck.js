@@ -2094,12 +2094,12 @@ function ctEnsureCustomerMeta(c){
     });
   }
 }
-/* [Phase 17-AS] 사업자 종합 상태 — 사업장 siteStatus 기반 파생(저장 X, 계산 O) */
+/* [Phase 17-AV] 사업자 종합 상태 — 사업장 siteStatus 기반 파생(저장 X, 계산 O), 계약해지 추가 */
 function ctComputeBizStatus(c){
   ctEnsureCustomerMeta(c);
   const sites = Array.isArray(c.sites) ? c.sites : [];
-  if(sites.length === 0) return { status:'계약대기', expiringCount:0 };
-  const counts = { '계약대기':0, '계약완료':0, '계약만료':0 };
+  if(sites.length === 0) return { status:'계약대기', expiringCount:0, counts:{'계약대기':0,'계약완료':0,'계약만료':0,'계약해지':0} };
+  const counts = { '계약대기':0, '계약완료':0, '계약만료':0, '계약해지':0 };
   let expiringCount = 0;
   const now = new Date();
   const sixtyDaysLater = new Date(now.getTime() + 60*86400000).toISOString().slice(0,10);
@@ -2111,9 +2111,10 @@ function ctComputeBizStatus(c){
     }
   });
   let status;
-  if(counts['계약대기'] >= 1) status = '계약대기';
+  if(counts['계약대기'] >= 1)              status = '계약대기';
+  else if(counts['계약해지'] === sites.length) status = '계약해지';
   else if(counts['계약만료'] === sites.length) status = '계약만료';
-  else status = '계약완료';
+  else                                       status = '계약완료';
   return { status, expiringCount, counts };
 }
 function ctGetStage(c){
@@ -2124,6 +2125,7 @@ function ctStageBadge(stage){
   if(stage==='계약진행') return 'badge-progress';
   if(stage==='계약완료') return 'badge-done';
   if(stage==='계약만료') return 'badge-gray';
+  if(stage==='계약해지') return 'badge-fail';
   return 'badge-gray';
 }
 function ctEligibleCustomers(){
@@ -2187,18 +2189,24 @@ function ctRenderTable(){
   let siteTotal = 0;
   tbody.innerHTML = rows.map(c => {
     const biz = ctComputeBizStatus(c);
-    const stage = biz.status;
     const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (Array.isArray(c.sites) ? c.sites : []);
     const siteCount = sites.length || 1;
     siteTotal += siteCount;
+    const counts = biz.counts || {'계약대기':0,'계약완료':0,'계약만료':0,'계약해지':0};
+    const cell = (n, color) => n > 0
+      ? `<span style="color:${color};font-weight:600;">${n}개</span>`
+      : `<span style="color:var(--text-hint);">—</span>`;
     const expiringIcon = biz.expiringCount > 0
-      ? `<span title="만료 예정 ${biz.expiringCount}건 (60일 내 종료)" style="margin-left:6px;color:var(--amber);font-size:14px;line-height:1;">⚠</span>`
+      ? `<span title="만료 예정 ${biz.expiringCount}건 (60일 내 종료)" style="margin-left:4px;color:var(--amber);font-size:13px;line-height:1;">⚠</span>`
       : '';
     return `<tr class="ct-business-row" data-biz-id="${c.id}" style="cursor:pointer;">
       <td><div class="ct-name">${c.name||'—'}</div></td>
       <td style="font-family:monospace;">${c.bizno||'—'}</td>
       <td>${siteCount}개</td>
-      <td><span class="badge ${ctStageBadge(stage)}">${stage||'—'}</span>${expiringIcon}</td>
+      <td style="text-align:center;">${cell(counts['계약대기'], 'var(--amber)')}</td>
+      <td style="text-align:center;">${cell(counts['계약완료'], 'var(--green)')}${expiringIcon}</td>
+      <td style="text-align:center;">${cell(counts['계약만료'], 'var(--text-sub)')}</td>
+      <td style="text-align:center;">${cell(counts['계약해지'], 'var(--red)')}</td>
       <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
     </tr>`;
   }).join('');
@@ -2636,7 +2644,7 @@ function ctRenderSitesTable(c, sites){
     const addrText = s.addr ? `${s.addr}${s.addrDetail?` ${s.addrDetail}`:''}` : '—';
     // 사업장 정보 — 한 줄씩 (라벨 좌 회색 중앙정렬 / 값 우)
     const curStatus = s.siteStatus || '계약대기';
-    const statusSelect = ['계약대기','계약완료','계약만료'].map(opt =>
+    const statusSelect = ['계약대기','계약완료','계약만료','계약해지'].map(opt =>
       `<option value="${opt}"${opt===curStatus?' selected':''}>${opt}</option>`
     ).join('');
     const statusDropdown = `<select onchange="ctSetSiteStatus('${c.id}','${s.id}', this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;">${statusSelect}</select>
