@@ -2204,8 +2204,8 @@ function ctRenderTable(){
       <td style="font-family:monospace;">${c.bizno||'—'}</td>
       <td>${siteCount}개</td>
       <td style="text-align:center;">${cell(counts['계약대기'], 'var(--amber)')}</td>
-      <td style="text-align:center;">${cell(counts['계약완료'], 'var(--green)')}${expiringIcon}</td>
-      <td style="text-align:center;">${cell(counts['계약만료'], 'var(--text-sub)')}</td>
+      <td style="text-align:center;">${cell(counts['계약완료'], 'var(--green)')}</td>
+      <td style="text-align:center;">${cell(counts['계약만료'], 'var(--text-sub)')}${expiringIcon}</td>
       <td style="text-align:center;">${cell(counts['계약해지'], 'var(--red)')}</td>
       <td style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();ctOpenDetail('${c.id}')">상세보기</button></td>
     </tr>`;
