@@ -777,7 +777,7 @@ function monRenderCustTable(r, g){
   const rawActualSum = rows.reduce((s,x)=>s + x.ordered*x.rawV, 0);
   const scale = rawActualSum>0 ? (r.actual / rawActualSum) : 1;
   return `<div class="cust-head">
-      <span>고객명</span><span style="text-align:right;">지시(kW)</span><span style="text-align:right;">실적(kW)</span><span style="text-align:right;">이행률</span>
+      <span>고객명</span><span style="text-align:right;">지시(kW)</span><span style="text-align:right;">실적(kW)</span><span style="text-align:center;">이행률</span>
     </div>
     ${rows.map(({c,ordered,rawV})=>{
       const actual = Math.round(ordered * rawV * scale);
@@ -786,7 +786,7 @@ function monRenderCustTable(r, g){
         <span><div style="font-weight:600;color:var(--navy);">${c.name}</div><div style="font-size:10px;color:var(--text-hint);margin-top:1px;">${c.recno}</div></span>
         <span style="text-align:right;font-weight:500;">${ordered.toLocaleString()}</span>
         <span style="text-align:right;font-weight:500;color:${monRateColor(v)};">${actual.toLocaleString()}</span>
-        <span style="text-align:right;"><span class="rate-pill ${monRateCls(v)}" style="font-size:10px;min-width:48px;" title="${v>=0.9?'정상':v>=0.7?'주의':'이상'}">${Math.round(v*100)}%</span></span>
+        <span style="text-align:center;"><span class="rate-pill ${monRateCls(v)}" style="font-size:10px;min-width:48px;" title="${v>=0.9?'정상':v>=0.7?'주의':'이상'}">${Math.round(v*100)}%</span></span>
       </div>`;
     }).join('')}`;
 }
