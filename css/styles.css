@@ -739,8 +739,8 @@ table.dm-matrix tbody td.dm-mx-cust{position:sticky;left:0;background:#f8f9fc;fo
 .heatmap-scale{display:flex;gap:2px;}
 .heatmap-scale span{width:14px;height:10px;border-radius:2px;display:inline-block;}
 
-.cust-head{display:grid;grid-template-columns:1fr 70px 70px 70px 70px;gap:8px;padding:8px 12px;background:var(--bg);font-size:10px;color:var(--text-sub);font-weight:500;border-radius:var(--radius) var(--radius) 0 0;border:1px solid var(--border);border-bottom:none;}
-.cust-row{display:grid;grid-template-columns:1fr 70px 70px 70px 70px;gap:8px;padding:10px 12px;font-size:11px;align-items:center;border:1px solid var(--border);border-top:none;}
+.cust-head{display:grid;grid-template-columns:1fr 80px 80px 80px;gap:8px;padding:8px 12px;background:var(--bg);font-size:10px;color:var(--text-sub);font-weight:500;border-radius:var(--radius) var(--radius) 0 0;border:1px solid var(--border);border-bottom:none;}
+.cust-row{display:grid;grid-template-columns:1fr 80px 80px 80px;gap:8px;padding:10px 12px;font-size:11px;align-items:center;border:1px solid var(--border);border-top:none;}
 .cust-row:last-child{border-radius:0 0 var(--radius) var(--radius);}
 
 .empty{padding:40px 20px;text-align:center;color:var(--text-hint);font-size:12px;}
