@@ -1043,7 +1043,7 @@ function dmRenderSummary(g, ev, state=dmState, bodyId='dm-body', scope='dm'){
       <thead>
         <tr>
           <th style="text-align:left;padding-left:12px;">고객</th>
-          <th>한전 계약전력</th>
+          <th>계약전력</th>
           <th>실측 평균</th>
           <th>미수신</th>
           <th>보정 적용</th>
@@ -1170,7 +1170,7 @@ function dmRenderDetail(g, ev, state=dmState, bodyId='dm-body', scope='dm'){
       <div class="dm-detail-card primary">
         <div class="dm-detail-label">참여고객</div>
         <div class="dm-detail-value">${c.name}</div>
-        <div class="dm-detail-meta">${c.id} · ${c.drType} · 한전 계약전력 ${c.power?.toLocaleString()} kW</div>
+        <div class="dm-detail-meta">${c.id} · ${c.drType} · 계약전력 ${c.power?.toLocaleString()} kW</div>
       </div>
       ${ev ? `
         <div class="dm-detail-card emphasis">
@@ -1258,7 +1258,7 @@ function dmRenderDetail(g, ev, state=dmState, bodyId='dm-body', scope='dm'){
     <div class="dm-detail-note">
       <span><b>보정(imputed)</b> 슬롯은 PRD §5.2 누락데이터 자동보정 규칙에 따라 채워진 값으로, KPX 정산 투입은 가능하지만 원수신 데이터는 아닙니다.</span>
       ${ev ? `<span>감축 시간대 (${drStartHM}~${drEndHM}) · 윈도우 내 보정 ${drImputedInWin}개</span>` : ''}
-      ${ev ? '<span>감축목표는 자원그룹 지시용량을 고객별 한전 계약전력 비중으로 추정, 실제 정산은 KPX 집계 기준</span>' : ''}
+      ${ev ? '<span>감축목표는 자원그룹 지시용량을 고객별 계약전력 비중으로 추정, 실제 정산은 KPX 집계 기준</span>' : ''}
     </div>
   `;
 }
