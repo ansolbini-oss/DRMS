@@ -327,7 +327,7 @@ function pcRenderBusinessSummary(c){
     <div class="result-grid">
       <div class="result-item"><div class="result-item-label">사업장 수</div><div class="result-item-val">${total}</div></div>
       <div class="result-item"><div class="result-item-label">검증 완료</div><div class="result-item-val">${done} / ${total}</div></div>
-      <div class="result-item"><div class="result-item-label">총 계약전력</div><div class="result-item-val">${totalPower.toLocaleString()} kW</div></div>
+      <div class="result-item"><div class="result-item-label">총 한전 계약전력</div><div class="result-item-val">${totalPower.toLocaleString()} kW</div></div>
       <div class="result-item"><div class="result-item-label">DR 유형</div><div class="result-item-val">${c.drType}</div></div>
     </div>
   `;
@@ -462,7 +462,7 @@ function pcSelectSite(bizId, siteId){
             <tr><td>현장 연락처</td><td>${s.tel||'—'}</td></tr>
             <tr><td>주소</td><td>${s.addr||'—'}</td></tr>
             <tr><td>KEPCO 고객번호</td><td style="font-family:monospace;">${s.kepco||'—'}</td></tr>
-            <tr><td>계약전력</td><td>${s.power||'—'} kW</td></tr>
+            <tr><td>한전 계약전력</td><td>${s.power||'—'} kW</td></tr>
             <tr><td>등록일</td><td>${s.date||'—'}</td></tr>
             <tr><td>데이터 수집</td><td>${s.dataStatus||'—'}</td></tr>
           </tbody>
@@ -552,7 +552,7 @@ function pcOpenExtRecheck(bizId, siteId){
         style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계약전력 (kW)</label>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">한전 계약전력 (kW)</label>
       <input id="pc-ext-power" type="number" value="${s.power||''}" placeholder="예: 500"
         style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
     </div>
@@ -1267,7 +1267,7 @@ function pcRenderSiteForm({title, sub, site, onSave}){
         <input id="pc-s-kepco" type="text" value="${(site.kepco||'').replace(/"/g,'&quot;')}" placeholder="8자리 숫자" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
       </div>
       <div>
-        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계약전력 (kW)</label>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">한전 계약전력 (kW)</label>
         <input id="pc-s-power" type="number" value="${site.power||''}" placeholder="예: 500" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
       </div>
     </div>
@@ -1356,7 +1356,7 @@ function pcSubmitEditSite(bizId, siteId){
   apply('tel', s.tel, newTel, '연락처');
   apply('addr', s.addr, newAddr, '주소');
   apply('kepco', s.kepco, newKepco, 'KEPCO');
-  if(newPower) apply('power', s.power, newPower, '계약전력');
+  if(newPower) apply('power', s.power, newPower, '한전 계약전력');
 
   logAudit?.({
     objectType:'site', objectId:siteId, action:'site_info_updated',
