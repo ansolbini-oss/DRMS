@@ -113,10 +113,21 @@ const store = {
        {id:'C116-S1', siteName:'달성 본사 공장', kepco:'66778800', addr:'대구 달성군 논공읍',  power:520, tel:'053-588-4401', manager:'배은영', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-25'},
        {id:'C116-S2', siteName:'성서 R&D센터',   kepco:'66778801', addr:'대구 달서구 성서로',  power:400, tel:'053-588-4402', manager:'정성서', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-26'}
      ]},
-    // 검증중
+    // 검증중 — 4단계별 진행 분포 시드 [Phase 17-BB]
+    // Stage 4 (CBL 진행 중)
     {id:'C102',name:'(주)한국에너지솔루션',ceo:'김철수',tel:'02-1234-5678',addr:'서울 강남구', recno:'DR-2026-0013',date:'2026-04-14',power:500, kepco:'12345678',drType:'표준DR', status:'검증중',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,3],extS:'통과',rrmseS:'완료',cblS:'진행중',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'8%',infraS:'완료'},
+    // Stage 3 (RRMSE 진행 중)
     {id:'C103',name:'(주)미래서비스코리아',ceo:'최지수',tel:'051-345-6789',addr:'부산 해운대구',recno:'DR-2026-0014',date:'2026-04-15',power:150, kepco:'45678901',drType:'중소형DR',status:'검증중',dataStatus:'수집중',inflow:'영업',steps:[2,2,2,3,1,1],extS:'통과',rrmseS:'진행중',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'완료'},
+    // Stage 4 진입 직전 (RRMSE 완료, CBL 대기) — Stage 4 미진입
     {id:'C104',name:'(주)케이파워솔루션',ceo:'임태현',tel:'043-456-7890',addr:'충북 청주시',  recno:'DR-2026-0015',date:'2026-04-16',power:750, kepco:'90123456',drType:'국민DR',   status:'검증중',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,1],extS:'통과',rrmseS:'완료',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'11%',infraS:'완료'},
+    // Stage 1 (외부데이터 조회 진행 중) — 시연용 신규
+    {id:'C120',name:'(주)광주에너지솔루션',ceo:'박광주',tel:'062-345-6789',addr:'광주 광산구',recno:'DR-2026-0025',date:'2026-06-01',power:540, kepco:'67801234',drType:'표준DR',     status:'검증중',dataStatus:'수집중',inflow:'사이트',steps:[3,1,1,1,1,1],extS:'진행중',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'미실행'},
+    // Stage 2 (인프라 검증 진행 중) — 시연용 신규
+    {id:'C121',name:'(주)울산정밀',       ceo:'정울산',tel:'052-456-7890',addr:'울산 남구',  recno:'DR-2026-0026',date:'2026-06-05',power:820, kepco:'78902345',drType:'표준DR',     status:'검증중',dataStatus:'수집완료',inflow:'영업',steps:[2,3,1,1,1,1],extS:'통과',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'진행중'},
+    // Stage 3 (RRMSE 진행 중) — 시연용 신규 (C103 외 1건 추가)
+    {id:'C122',name:'세종에너지센터',     ceo:'한세종',tel:'044-567-8901',addr:'세종특별자치시',recno:'DR-2026-0027',date:'2026-06-08',power:460, kepco:'89013456',drType:'중소형DR',  status:'검증중',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,3,1],extS:'통과',rrmseS:'진행중',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'완료'},
+    // Stage 4 (CBL 진행 중) — 시연용 신규 (C102 외 1건 추가)
+    {id:'C123',name:'창원중공업',         ceo:'오창원',tel:'055-678-9012',addr:'경남 창원시',recno:'DR-2026-0028',date:'2026-06-12',power:980, kepco:'90124567',drType:'표준DR',     status:'검증중',dataStatus:'수집완료',inflow:'추천',steps:[2,2,2,2,2,3],extS:'통과',rrmseS:'완료',cblS:'진행중',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'7%',infraS:'완료'},
     // 검증대기
     {id:'C105',name:'㈜대한물류네트웍스',ceo:'이영희',tel:'031-234-5678',addr:'경기 수원시',  recno:'DR-2026-0016',date:'2026-04-17',power:800, kepco:'23456789',drType:'표준DR',   status:'검증대기',dataStatus:'수집완료',inflow:'영업',steps:[1,1,1,1,1,1],extS:'미실행',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'-'},
     {id:'C106',name:'(주)스마트팩토리', ceo:'한소희',tel:'053-567-8901',addr:'대구 달서구',  recno:'DR-2026-0017',date:'2026-04-18',power:650, kepco:'67890123',drType:'중소형DR',status:'검증대기',dataStatus:'미수집',inflow:'사이트',steps:[1,1,1,1,1,1],extS:'미실행',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'-'},
