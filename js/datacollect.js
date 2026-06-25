@@ -432,7 +432,7 @@ function dcRenderTabGroups(aggs){
         ${accordionIcon}
         <span onclick='dcOpenCustomerDetail(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)})' style="cursor:pointer;">
           <div class="dc-customer-jump-name">${p.cust.name}${sitesBadge}</div>
-          <div class="dc-customer-jump-meta">${p.cust.id} · 계약전력 ${p.cust.power ? p.cust.power.toLocaleString() : '-'} kW</div>
+          <div class="dc-customer-jump-meta">${p.cust.id} · 한전 계약전력 ${p.cust.power ? p.cust.power.toLocaleString() : '-'} kW</div>
         </span>
         <span class="dc-customer-jump-val">${rx}%</span>
         <span class="dc-customer-jump-val" style="color:${p.missCnt>0?'var(--red)':'var(--text-hint)'};">${p.missCnt}</span>
@@ -760,7 +760,7 @@ function dcDRender(g, customers, dayCount){
           <thead style="background:#fafbfe;">
             <tr>
               <th style="padding:9px 12px;text-align:left;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">고객</th>
-              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">계약전력</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">한전 계약전력</th>
               <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">수신률</th>
               <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">미수신</th>
               <th style="padding:9px 12px;text-align:right;color:var(--text-sub);font-weight:500;border-bottom:1px solid var(--border);">보정</th>
