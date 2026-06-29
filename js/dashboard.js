@@ -248,10 +248,11 @@ function dashRenderTrialList(){
    정상 완료되므로 rmOpenDetail이 정상 호출됨. navigate의 closeTransientUi와의 transition
    충돌 회피를 위해 setTimeout(0)으로 한 tick만 미룬다. */
 function dashGoToRiskGroup(gid){
-  navigate('resource');
-  if(typeof rmFilterByCard === 'function') rmFilterByCard('risk');
+  // [Phase 17-BY] 운영이상 자원그룹 → 전력데이터 수집현황 상세로 점프
+  // (이전: 자원관리 가동상태 탭이었으나, 이상 원인 확인 흐름상 데이터 수집현황이 더 자연스러움)
+  navigate('datacollect');
   setTimeout(()=>{
-    if(typeof rmOpenDetail === 'function') rmOpenDetail(gid, 'op');
+    if(typeof dcOpenDetail === 'function') dcOpenDetail(gid);
   }, 0);
 }
 
