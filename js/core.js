@@ -557,19 +557,13 @@ function navigate(pageKey, subTab){
   refreshSidebarBadges();
 }
 
-/* [Phase 17-BP] 사이드바 — 고객정산관리 부모 클릭 시 expand 토글 + 첫 sub로 이동 */
+/* [Phase 17-BX] 사이드바 — 고객정산관리 부모 클릭 시 펼침/접힘만 (페이지 이동 X)
+   sub-item 클릭 시에만 settlement 페이지로 이동 + 해당 sub-tab 활성 */
 function stmToggleSubMenu(event){
   if(event && event.stopPropagation) event.stopPropagation();
   const group = $('sb-stm-group');
-  if(!group) { navigate('settlement', 'basic'); return; }
-  const isOpen = group.classList.contains('open');
-  if(isOpen && document.getElementById('page-settlement')?.classList.contains('active')){
-    // 이미 펼쳐져 있고 현재 settlement 페이지면 닫기 동작
-    group.classList.remove('open');
-  } else {
-    group.classList.add('open');
-    navigate('settlement', 'basic');
-  }
+  if(!group) return;
+  group.classList.toggle('open');
 }
 function refreshSidebarBadges(){
   // 사전검증 뱃지: 계약완료를 제외한 모든 사전검증 관리 대상 (대기/진행/완료/반려)

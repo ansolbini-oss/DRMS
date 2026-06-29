@@ -383,54 +383,56 @@ function stmBasicRenderDetail(){
     </div>
   </div>
 
-  <!-- 참여고객별 배분 -->
+  <!-- [Phase 17-BX] 참여고객별 배분 — 체크박스 + 폰트 가독성 + 사업자별 상태 -->
   <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-xs);">
-    <div style="padding:12px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy);">
-      참여고객별 배분 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">${customers.length}명</span>
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;color:var(--navy);">
+      참여고객별 배분 <span style="font-size:13px;color:var(--text-hint);font-weight:400;margin-left:6px;">${customers.length}명</span>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:var(--g-100);">
-          <th style="padding:10px 14px;text-align:left;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">참여고객</th>
-          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">60hz 계약용량</th>
-          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">기본 배분금액</th>
-          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">수수료</th>
-          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">실 지급금액</th>
-          <th style="padding:10px 14px;text-align:center;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">세금계산서</th>
-          <th style="padding:10px 14px;text-align:center;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">정산 상태</th>
+          <th style="padding:12px 14px;text-align:center;width:40px;border-bottom:1px solid var(--border);"><input type="checkbox" id="stmb-d-checkall" onchange="stmBasicToggleAll(this.checked)" style="cursor:pointer;"></th>
+          <th style="padding:12px 16px;text-align:left;color:var(--text-sub);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);">참여고객</th>
+          <th style="padding:12px 16px;text-align:right;color:var(--text-sub);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);">60hz 계약용량</th>
+          <th style="padding:12px 16px;text-align:right;color:var(--text-sub);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);">기본 배분금액</th>
+          <th style="padding:12px 16px;text-align:right;color:var(--text-sub);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);">수수료</th>
+          <th style="padding:12px 16px;text-align:right;color:var(--text-sub);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);">실 지급금액</th>
+          <th style="padding:12px 16px;text-align:center;color:var(--text-sub);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);">세금계산서</th>
+          <th style="padding:12px 16px;text-align:center;color:var(--text-sub);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);">정산 상태</th>
         </tr>
       </thead>
       <tbody>
         ${allocations.map(a => {
           const ratioPct = (a.ratio * 100).toFixed(1);
-          // 세금계산서 + 정산상태 — 운영 흐름에 따라 동적
-          const invoiced = row.status !== 'pending';
-          const settled = row.status === 'completed';
+          const st = stmBasicGetCustomerStatus(row, a.c.id);
           return `<tr style="border-bottom:1px solid var(--border);">
-            <td style="padding:14px;">
-              <div style="font-weight:600;color:var(--navy);">${a.c.name}</div>
-              <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${a.sites}사업장 · feeRate ${a.avgFeeRate.toFixed(1)}%</div>
+            <td style="padding:14px;text-align:center;"><input type="checkbox" class="stmb-d-row-check" data-cid="${a.c.id}" style="cursor:pointer;"></td>
+            <td style="padding:14px 16px;">
+              <div style="font-weight:600;color:var(--navy);font-size:14px;">${a.c.name}</div>
+              <div style="font-size:11px;color:var(--text-hint);margin-top:3px;">${a.sites}사업장 · feeRate ${a.avgFeeRate.toFixed(1)}%</div>
             </td>
-            <td style="padding:14px;text-align:right;font-variant-numeric:tabular-nums;">
-              <div style="font-weight:600;">${a.power60hz.toLocaleString()} kW</div>
-              <div style="font-size:10px;color:var(--text-hint);">(${ratioPct}%)</div>
+            <td style="padding:14px 16px;text-align:right;font-variant-numeric:tabular-nums;">
+              <div style="font-weight:600;font-size:13px;">${a.power60hz.toLocaleString()} kW</div>
+              <div style="font-size:11px;color:var(--text-hint);">(${ratioPct}%)</div>
             </td>
-            <td style="padding:14px;text-align:right;font-weight:500;font-variant-numeric:tabular-nums;">₩ ${a.baseAlloc.toLocaleString()}</td>
-            <td style="padding:14px;text-align:right;font-variant-numeric:tabular-nums;color:var(--green);">₩ ${a.fee.toLocaleString()}</td>
-            <td style="padding:14px;text-align:right;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;">₩ ${a.payout.toLocaleString()}</td>
-            <td style="padding:14px;text-align:center;">
-              <span class="badge ${invoiced ? 'badge-done' : 'badge-pending'}">${invoiced ? '발행완료' : '발행대기'}</span>
+            <td style="padding:14px 16px;text-align:right;font-weight:500;font-variant-numeric:tabular-nums;font-size:13px;">₩ ${a.baseAlloc.toLocaleString()}</td>
+            <td style="padding:14px 16px;text-align:right;font-variant-numeric:tabular-nums;color:var(--green);font-size:13px;">₩ ${a.fee.toLocaleString()}</td>
+            <td style="padding:14px 16px;text-align:right;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;font-size:14px;">₩ ${a.payout.toLocaleString()}</td>
+            <td style="padding:14px 16px;text-align:center;">
+              <span class="badge ${st.invoiced ? 'badge-done' : 'badge-pending'}">${st.invoiced ? '발행완료' : '발행대기'}</span>
             </td>
-            <td style="padding:14px;text-align:center;">
-              <span class="badge ${settled ? 'badge-done' : (row.status==='in_progress' ? 'badge-progress' : 'badge-pending')}">${settled ? '입금완료' : (row.status==='in_progress' ? '입금진행' : '대기')}</span>
+            <td style="padding:14px 16px;text-align:center;">
+              <span class="badge ${st.settled ? 'badge-done' : (st.invoiced ? 'badge-progress' : 'badge-pending')}">${st.settled ? '입금완료' : (st.invoiced ? '입금대기' : '대기')}</span>
             </td>
           </tr>`;
         }).join('')}
       </tbody>
     </table>
-    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--g-50);">
-      <button class="btn btn-secondary btn-sm">선택 항목 일괄 세금계산서 발행</button>
-      <button class="btn btn-primary btn-sm">선택 항목 일괄 입금 처리</button>
+    <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--g-50);align-items:center;">
+      <span style="font-size:11px;color:var(--text-hint);margin-right:auto;">※ 세금계산서는 외부 발행, 본 시스템은 상태 기록만</span>
+      <button class="btn btn-secondary btn-sm" onclick="stmBasicBulkUpdate('invoiced')">선택 항목 세금계산서 발행 표시</button>
+      <button class="btn btn-secondary btn-sm" onclick="stmBasicBulkUpdate('uninvoiced')">발행 취소</button>
+      <button class="btn btn-primary btn-sm" onclick="stmBasicBulkUpdate('settled')">선택 항목 입금 완료 표시</button>
     </div>
   </div>
 
@@ -498,6 +500,81 @@ function stmBasicSaveKpx(){
       actor:'운영자', tone:'info'});
   }
   stmBasicRenderDetail();
+}
+
+/* [Phase 17-BX] 사업자별 정산 상태 — row 단위로 저장 */
+function stmBasicEnsureCustomerStatuses(row, customerIds){
+  if(!row.customerStatuses) row.customerStatuses = {};
+  const baseInvoiced = row.status !== 'pending';
+  const baseSettled = row.status === 'completed';
+  customerIds.forEach(cid => {
+    if(!row.customerStatuses[cid]){
+      row.customerStatuses[cid] = { invoiced: baseInvoiced, settled: baseSettled };
+    }
+  });
+}
+
+function stmBasicGetCustomerStatus(row, customerId){
+  if(!row.customerStatuses) row.customerStatuses = {};
+  if(!row.customerStatuses[customerId]){
+    row.customerStatuses[customerId] = {
+      invoiced: row.status !== 'pending',
+      settled: row.status === 'completed',
+    };
+  }
+  return row.customerStatuses[customerId];
+}
+
+/* 전체 선택/해제 */
+function stmBasicToggleAll(checked){
+  document.querySelectorAll('.stmb-d-row-check').forEach(cb => { cb.checked = checked; });
+}
+
+/* 일괄 상태 업데이트 — action: 'invoiced' | 'uninvoiced' | 'settled' */
+function stmBasicBulkUpdate(action){
+  const row = stmBasicSeed.find(r => r.id === stmBasicState.currentDetailId);
+  if(!row) return;
+  const checked = Array.from(document.querySelectorAll('.stmb-d-row-check')).filter(cb => cb.checked);
+  if(checked.length === 0){
+    if(typeof showToast === 'function') showToast('선택된 참여고객이 없습니다.');
+    return;
+  }
+  const cids = checked.map(cb => cb.dataset.cid);
+  stmBasicEnsureCustomerStatuses(row, cids);
+  let actionLabel = '';
+  cids.forEach(cid => {
+    const st = row.customerStatuses[cid];
+    if(action === 'invoiced'){ st.invoiced = true; }
+    else if(action === 'uninvoiced'){ st.invoiced = false; st.settled = false; }
+    else if(action === 'settled'){ st.settled = true; st.invoiced = true; }
+  });
+  actionLabel = action === 'invoiced' ? '세금계산서 발행 표시'
+              : action === 'uninvoiced' ? '발행 취소'
+              : '입금 완료 표시';
+  // row 전체 status도 사업자 상태에 따라 자동 갱신
+  stmBasicRecomputeRowStatus(row);
+  if(typeof showToast === 'function') showToast(`${checked.length}명 → ${actionLabel}`);
+  if(typeof logAudit === 'function'){
+    logAudit({objectType:'settlement', objectId:row.id, action:`bulk_${action}`,
+      title:`정산 일괄 처리 — ${row.groupName} ${row.month}`,
+      desc:`${checked.length}명 ${actionLabel}`,
+      actor:'운영자', tone:'info'});
+  }
+  stmBasicRenderDetail();
+}
+
+/* row 전체 status 자동 재계산 — 전체 사업자 상태 집계 */
+function stmBasicRecomputeRowStatus(row){
+  if(!row.customerStatuses) return;
+  const statuses = Object.values(row.customerStatuses);
+  if(statuses.length === 0) return;
+  const allSettled = statuses.every(s => s.settled);
+  const anyInvoiced = statuses.some(s => s.invoiced);
+  const anySettled = statuses.some(s => s.settled);
+  if(allSettled)      row.status = 'completed';
+  else if(anySettled) row.status = 'in_progress';
+  else if(anyInvoiced) row.status = 'invoiced';
+  else                 row.status = 'pending';
 }
 
 function stmApplyPeriodRange(){
