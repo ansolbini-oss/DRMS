@@ -33,20 +33,211 @@ function stmInit(){
   stmRender();
 }
 
-/* [Phase 17-BP] 정산 sub-tab 전환 placeholder — 실제 분기 화면은 Phase 3 */
+/* [Phase 17-BS] 정산 sub-tab 전환 — 기본 정산금 / 실적정산금 view 분기 */
 let stmActiveSubTab = 'basic';
 function stmSwitchSubTab(tab){
   stmActiveSubTab = tab || 'basic';
-  // 페이지 타이틀에 sub-tab 표기
   const titleEl = document.querySelector('#page-settlement .page-title');
   if(titleEl){
     const label = tab === 'mandatory' ? '실적정산금 (의무)'
                 : tab === 'voluntary' ? '실적정산금 (자발)'
                 : '기본 정산금';
-    // 기존 타이틀이 "고객정산관리"인 경우 sub label 추가
     titleEl.innerHTML = `고객정산관리 <span style="font-size:13px;font-weight:500;color:var(--text-sub);margin-left:8px;">› ${label}</span>`;
   }
-  // TODO: Phase 3 — 각 sub-tab별 필터·시드·산식 분기
+  const basicView = document.getElementById('stm-basic-view');
+  const perfView  = document.getElementById('stm-perf-view');
+  if(basicView && perfView){
+    if(tab === 'basic'){
+      basicView.style.display = '';
+      perfView.style.display  = 'none';
+      stmBasicInit();
+    } else {
+      basicView.style.display = 'none';
+      perfView.style.display  = '';
+      // 기존 실적 정산금 화면 (mandatory/voluntary 공통, 추후 분리)
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   [Phase 17-BS] 기본 정산금 — 신뢰성DR 자원의 매월 KPX 정산 + 사업자 배분
+   - 자원그룹 단위 row (매월 한 행)
+   - KPX 입금금액 운영자 직접 입력 (공급가액·부가세·합계)
+   - 사업자별 배분 = 60hz 계약전력 비중
+   - 수수료 = 배분금액 × feeRate
+   - 실 지급액 = 배분금액 − 수수료
+═══════════════════════════════════════════════════════════════ */
+
+/* 시드: 자원그룹 × 월별 기본 정산금 — 신뢰성DR 자원만 (의무감축 가능) */
+const stmBasicSeed = (() => {
+  // 신뢰성DR = 표준DR / 중소형DR / 국민DR / 제주DR (의무감축 가능)
+  const reliabilityTypes = ['표준DR', '중소형DR', '국민DR', '제주DR'];
+  const months = ['2026-04', '2026-05', '2026-06'];
+  const seed = [];
+  if(typeof store !== 'undefined' && Array.isArray(store.groups)){
+    store.groups.forEach(g => {
+      if(!reliabilityTypes.includes(g.type)) return;
+      if(g.status !== 'active') return;
+      months.forEach((month, idx) => {
+        // 의무감축용량 기반 KPX 기본단가 (예: ₩202/kW·월)
+        const baseUnitPrice = 202;
+        const supply = (g.reg?.mandatoryCapacity || 1000) * baseUnitPrice;
+        const vat = Math.round(supply * 0.1);
+        const total = supply + vat;
+        // 상태 분포 — 최근 월일수록 pending 비중 ↑
+        const statusByIdx = idx === 0 ? ['completed','completed','in_progress']
+                          : idx === 1 ? ['invoiced','in_progress','completed']
+                          : ['pending','pending','invoiced'];
+        const status = statusByIdx[g.id % statusByIdx.length] || 'pending';
+        seed.push({
+          id: `STMB-${g.id}-${month.replace('-','')}`,
+          groupId: g.id,
+          groupName: g.name,
+          drType: g.type,
+          mandatoryCapacity: g.reg?.mandatoryCapacity || 0,
+          month,
+          kpxSupply: status === 'pending' ? 0 : supply,
+          kpxVat:    status === 'pending' ? 0 : vat,
+          kpxTotal:  status === 'pending' ? 0 : total,
+          kpxDate:   status === 'pending' ? '' : `${month}-15`,
+          status,
+          customerIds: g.customerIds || [],
+        });
+      });
+    });
+  }
+  return seed;
+})();
+
+const stmBasicState = {
+  month: '2026-06',
+  status: 'all',
+  search: '',
+};
+
+function stmBasicInit(){
+  // 필터 초기값 설정 (한 번만)
+  const monthEl = document.getElementById('stmb-month');
+  if(monthEl && !monthEl.value) monthEl.value = stmBasicState.month;
+  stmBasicRender();
+}
+
+function stmBasicReset(){
+  stmBasicState.month = '2026-06';
+  stmBasicState.status = 'all';
+  stmBasicState.search = '';
+  document.getElementById('stmb-month').value = '2026-06';
+  document.getElementById('stmb-status').value = 'all';
+  document.getElementById('stmb-search').value = '';
+  stmBasicRender();
+}
+
+function stmBasicFilterByStatus(s){
+  stmBasicState.status = s || 'all';
+  const el = document.getElementById('stmb-status');
+  if(el) el.value = stmBasicState.status;
+  stmBasicRender();
+}
+
+function stmBasicFilteredRows(){
+  const month = document.getElementById('stmb-month')?.value || stmBasicState.month;
+  const status = document.getElementById('stmb-status')?.value || stmBasicState.status;
+  const search = (document.getElementById('stmb-search')?.value || '').trim().toLowerCase();
+  stmBasicState.month = month;
+  stmBasicState.status = status;
+  stmBasicState.search = search;
+  return stmBasicSeed.filter(r => {
+    if(month && r.month !== month) return false;
+    if(status !== 'all' && r.status !== status) return false;
+    if(search && !(r.groupName.toLowerCase().includes(search))) return false;
+    return true;
+  });
+}
+
+function stmBasicStatusBadge(s){
+  const map = {
+    'pending':     { cls:'badge-pending', label:'KPX 입금 대기' },
+    'invoiced':    { cls:'badge-progress', label:'세금계산서 발행' },
+    'in_progress': { cls:'badge-progress', label:'입금 진행' },
+    'completed':   { cls:'badge-done', label:'정산완료' },
+  };
+  return map[s] || { cls:'badge-gray', label:s };
+}
+
+function stmBasicRender(){
+  const rows = stmBasicFilteredRows();
+  // KPI 갱신
+  const countBy = s => stmBasicSeed.filter(r => r.month === stmBasicState.month && r.status === s).length;
+  document.getElementById('stmb-kpi-total').textContent    = stmBasicSeed.filter(r => r.month === stmBasicState.month).length;
+  document.getElementById('stmb-kpi-pending').textContent  = countBy('pending');
+  document.getElementById('stmb-kpi-invoiced').textContent = countBy('invoiced');
+  document.getElementById('stmb-kpi-inprog').textContent   = countBy('in_progress');
+  document.getElementById('stmb-kpi-done').textContent     = countBy('completed');
+
+  const body = document.getElementById('stmb-list-body');
+  if(!body) return;
+  if(rows.length === 0){
+    body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-hint);font-size:13px;background:#fff;border:1px solid var(--border);border-radius:var(--r);margin-top:12px;">조건에 맞는 정산 데이터가 없습니다.</div>`;
+    return;
+  }
+  // 자원그룹별 사업자 수·60hz 계약전력 합 계산
+  const grpInfo = (g) => {
+    const sites60hzKw = (g.customerIds || []).reduce((sum, cid) => {
+      const c = (typeof custById === 'function') ? custById(cid) : (store.customers||[]).find(x=>x.id===cid);
+      if(!c) return sum;
+      const siteSum = (c.sites || []).reduce((s2, st) => s2 + (st.contract?.power || 0), 0);
+      return sum + (siteSum || c.power || 0);
+    }, 0);
+    return { count: (g.customerIds || []).length, kw: sites60hzKw };
+  };
+
+  body.innerHTML = `
+  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-top:12px;box-shadow:var(--shadow-xs);">
+    <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm);">
+      <thead>
+        <tr style="background:var(--g-100);">
+          <th style="padding:var(--sp-3) var(--sp-5);text-align:left;font-weight:600;color:var(--text-sub);font-size:var(--fs-xs);">정산월</th>
+          <th style="padding:var(--sp-3) var(--sp-5);text-align:left;font-weight:600;color:var(--text-sub);font-size:var(--fs-xs);">자원그룹</th>
+          <th style="padding:var(--sp-3) var(--sp-5);text-align:right;font-weight:600;color:var(--text-sub);font-size:var(--fs-xs);">참여고객</th>
+          <th style="padding:var(--sp-3) var(--sp-5);text-align:right;font-weight:600;color:var(--text-sub);font-size:var(--fs-xs);">60hz 계약전력</th>
+          <th style="padding:var(--sp-3) var(--sp-5);text-align:right;font-weight:600;color:var(--text-sub);font-size:var(--fs-xs);">KPX 입금금액</th>
+          <th style="padding:var(--sp-3) var(--sp-5);text-align:center;font-weight:600;color:var(--text-sub);font-size:var(--fs-xs);">정산 상태</th>
+          <th style="padding:var(--sp-3) var(--sp-5);text-align:center;font-weight:600;color:var(--text-sub);font-size:var(--fs-xs);">상세</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => {
+          const g = (typeof groupById === 'function') ? groupById(r.groupId) : (store.groups||[]).find(x=>x.id===r.groupId);
+          if(!g) return '';
+          const info = grpInfo(g);
+          const badge = stmBasicStatusBadge(r.status);
+          const kpx = r.kpxTotal > 0
+            ? `<div style="font-weight:600;color:var(--navy);">₩ ${r.kpxTotal.toLocaleString()}</div>
+               <div style="font-size:10px;color:var(--text-hint);">공급 ${r.kpxSupply.toLocaleString()} + VAT ${r.kpxVat.toLocaleString()}</div>`
+            : `<span style="color:var(--text-hint);">미입력</span>`;
+          return `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:var(--sp-4) var(--sp-5);font-variant-numeric:tabular-nums;font-weight:500;">${r.month}</td>
+            <td style="padding:var(--sp-4) var(--sp-5);">
+              <div style="font-weight:600;color:var(--navy);">${g.name}</div>
+              <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${r.drType} · 의무감축 ${r.mandatoryCapacity.toLocaleString()} kW</div>
+            </td>
+            <td style="padding:var(--sp-4) var(--sp-5);text-align:right;font-weight:500;">${info.count}명</td>
+            <td style="padding:var(--sp-4) var(--sp-5);text-align:right;font-weight:500;font-variant-numeric:tabular-nums;">${info.kw.toLocaleString()} kW</td>
+            <td style="padding:var(--sp-4) var(--sp-5);text-align:right;font-variant-numeric:tabular-nums;">${kpx}</td>
+            <td style="padding:var(--sp-4) var(--sp-5);text-align:center;"><span class="badge ${badge.cls}">${badge.label}</span></td>
+            <td style="padding:var(--sp-4) var(--sp-5);text-align:center;"><button class="btn btn-secondary btn-sm" onclick="stmBasicOpenDetail('${r.id}')">상세</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:12px 4px;font-size:11px;color:var(--text-hint);">총 ${rows.length}건 · ${stmBasicState.month} 기준</div>
+  `;
+}
+
+function stmBasicOpenDetail(rowId){
+  // [Phase 17-BS] 상세는 다음 push에서 구현 (placeholder)
+  if(typeof showToast === 'function') showToast('기본 정산금 상세 — 다음 단계 구현');
 }
 
 function stmApplyPeriodRange(){
