@@ -266,25 +266,11 @@ function monRender(){
   // LIVE 배지
   $('mon-live-badge').style.display = ev && ev.live ? 'inline-flex':'none';
 
-  // 등록시험 이벤트 배너 — category==='test'일 때만 표시 + 정산 미대상임을 강조
+  // [Phase 17-BL] 등록시험 이벤트 배너 제거 — 운영자는 학습된 정보라 노출 불필요
   const testBanner = $('mon-test-banner');
   if(testBanner){
-    if(ev && ev.category==='test'){
-      const tg = ev.trialTargetGroupId ? groupById(ev.trialTargetGroupId) : null;
-      testBanner.style.display = '';
-      testBanner.innerHTML = `<div class="mon-test-banner">
-        <span class="mon-test-banner-icon"></span>
-        <div style="flex:1;">
-          <div class="mon-test-banner-title">자격 검증 이벤트 — 정산 대상 아님</div>
-          <div class="mon-test-banner-sub">
-            이 이벤트는 KPX가 발령한 <b>등록시험</b>입니다. ${tg?`대상 자원: <b>${tg.name}</b> · ${ev.trialAttemptNo||1}차 시험 · `:''}이행률은 자원의 감축지시 이행 자격 검증에만 사용되며, <b>정산에는 포함되지 않습니다</b>.
-          </div>
-        </div>
-      </div>`;
-    } else {
-      testBanner.style.display = 'none';
-      testBanner.innerHTML = '';
-    }
+    testBanner.style.display = 'none';
+    testBanner.innerHTML = '';
   }
   // 이벤트 메타 — dispatch_type 라벨 + 병행 이벤트 안내
   if(ev){
