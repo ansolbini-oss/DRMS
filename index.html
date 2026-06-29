@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260629-1927. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260629-1927">
+<!-- css/js 모두 ?v=260630-0812. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260630-0812">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260629-1927</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260630-0812</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -463,18 +463,19 @@
         <div style="display:none;" id="pc-d-inflow">-</div>
       </div>
 
-      <!-- ② 사업자 요약 (사업장 수 / 검증 완료) -->
+      <!-- ② 사업장 요약 (사업장 수 / 검증 완료) [Phase 17-BV] -->
       <div class="r-card">
-        <div class="r-card-header"><div class="r-card-title">사업자 요약</div></div>
+        <div class="r-card-header"><div class="r-card-title">사업장 요약</div></div>
         <div class="r-card-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="display:flex;gap:48px;align-items:flex-start;">
             <div>
-              <div style="font-size:11px;color:var(--text-hint);font-weight:500;">사업장 수</div>
-              <div style="font-size:22px;font-weight:700;color:var(--navy);margin-top:4px;" id="pc-d-site-count">-</div>
+              <div style="font-size:12px;color:var(--text-hint);font-weight:500;">사업장 수</div>
+              <div style="font-size:30px;font-weight:700;color:var(--navy);margin-top:6px;letter-spacing:-0.02em;line-height:1.2;" id="pc-d-site-count">-</div>
             </div>
+            <div style="width:1px;background:var(--border);align-self:stretch;"></div>
             <div>
-              <div style="font-size:11px;color:var(--text-hint);font-weight:500;">검증 완료</div>
-              <div style="font-size:22px;font-weight:700;color:var(--green);margin-top:4px;" id="pc-d-verify-done">-</div>
+              <div style="font-size:12px;color:var(--text-hint);font-weight:500;">검증 완료</div>
+              <div style="font-size:30px;font-weight:700;color:var(--green);margin-top:6px;letter-spacing:-0.02em;line-height:1.2;font-variant-numeric:tabular-nums;" id="pc-d-verify-done">-</div>
             </div>
             <!-- 옛 호환 -->
             <div style="display:none;" id="pc-d-kepco-power">-</div>
@@ -2355,20 +2356,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260629-1927"></script>
-<script src="data/tips.js?v=260629-1927"></script>
-<script src="js/core.js?v=260629-1927"></script>
-<script src="js/dashboard.js?v=260629-1927"></script>
-<script src="js/precheck.js?v=260629-1927"></script>
-<script src="js/resource.js?v=260629-1927"></script>
-<script src="js/monitoring.js?v=260629-1927"></script>
-<script src="js/report.js?v=260629-1927"></script>
-<script src="js/settlement.js?v=260629-1927"></script>
-<script src="js/datacollect.js?v=260629-1927"></script>
-<script src="js/rtu.js?v=260629-1927"></script>
-<script src="js/communication.js?v=260629-1927"></script>
-<script src="js/bidding.js?v=260629-1927"></script>
-<script src="js/account.js?v=260629-1927"></script>
-<script src="js/system.js?v=260629-1927"></script>
+<script src="data/store.js?v=260630-0812"></script>
+<script src="data/tips.js?v=260630-0812"></script>
+<script src="js/core.js?v=260630-0812"></script>
+<script src="js/dashboard.js?v=260630-0812"></script>
+<script src="js/precheck.js?v=260630-0812"></script>
+<script src="js/resource.js?v=260630-0812"></script>
+<script src="js/monitoring.js?v=260630-0812"></script>
+<script src="js/report.js?v=260630-0812"></script>
+<script src="js/settlement.js?v=260630-0812"></script>
+<script src="js/datacollect.js?v=260630-0812"></script>
+<script src="js/rtu.js?v=260630-0812"></script>
+<script src="js/communication.js?v=260630-0812"></script>
+<script src="js/bidding.js?v=260630-0812"></script>
+<script src="js/account.js?v=260630-0812"></script>
+<script src="js/system.js?v=260630-0812"></script>
 
 </body></html>
