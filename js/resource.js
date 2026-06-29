@@ -544,11 +544,8 @@ function rmTabOpHtml(g){
   const liveCtxList = rmGroupCurrentLiveEvents(g);
   if(liveCtxList.length > 0){
     const isParallel = liveCtxList.length > 1;
-    const parallelBanner = isParallel
-      ? `<div style="padding:6px 14px;font-size:10px;color:var(--blue);background:var(--blue-light);border-bottom:1px solid var(--blue-border);">
-           ⓘ 병행 이벤트 ${liveCtxList.length}건 동시 진행 중 — 각 이벤트별로 독립 평가 (설계서 §8.1)
-         </div>`
-      : '';
+    // [Phase 17-BN] 병행 이벤트 안내 배너 제거 — 이벤트 목록으로 자명
+    const parallelBanner = '';
     const eventBlocks = liveCtxList.map(({event:ev, resource:r})=>{
       const rate = r.actual!=null && r.ordered>0 ? r.actual/r.ordered : null;
       const rateColor = rate==null?'var(--text-hint)':rate>=0.9?'var(--green)':rate>=0.7?'var(--amber)':'var(--red)';
