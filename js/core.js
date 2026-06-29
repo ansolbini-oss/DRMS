@@ -529,9 +529,16 @@ function dataBadgeClass(d){ return d==='수집완료'?'badge-done':d==='수집�
 /* ════════════════════════════════════════════════════════════
    ★ 네비게이션
 ════════════════════════════════════════════════════════════ */
-function navigate(pageKey){
+function navigate(pageKey, subTab){
   closeTransientUi();
   $$('.sidebar-item').forEach(el=>el.classList.toggle('active', el.dataset.page===pageKey));
+  // [Phase 17-BP] settlement sub-menu active 처리
+  $$('.sidebar-sub-item').forEach(el=>el.classList.toggle('active', pageKey==='settlement' && el.dataset.stmTab===subTab));
+  const stmGroup = $('sb-stm-group');
+  if(stmGroup){
+    if(pageKey==='settlement') stmGroup.classList.add('open');
+    // 다른 페이지 이동 시는 group state 유지 (사용자가 다시 펼치지 않게)
+  }
   $$('.page').forEach(el=>el.classList.remove('active'));
   $('page-'+pageKey).classList.add('active');
   if(pageKey==='dashboard')     renderDashboard();
@@ -541,13 +548,28 @@ function navigate(pageKey){
   if(pageKey==='communication') comInit();
   if(pageKey==='monitoring')    monInit();
   if(pageKey==='report')        rpInit();
-  if(pageKey==='settlement')    stmInit();
+  if(pageKey==='settlement')    { stmInit(); if(typeof stmSwitchSubTab==='function') stmSwitchSubTab(subTab||'basic'); }
   if(pageKey==='bidding')       bidInit();
   if(pageKey==='datacollect')   dcInit();
   if(pageKey==='rtu')           rtuInit();
   if(pageKey==='accounts')      acctInit();
   if(pageKey==='system')        sysInit();
   refreshSidebarBadges();
+}
+
+/* [Phase 17-BP] 사이드바 — 고객정산관리 부모 클릭 시 expand 토글 + 첫 sub로 이동 */
+function stmToggleSubMenu(event){
+  if(event && event.stopPropagation) event.stopPropagation();
+  const group = $('sb-stm-group');
+  if(!group) { navigate('settlement', 'basic'); return; }
+  const isOpen = group.classList.contains('open');
+  if(isOpen && document.getElementById('page-settlement')?.classList.contains('active')){
+    // 이미 펼쳐져 있고 현재 settlement 페이지면 닫기 동작
+    group.classList.remove('open');
+  } else {
+    group.classList.add('open');
+    navigate('settlement', 'basic');
+  }
 }
 function refreshSidebarBadges(){
   // 사전검증 뱃지: 계약완료를 제외한 모든 사전검증 관리 대상 (대기/진행/완료/반려)

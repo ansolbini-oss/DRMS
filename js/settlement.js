@@ -33,6 +33,22 @@ function stmInit(){
   stmRender();
 }
 
+/* [Phase 17-BP] 정산 sub-tab 전환 placeholder — 실제 분기 화면은 Phase 3 */
+let stmActiveSubTab = 'basic';
+function stmSwitchSubTab(tab){
+  stmActiveSubTab = tab || 'basic';
+  // 페이지 타이틀에 sub-tab 표기
+  const titleEl = document.querySelector('#page-settlement .page-title');
+  if(titleEl){
+    const label = tab === 'mandatory' ? '실적정산금 (의무)'
+                : tab === 'voluntary' ? '실적정산금 (자발)'
+                : '기본 정산금';
+    // 기존 타이틀이 "고객정산관리"인 경우 sub label 추가
+    titleEl.innerHTML = `고객정산관리 <span style="font-size:13px;font-weight:500;color:var(--text-sub);margin-left:8px;">› ${label}</span>`;
+  }
+  // TODO: Phase 3 — 각 sub-tab별 필터·시드·산식 분기
+}
+
 function stmApplyPeriodRange(){
   const today = new Date();
   const y=today.getFullYear(), m=today.getMonth(), d=today.getDate();
