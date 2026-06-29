@@ -256,12 +256,22 @@ function stmBasicGotoList(){
 function stmBasicToggleViews(showDetail){
   const view = document.getElementById('stm-basic-view');
   if(!view) return;
+  // [Phase 17-BU] 상세 진입 시 KPI/필터/list 영역 완전 숨김 (검색·현황카드 noise 제거)
   const kpis    = view.querySelector('.rp-kpi-grid');
   const filters = view.querySelector('.rp-filter-bar');
   const note    = view.querySelector('.wf-note');
   const listBody = document.getElementById('stmb-list-body');
   const detailBody = document.getElementById('stmb-detail-body');
-  [kpis, filters, note, listBody].forEach(el => { if(el) el.style.display = showDetail ? 'none' : ''; });
+  const hideStyle = showDetail ? 'none' : '';
+  [kpis, filters, note, listBody].forEach(el => {
+    if(el){
+      el.style.display = hideStyle;
+      el.style.visibility = showDetail ? 'hidden' : '';
+    }
+    // visibility 적용 시 display:none이 우선이라 visibility는 보조 안전장치
+  });
+  // visibility 사용은 레이아웃 공간 차지 → 다시 display:none만 사용
+  [kpis, filters, note, listBody].forEach(el => { if(el){ el.style.visibility = ''; el.style.display = hideStyle; } });
   if(detailBody) detailBody.style.display = showDetail ? '' : 'none';
 }
 
@@ -300,15 +310,23 @@ function stmBasicRenderDetail(){
   const totalPayout = allocations.reduce((s,x) => s + x.payout, 0);
 
   body.innerHTML = `
-  <!-- 헤더 -->
-  <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:#fff;border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;">
-    <button class="btn btn-secondary btn-sm" onclick="stmBasicGotoList()">← 목록으로</button>
-    <div style="flex:1;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="font-size:16px;font-weight:700;color:var(--navy);">${g.name}</div>
-        <span class="badge ${badge.cls}">${badge.label}</span>
+  <!-- [Phase 17-BU] 헤더 — 정보 위계 재정리: 목록 버튼(좌상단) / 자원명(L1) / 메타(L2) / 상태 뱃지 -->
+  <div style="padding:8px 0 16px;">
+    <button class="btn btn-secondary btn-sm" onclick="stmBasicGotoList()" style="margin-bottom:14px;">← 목록으로</button>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;box-shadow:var(--shadow-xs);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:20px;font-weight:700;color:var(--navy);letter-spacing:-0.01em;line-height:1.2;">${g.name}</div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-sub);">
+            <span><span style="color:var(--text-hint);">정산월</span> <b style="color:var(--navy);font-weight:600;font-variant-numeric:tabular-nums;">${row.month}</b></span>
+            <span style="color:var(--border-dark);">|</span>
+            <span><span style="color:var(--text-hint);">DR 유형</span> <b style="color:var(--navy);font-weight:600;">${row.drType}</b></span>
+            <span style="color:var(--border-dark);">|</span>
+            <span><span style="color:var(--text-hint);">의무감축용량</span> <b style="color:var(--navy);font-weight:600;font-variant-numeric:tabular-nums;">${row.mandatoryCapacity.toLocaleString()} kW</b></span>
+          </div>
+        </div>
+        <span class="badge ${badge.cls}" style="flex-shrink:0;">${badge.label}</span>
       </div>
-      <div style="font-size:11px;color:var(--text-hint);margin-top:3px;">${row.month} 정산 · ${row.drType} · 의무감축 ${row.mandatoryCapacity.toLocaleString()} kW</div>
     </div>
   </div>
 
