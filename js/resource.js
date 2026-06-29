@@ -1040,7 +1040,7 @@ function rmTabCustomersHtml(g){
       ${canMap?`<button class="btn btn-danger btn-sm" onclick="rmUnmap(${g.id},'${c.id}')">제거</button>`:'-'}
     </span>
   </div>`).join('')}
-  ${canMap?`<div style="padding:12px 14px;text-align:center;"><button class="btn btn-secondary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객 매핑 추가</button></div>`:''}`;
+  `;
 }
 
 function rmRenderDetailFooter(g){
@@ -1061,7 +1061,7 @@ function rmRenderDetailFooter(g){
     btns.push(`<button class="btn btn-success btn-sm" onclick="rmActivate(${g.id})" ${canActivate?'':'disabled'} title="${canActivate?'':disableReason}">활성 전환</button>`);
   } else if(g.status==='active'){
     btns.push(`<button class="btn btn-secondary btn-sm" onclick="rmSuspend(${g.id})">일시중지</button>`);
-    btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객 매핑</button>`);
+    btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객추가</button>`);
   } else if(g.status==='suspended'){
     btns.push(`<button class="btn btn-success btn-sm" onclick="rmResume(${g.id})">운영 재개</button>`);
   }
