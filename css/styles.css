@@ -691,6 +691,9 @@ table.dm-matrix tbody td.dm-mx-cust{position:sticky;left:0;background:#f8f9fc;fo
 .mon-table-row:last-child{border-bottom:none;}
 .mon-table-row:hover{background:#f8fbff;}
 .mon-table-row.active{background:var(--blue-light);}
+/* [Phase 17-BQ] active row 안 버튼 명시 — 흰 배경 위 테두리 보이게 */
+.mon-table-row.active .btn-secondary{background:#fff;border-color:var(--border-dark);color:var(--text-sub);}
+.mon-table-row.active .btn-secondary:hover{background:var(--g-50);color:var(--heading);}
 .mon-table-row > span{min-width:0;}
 .mon-table-event-name{font-weight:700;color:var(--navy);}
 .mon-table-event-sub{font-size:10px;color:var(--text-hint);margin-top:3px;font-family:monospace;}

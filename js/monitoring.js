@@ -222,21 +222,21 @@ function monRenderEventTable(evs){
       ? `<span style="color:${monRateColor(summary.rate)};font-weight:700;">${Math.round(summary.rate*100)}%</span>`
       : `<span style="color:var(--text-hint);">—</span>`;
     const activeCls = monState.currentEventId===ev.id ? ' active' : '';
-    // [Phase 17-BM] 이상 여부 칼럼 제거 → 이벤트명 좌측 빨간 점 + 호버 툴팁
-    const abnormalDot = health.tone === 'bad'
-      ? `<span title="이상 ${health.abnormalCount}건 — 상세에서 확인" style="display:inline-block;width:8px;height:8px;background:var(--red);border-radius:50%;margin-right:6px;vertical-align:1px;flex-shrink:0;"></span>`
+    // [Phase 17-BQ] 빨간 점 → 삼각형 ⚠ 아이콘 (계약관리 패턴 일관)
+    const abnormalIcon = health.tone === 'bad'
+      ? `<span title="이상 ${health.abnormalCount}건 — 상세에서 확인" style="display:inline-flex;color:var(--red);font-size:14px;line-height:1;margin-right:6px;vertical-align:-1px;flex-shrink:0;">⚠</span>`
       : '';
     return `<div class="mon-table-row${activeCls}" onclick="monSelectEvent('${ev.id}')">
       <span>${monStatusPillHtml(statusKey)}</span>
       <span>
-        <div class="mon-table-event-name">${abnormalDot}${eventDisplayName(ev)}</div>
+        <div class="mon-table-event-name">${abnormalIcon}${eventDisplayName(ev)}</div>
         <div class="mon-table-event-sub">${ev.id}</div>
       </span>
       <span style="color:var(--text-sub);font-variant-numeric:tabular-nums;">${ev.date}<br>${ev.timeRange}</span>
       <span><span class="badge ${typeMeta.badge}" style="font-size:10px;">${typeMeta.label}</span></span>
       <span style="text-align:right;font-weight:600;">${summary.targetCount}개</span>
       <span style="text-align:right;font-weight:600;">${summary.totalOrd.toLocaleString()} kW</span>
-      <span style="text-align:right;">${rateText}</span>
+      <span style="text-align:center;">${rateText}</span>
       <span style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();monOpenDetailModal('${ev.id}')">상세</button></span>
     </div>`;
   }).join('');
