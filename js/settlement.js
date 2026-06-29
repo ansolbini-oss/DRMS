@@ -113,6 +113,7 @@ const stmBasicState = {
   month: '2026-06',
   status: 'all',
   search: '',
+  currentDetailId: null,   // [Phase 17-BT] 상세 진입 시 row id
 };
 
 function stmBasicInit(){
@@ -235,9 +236,261 @@ function stmBasicRender(){
   `;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   [Phase 17-BT] 기본 정산금 — 상세 페이지
+═══════════════════════════════════════════════════════════════ */
+
 function stmBasicOpenDetail(rowId){
-  // [Phase 17-BS] 상세는 다음 push에서 구현 (placeholder)
-  if(typeof showToast === 'function') showToast('기본 정산금 상세 — 다음 단계 구현');
+  stmBasicState.currentDetailId = rowId;
+  stmBasicToggleViews(true);
+  stmBasicRenderDetail();
+}
+
+function stmBasicGotoList(){
+  stmBasicState.currentDetailId = null;
+  stmBasicToggleViews(false);
+  stmBasicRender();
+}
+
+/* list mode ↔ detail mode 토글 — KPI·필터·list 영역 숨김/표시 */
+function stmBasicToggleViews(showDetail){
+  const view = document.getElementById('stm-basic-view');
+  if(!view) return;
+  const kpis    = view.querySelector('.rp-kpi-grid');
+  const filters = view.querySelector('.rp-filter-bar');
+  const note    = view.querySelector('.wf-note');
+  const listBody = document.getElementById('stmb-list-body');
+  const detailBody = document.getElementById('stmb-detail-body');
+  [kpis, filters, note, listBody].forEach(el => { if(el) el.style.display = showDetail ? 'none' : ''; });
+  if(detailBody) detailBody.style.display = showDetail ? '' : 'none';
+}
+
+/* 상세 렌더 — 자원그룹별 정산 row의 detail view */
+function stmBasicRenderDetail(){
+  const row = stmBasicSeed.find(r => r.id === stmBasicState.currentDetailId);
+  const body = document.getElementById('stmb-detail-body');
+  if(!row || !body) return;
+  const g = (typeof groupById === 'function') ? groupById(row.groupId) : (store.groups||[]).find(x=>x.id===row.groupId);
+  if(!g){ body.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-hint);">자원그룹을 찾을 수 없습니다.</div>'; return; }
+
+  // 사업자별 60hz 계약전력 + 평균 feeRate 산출
+  const customers = (g.customerIds || []).map(cid => {
+    const c = (typeof custById === 'function') ? custById(cid) : (store.customers||[]).find(x=>x.id===cid);
+    if(!c) return null;
+    const sites = Array.isArray(c.sites) ? c.sites : [];
+    const power60hz = sites.reduce((s, st) => s + (st.contract?.power || 0), 0) || (c.power || 0);
+    const feeRates = sites.map(st => st.contract?.feeRate).filter(v => v != null);
+    const avgFeeRate = feeRates.length ? feeRates.reduce((a,b)=>a+b,0)/feeRates.length : 3.5;  // 기본값
+    return { c, power60hz, avgFeeRate, sites: sites.length };
+  }).filter(Boolean);
+
+  const totalKw = customers.reduce((s,x) => s + x.power60hz, 0);
+  const badge = stmBasicStatusBadge(row.status);
+
+  // 사업자별 배분 계산
+  const allocations = customers.map(x => {
+    const ratio = totalKw > 0 ? x.power60hz / totalKw : 0;
+    const baseAlloc = Math.round((row.kpxSupply || 0) * ratio);   // 기본 배분금액(공급가액 기준)
+    const fee = Math.round(baseAlloc * (x.avgFeeRate / 100));
+    const payout = baseAlloc - fee;
+    return { ...x, ratio, baseAlloc, fee, payout };
+  });
+
+  const totalFee = allocations.reduce((s,x) => s + x.fee, 0);
+  const totalPayout = allocations.reduce((s,x) => s + x.payout, 0);
+
+  body.innerHTML = `
+  <!-- 헤더 -->
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;background:#fff;border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;">
+    <button class="btn btn-secondary btn-sm" onclick="stmBasicGotoList()">← 목록으로</button>
+    <div style="flex:1;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:16px;font-weight:700;color:var(--navy);">${g.name}</div>
+        <span class="badge ${badge.cls}">${badge.label}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:3px;">${row.month} 정산 · ${row.drType} · 의무감축 ${row.mandatoryCapacity.toLocaleString()} kW</div>
+    </div>
+  </div>
+
+  <!-- 자원 식별 + KPX 입금 + 60hz 마진 (3개 카드) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+    <!-- 자원 식별 -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-xs);">
+      <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:10px;">자원 식별</div>
+      <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:8px;">${g.name}</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
+        <span style="color:var(--text-sub);">참여고객</span>
+        <span style="font-weight:600;color:var(--navy);">${customers.length}명</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
+        <span style="color:var(--text-sub);">60hz 계약전력 합</span>
+        <span style="font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;">${totalKw.toLocaleString()} kW</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
+        <span style="color:var(--text-sub);">DR 유형</span>
+        <span style="font-weight:600;color:var(--navy);">${row.drType}</span>
+      </div>
+    </div>
+
+    <!-- KPX 입금 입력 -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-xs);">
+      <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:10px;">KPX 입금 정보</div>
+      <div style="margin-bottom:8px;">
+        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">공급가액 (₩)</label>
+        <input type="number" id="stmb-d-supply" value="${row.kpxSupply || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:8px;">
+        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">부가세 10% (₩)</label>
+        <input type="number" id="stmb-d-vat" value="${row.kpxVat || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:8px;">
+        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">합계 (₩)</label>
+        <input type="number" id="stmb-d-total" value="${row.kpxTotal || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;background:var(--g-50);box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">입금일</label>
+        <input type="date" id="stmb-d-date" value="${row.kpxDate || ''}" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;box-sizing:border-box;">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="stmBasicSaveKpx()" style="width:100%;margin-top:10px;">저장 + 배분 산정</button>
+    </div>
+
+    <!-- 60hz 마진 요약 -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-xs);">
+      <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:10px;">60hz 마진 요약</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;">
+        <span style="color:var(--text-sub);">자원 총 매출 (KPX)</span>
+        <span style="font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;">₩ ${(row.kpxSupply||0).toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
+        <span style="color:var(--text-sub);">60hz 수수료 총합</span>
+        <span style="font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;">₩ ${totalFee.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
+        <span style="color:var(--text-sub);">사업자 지급 합계</span>
+        <span style="font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;">₩ ${totalPayout.toLocaleString()}</span>
+      </div>
+      <div style="margin-top:10px;padding:8px 10px;background:var(--g-50);border-radius:var(--r);font-size:10px;color:var(--text-hint);line-height:1.5;">
+        수수료 = 배분금액 × 사업자 평균 feeRate<br>
+        실 지급 = 배분금액 − 수수료
+      </div>
+    </div>
+  </div>
+
+  <!-- 참여고객별 배분 -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-xs);">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--navy);">
+      참여고객별 배분 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">${customers.length}명</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:var(--g-100);">
+          <th style="padding:10px 14px;text-align:left;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">참여고객</th>
+          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">60hz 계약용량</th>
+          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">기본 배분금액</th>
+          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">수수료</th>
+          <th style="padding:10px 14px;text-align:right;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">실 지급금액</th>
+          <th style="padding:10px 14px;text-align:center;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">세금계산서</th>
+          <th style="padding:10px 14px;text-align:center;color:var(--text-sub);font-weight:600;font-size:11px;border-bottom:1px solid var(--border);">정산 상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${allocations.map(a => {
+          const ratioPct = (a.ratio * 100).toFixed(1);
+          // 세금계산서 + 정산상태 — 운영 흐름에 따라 동적
+          const invoiced = row.status !== 'pending';
+          const settled = row.status === 'completed';
+          return `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:14px;">
+              <div style="font-weight:600;color:var(--navy);">${a.c.name}</div>
+              <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${a.sites}사업장 · feeRate ${a.avgFeeRate.toFixed(1)}%</div>
+            </td>
+            <td style="padding:14px;text-align:right;font-variant-numeric:tabular-nums;">
+              <div style="font-weight:600;">${a.power60hz.toLocaleString()} kW</div>
+              <div style="font-size:10px;color:var(--text-hint);">(${ratioPct}%)</div>
+            </td>
+            <td style="padding:14px;text-align:right;font-weight:500;font-variant-numeric:tabular-nums;">₩ ${a.baseAlloc.toLocaleString()}</td>
+            <td style="padding:14px;text-align:right;font-variant-numeric:tabular-nums;color:var(--green);">₩ ${a.fee.toLocaleString()}</td>
+            <td style="padding:14px;text-align:right;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;">₩ ${a.payout.toLocaleString()}</td>
+            <td style="padding:14px;text-align:center;">
+              <span class="badge ${invoiced ? 'badge-done' : 'badge-pending'}">${invoiced ? '발행완료' : '발행대기'}</span>
+            </td>
+            <td style="padding:14px;text-align:center;">
+              <span class="badge ${settled ? 'badge-done' : (row.status==='in_progress' ? 'badge-progress' : 'badge-pending')}">${settled ? '입금완료' : (row.status==='in_progress' ? '입금진행' : '대기')}</span>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--g-50);">
+      <button class="btn btn-secondary btn-sm">선택 항목 일괄 세금계산서 발행</button>
+      <button class="btn btn-primary btn-sm">선택 항목 일괄 입금 처리</button>
+    </div>
+  </div>
+
+  <!-- 진행 이력 -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-top:14px;box-shadow:var(--shadow-xs);">
+    <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px;">진행 이력</div>
+    <div style="font-size:12px;color:var(--text-sub);line-height:1.8;">
+      ${row.kpxDate ? `<div>${row.kpxDate} · KPX 입금 ₩ ${(row.kpxTotal||0).toLocaleString()} (공급 ${(row.kpxSupply||0).toLocaleString()} + VAT ${(row.kpxVat||0).toLocaleString()})</div>` : `<div style="color:var(--text-hint);">KPX 입금 미입력 — 위 입력 영역에서 명세서 정보 입력 후 [저장 + 배분 산정] 클릭</div>`}
+      ${row.status === 'invoiced' || row.status === 'in_progress' || row.status === 'completed' ? `<div>세금계산서 ${customers.length}건 발행 완료</div>` : ''}
+      ${row.status === 'in_progress' || row.status === 'completed' ? `<div>사업자 입금 진행 중</div>` : ''}
+      ${row.status === 'completed' ? `<div style="color:var(--green);font-weight:600;">전체 사업자 입금 완료</div>` : ''}
+    </div>
+  </div>
+  `;
+}
+
+/* KPX 입금 입력 — 자동 계산 (공급/부가/합계 3개 셀 중 하나 입력 시 나머지 자동) */
+function stmBasicRecalc(){
+  const sEl = document.getElementById('stmb-d-supply');
+  const vEl = document.getElementById('stmb-d-vat');
+  const tEl = document.getElementById('stmb-d-total');
+  if(!sEl || !vEl || !tEl) return;
+  // 어느 필드가 active focus인지 — 보수적 처리: 공급가액 입력 → VAT·합계 자동 / 합계 입력 → 공급·VAT 자동
+  const active = document.activeElement;
+  const supply = Number(sEl.value) || 0;
+  const vat = Number(vEl.value) || 0;
+  const total = Number(tEl.value) || 0;
+  if(active === sEl){
+    const newVat = Math.round(supply * 0.1);
+    vEl.value = newVat;
+    tEl.value = supply + newVat;
+  } else if(active === tEl){
+    const newSupply = Math.round(total / 1.1);
+    const newVat = total - newSupply;
+    sEl.value = newSupply;
+    vEl.value = newVat;
+  } else if(active === vEl){
+    // VAT 직접 입력 시 합계 = 공급 + VAT
+    tEl.value = supply + vat;
+  }
+}
+
+/* KPX 입금 저장 → 시드 갱신 + 배분 산정 (상태를 'pending' → 'invoiced'로) */
+function stmBasicSaveKpx(){
+  const row = stmBasicSeed.find(r => r.id === stmBasicState.currentDetailId);
+  if(!row) return;
+  const supply = Number(document.getElementById('stmb-d-supply').value) || 0;
+  const vat    = Number(document.getElementById('stmb-d-vat').value) || 0;
+  const total  = Number(document.getElementById('stmb-d-total').value) || 0;
+  const date   = document.getElementById('stmb-d-date').value || '';
+  if(supply <= 0 || total <= 0){
+    if(typeof showToast === 'function') showToast('공급가액·합계를 입력해 주세요.');
+    return;
+  }
+  row.kpxSupply = supply;
+  row.kpxVat = vat;
+  row.kpxTotal = total;
+  row.kpxDate = date;
+  if(row.status === 'pending') row.status = 'invoiced';   // 자동 진전
+  if(typeof showToast === 'function') showToast('KPX 입금 정보 저장 · 배분 산정 완료');
+  if(typeof logAudit === 'function'){
+    logAudit({objectType:'settlement', objectId:row.id, action:'kpx_input',
+      title:`KPX 입금 입력 — ${row.groupName} ${row.month}`,
+      desc:`공급 ₩${supply.toLocaleString()} + VAT ₩${vat.toLocaleString()} = ₩${total.toLocaleString()}`,
+      actor:'운영자', tone:'info'});
+  }
+  stmBasicRenderDetail();
 }
 
 function stmApplyPeriodRange(){
