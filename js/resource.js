@@ -1035,7 +1035,7 @@ function rmTabCustomersHtml(g){
     <span><div style="font-weight:600;color:var(--navy);">${c.name}</div><div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${c.recno}</div></span>
     <span style="text-align:right;"><span class="badge badge-gray" style="font-size:9px;">${c.drType}</span></span>
     <span style="text-align:right;font-weight:600;color:var(--blue);">${(c.reduction||0).toLocaleString()}</span>
-    <span style="text-align:center;"><span class="badge badge-done" style="font-size:9px;">ACTIVE</span></span>
+    <span style="text-align:center;"><span class="badge badge-done" style="font-size:9px;">활성</span></span>
     <span style="text-align:center;">
       ${canMap?`<button class="btn btn-danger btn-sm" onclick="rmUnmap(${g.id},'${c.id}')">제거</button>`:'-'}
     </span>
