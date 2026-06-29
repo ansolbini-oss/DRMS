@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260630-0812. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260630-0812">
+<!-- css/js 모두 ?v=260630-0823. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260630-0823">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260630-0812</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260630-0823</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -987,12 +987,12 @@
        [Phase 17-BS] sub-tab 분기 — 기본 정산금 / 실적정산금(의무·자발)
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 
-  <!-- ─── 기본 정산금 view (Phase 17-BS 신설) ─── -->
-  <div id="stm-basic-view" style="display:none;">
-    <div class="wf-note">신뢰성DR 자원의 매월 KPX 기본정산금을 수금·참여고객 배분 처리합니다.</div>
+  <!-- ─── 기본 정산금 view (Phase 17-BS 신설, BW: 스크롤 가능 컨테이너) ─── -->
+  <div id="stm-basic-view" style="display:none;flex:1;overflow-y:auto;padding:14px 20px;">
+    <div class="wf-note" id="stmb-wfnote">신뢰성DR 자원의 매월 KPX 기본정산금을 수금·참여고객 배분 처리합니다.</div>
 
     <!-- KPI 5개 -->
-    <div class="rp-kpi-grid">
+    <div class="rp-kpi-grid" id="stmb-kpi-row">
       <div class="rp-kpi" onclick="stmBasicFilterByStatus('all')" style="cursor:pointer;"><div class="rp-kpi-label">정산 대상 자원</div><div class="rp-kpi-val blue" id="stmb-kpi-total">0</div><div class="rp-kpi-sub">매월 KPX 정산 자원그룹</div></div>
       <div class="rp-kpi" onclick="stmBasicFilterByStatus('pending')" style="cursor:pointer;"><div class="rp-kpi-label">KPX 입금 대기</div><div class="rp-kpi-val amber" id="stmb-kpi-pending">0</div><div class="rp-kpi-sub">입금 금액 입력 필요</div></div>
       <div class="rp-kpi" onclick="stmBasicFilterByStatus('invoiced')" style="cursor:pointer;"><div class="rp-kpi-label">세금계산서 발행</div><div class="rp-kpi-val" id="stmb-kpi-invoiced">0</div><div class="rp-kpi-sub">사업자 배분 산정 완료</div></div>
@@ -1001,7 +1001,7 @@
     </div>
 
     <!-- 필터 3개 -->
-    <div class="rp-filter-bar">
+    <div class="rp-filter-bar" id="stmb-filter-row">
       <label>정산월</label>
       <input type="month" class="filter-select" id="stmb-month" onchange="stmBasicRender()">
       <label style="margin-left:10px;">상태</label>
@@ -1022,7 +1022,7 @@
   </div>
 
   <!-- ─── 실적 정산금 view (기존, mandatory/voluntary 공통 — 추후 분리) ─── -->
-  <div id="stm-perf-view">
+  <div id="stm-perf-view" style="flex:1;overflow-y:auto;padding:14px 20px;">
     <div class="wf-note">이벤트별 확정 금액으로 정산금 수금·참여고객 배분을 처리합니다.</div>
 
     <div class="rp-kpi-grid">
@@ -2356,20 +2356,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260630-0812"></script>
-<script src="data/tips.js?v=260630-0812"></script>
-<script src="js/core.js?v=260630-0812"></script>
-<script src="js/dashboard.js?v=260630-0812"></script>
-<script src="js/precheck.js?v=260630-0812"></script>
-<script src="js/resource.js?v=260630-0812"></script>
-<script src="js/monitoring.js?v=260630-0812"></script>
-<script src="js/report.js?v=260630-0812"></script>
-<script src="js/settlement.js?v=260630-0812"></script>
-<script src="js/datacollect.js?v=260630-0812"></script>
-<script src="js/rtu.js?v=260630-0812"></script>
-<script src="js/communication.js?v=260630-0812"></script>
-<script src="js/bidding.js?v=260630-0812"></script>
-<script src="js/account.js?v=260630-0812"></script>
-<script src="js/system.js?v=260630-0812"></script>
+<script src="data/store.js?v=260630-0823"></script>
+<script src="data/tips.js?v=260630-0823"></script>
+<script src="js/core.js?v=260630-0823"></script>
+<script src="js/dashboard.js?v=260630-0823"></script>
+<script src="js/precheck.js?v=260630-0823"></script>
+<script src="js/resource.js?v=260630-0823"></script>
+<script src="js/monitoring.js?v=260630-0823"></script>
+<script src="js/report.js?v=260630-0823"></script>
+<script src="js/settlement.js?v=260630-0823"></script>
+<script src="js/datacollect.js?v=260630-0823"></script>
+<script src="js/rtu.js?v=260630-0823"></script>
+<script src="js/communication.js?v=260630-0823"></script>
+<script src="js/bidding.js?v=260630-0823"></script>
+<script src="js/account.js?v=260630-0823"></script>
+<script src="js/system.js?v=260630-0823"></script>
 
 </body></html>

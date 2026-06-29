@@ -254,24 +254,13 @@ function stmBasicGotoList(){
 
 /* list mode ↔ detail mode 토글 — KPI·필터·list 영역 숨김/표시 */
 function stmBasicToggleViews(showDetail){
-  const view = document.getElementById('stm-basic-view');
-  if(!view) return;
-  // [Phase 17-BU] 상세 진입 시 KPI/필터/list 영역 완전 숨김 (검색·현황카드 noise 제거)
-  const kpis    = view.querySelector('.rp-kpi-grid');
-  const filters = view.querySelector('.rp-filter-bar');
-  const note    = view.querySelector('.wf-note');
-  const listBody = document.getElementById('stmb-list-body');
-  const detailBody = document.getElementById('stmb-detail-body');
+  // [Phase 17-BW] ID 기반 강제 hide — querySelector가 못 찾던 케이스 해결
   const hideStyle = showDetail ? 'none' : '';
-  [kpis, filters, note, listBody].forEach(el => {
-    if(el){
-      el.style.display = hideStyle;
-      el.style.visibility = showDetail ? 'hidden' : '';
-    }
-    // visibility 적용 시 display:none이 우선이라 visibility는 보조 안전장치
+  ['stmb-wfnote', 'stmb-kpi-row', 'stmb-filter-row', 'stmb-list-body'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = hideStyle;
   });
-  // visibility 사용은 레이아웃 공간 차지 → 다시 display:none만 사용
-  [kpis, filters, note, listBody].forEach(el => { if(el){ el.style.visibility = ''; el.style.display = hideStyle; } });
+  const detailBody = document.getElementById('stmb-detail-body');
   if(detailBody) detailBody.style.display = showDetail ? '' : 'none';
 }
 
@@ -330,8 +319,8 @@ function stmBasicRenderDetail(){
     </div>
   </div>
 
-  <!-- 자원 식별 + KPX 입금 + 60hz 마진 (3개 카드) -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+  <!-- [Phase 17-BW] 자원 식별 + KPX 입금 + 60hz 마진 — 세로 stack 배치 (스크롤 친화) -->
+  <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:14px;">
     <!-- 자원 식별 -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-xs);">
       <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:10px;">자원 식별</div>
