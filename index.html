@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260629-1528. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260629-1528">
+<!-- css/js 모두 ?v=260629-1530. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260629-1530">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260629-1528</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260629-1530</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -1164,11 +1164,11 @@
     </div>
 
     <div class="ct-kpi-grid">
-      <div class="ct-kpi"><div class="ct-kpi-label">전체 계약 대상</div><div class="ct-kpi-val" id="ct-kpi-total">0</div><div class="ct-kpi-sub">계약 처리 이력 포함</div></div>
-      <div class="ct-kpi"><div class="ct-kpi-label">계약대기</div><div class="ct-kpi-val" id="ct-kpi-pending" style="color:var(--amber);">0</div><div class="ct-kpi-sub">사전검증 완료 후 전환됨</div></div>
-      <div class="ct-kpi"><div class="ct-kpi-label">계약완료</div><div class="ct-kpi-val" id="ct-kpi-approved" style="color:var(--green);">0</div><div class="ct-kpi-sub">자원관리 매핑 가능</div></div>
-      <div class="ct-kpi"><div class="ct-kpi-label">만료 예정</div><div class="ct-kpi-val" id="ct-kpi-review" style="color:var(--amber);">0</div><div class="ct-kpi-sub">60일 내 만료 사업장 보유</div></div>
-      <div class="ct-kpi"><div class="ct-kpi-label">계약만료</div><div class="ct-kpi-val" id="ct-kpi-rejected" style="color:var(--text-hint);">0</div><div class="ct-kpi-sub">모든 사업장 계약 종료</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">전체 계약 대상</div><div class="ct-kpi-val" id="ct-kpi-total">0</div><div class="ct-kpi-sub">사전검증·계약 처리 이력 보유</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">계약대기</div><div class="ct-kpi-val" id="ct-kpi-pending" style="color:var(--amber);">0</div><div class="ct-kpi-sub">계약기간·수수료 입력 필요</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">계약완료</div><div class="ct-kpi-val" id="ct-kpi-approved" style="color:var(--green);">0</div><div class="ct-kpi-sub">활성 계약 · 자원관리 매핑 가능</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">만료 예정</div><div class="ct-kpi-val" id="ct-kpi-review" style="color:var(--amber);">0</div><div class="ct-kpi-sub">60일 내 만료 · 재계약 협의 필요</div></div>
+      <div class="ct-kpi"><div class="ct-kpi-label">계약만료</div><div class="ct-kpi-val" id="ct-kpi-rejected" style="color:var(--text-hint);">0</div><div class="ct-kpi-sub">전체 사업장 종료 · 재계약 또는 종결</div></div>
     </div>
 
     <div class="ct-toolbar">
@@ -2296,20 +2296,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260629-1528"></script>
-<script src="data/tips.js?v=260629-1528"></script>
-<script src="js/core.js?v=260629-1528"></script>
-<script src="js/dashboard.js?v=260629-1528"></script>
-<script src="js/precheck.js?v=260629-1528"></script>
-<script src="js/resource.js?v=260629-1528"></script>
-<script src="js/monitoring.js?v=260629-1528"></script>
-<script src="js/report.js?v=260629-1528"></script>
-<script src="js/settlement.js?v=260629-1528"></script>
-<script src="js/datacollect.js?v=260629-1528"></script>
-<script src="js/rtu.js?v=260629-1528"></script>
-<script src="js/communication.js?v=260629-1528"></script>
-<script src="js/bidding.js?v=260629-1528"></script>
-<script src="js/account.js?v=260629-1528"></script>
-<script src="js/system.js?v=260629-1528"></script>
+<script src="data/store.js?v=260629-1530"></script>
+<script src="data/tips.js?v=260629-1530"></script>
+<script src="js/core.js?v=260629-1530"></script>
+<script src="js/dashboard.js?v=260629-1530"></script>
+<script src="js/precheck.js?v=260629-1530"></script>
+<script src="js/resource.js?v=260629-1530"></script>
+<script src="js/monitoring.js?v=260629-1530"></script>
+<script src="js/report.js?v=260629-1530"></script>
+<script src="js/settlement.js?v=260629-1530"></script>
+<script src="js/datacollect.js?v=260629-1530"></script>
+<script src="js/rtu.js?v=260629-1530"></script>
+<script src="js/communication.js?v=260629-1530"></script>
+<script src="js/bidding.js?v=260629-1530"></script>
+<script src="js/account.js?v=260629-1530"></script>
+<script src="js/system.js?v=260629-1530"></script>
 
 </body></html>
