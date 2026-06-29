@@ -222,10 +222,14 @@ function monRenderEventTable(evs){
       ? `<span style="color:${monRateColor(summary.rate)};font-weight:700;">${Math.round(summary.rate*100)}%</span>`
       : `<span style="color:var(--text-hint);">—</span>`;
     const activeCls = monState.currentEventId===ev.id ? ' active' : '';
+    // [Phase 17-BM] 이상 여부 칼럼 제거 → 이벤트명 좌측 빨간 점 + 호버 툴팁
+    const abnormalDot = health.tone === 'bad'
+      ? `<span title="이상 ${health.abnormalCount}건 — 상세에서 확인" style="display:inline-block;width:8px;height:8px;background:var(--red);border-radius:50%;margin-right:6px;vertical-align:1px;flex-shrink:0;"></span>`
+      : '';
     return `<div class="mon-table-row${activeCls}" onclick="monSelectEvent('${ev.id}')">
       <span>${monStatusPillHtml(statusKey)}</span>
       <span>
-        <div class="mon-table-event-name">${eventDisplayName(ev)}</div>
+        <div class="mon-table-event-name">${abnormalDot}${eventDisplayName(ev)}</div>
         <div class="mon-table-event-sub">${ev.id}</div>
       </span>
       <span style="color:var(--text-sub);font-variant-numeric:tabular-nums;">${ev.date}<br>${ev.timeRange}</span>
@@ -233,7 +237,6 @@ function monRenderEventTable(evs){
       <span style="text-align:right;font-weight:600;">${summary.targetCount}개</span>
       <span style="text-align:right;font-weight:600;">${summary.totalOrd.toLocaleString()} kW</span>
       <span style="text-align:right;">${rateText}</span>
-      <span style="text-align:center;">${monHealthBadgeHtml(health)}</span>
       <span style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();monOpenDetailModal('${ev.id}')">상세</button></span>
     </div>`;
   }).join('');
