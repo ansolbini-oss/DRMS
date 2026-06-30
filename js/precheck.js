@@ -456,17 +456,25 @@ function pcSelectSite(bizId, siteId){
         <button class="btn btn-secondary btn-sm" onclick="pcOpenEditSite('${bizId}','${siteId}')">수정</button>
       </div>
       <div class="r-card-body">
-        <table class="info-table">
-          <tbody>
-            <tr><td>사업장 책임자</td><td>${s.manager||'—'}</td></tr>
-            <tr><td>현장 연락처</td><td>${s.tel||'—'}</td></tr>
-            <tr><td>주소</td><td>${s.addr||'—'}</td></tr>
-            <tr><td>KEPCO 고객번호</td><td style="font-family:monospace;">${s.kepco||'—'}</td></tr>
-            <tr><td>한전 계약전력</td><td>${s.power||'—'} kW</td></tr>
-            <tr><td>등록일</td><td>${s.date||'—'}</td></tr>
-            <tr><td>데이터 수집</td><td>${s.dataStatus||'—'}</td></tr>
-          </tbody>
-        </table>
+        <!-- [Phase 17-CD] 2열 grid 배치 + 폰트·패딩 강화 (info-table CSS 의존 X) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;column-gap:48px;row-gap:0;">
+          ${[
+            ['사업장 책임자', s.manager||'—', false],
+            ['현장 연락처', s.tel||'—', false],
+            ['주소', s.addr||'—', true],
+            ['KEPCO 고객번호', s.kepco||'—', false, 'monospace'],
+            ['한전 계약전력', s.power ? s.power + ' kW' : '—', false],
+            ['등록일', s.date||'—', false],
+            ['데이터 수집', s.dataStatus||'—', false],
+          ].map((row, idx) => {
+            const [label, val, fullWidth, family] = row;
+            const fontFamily = family === 'monospace' ? 'font-family:monospace;' : '';
+            return `<div style="${fullWidth ? 'grid-column:1 / -1;' : ''}display:flex;align-items:center;gap:16px;padding:18px 0;border-top:${idx===0 ? 'none' : '1px solid var(--border)'};">
+              <div style="font-size:14px;color:var(--text-sub);font-weight:500;min-width:130px;">${label}</div>
+              <div style="font-size:15px;color:var(--navy);font-weight:600;${fontFamily}">${val}</div>
+            </div>`;
+          }).join('')}
+        </div>
       </div>
     </div>
 
