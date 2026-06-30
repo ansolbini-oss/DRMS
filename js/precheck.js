@@ -2604,6 +2604,7 @@ function ctEcLookupBizno(){
 
 /* [Phase 17-AP] 사업장 관리 — 테이블 + 아코디언 확장 (비니 와이어 형태) */
 let ctExpandedSiteId = null;
+let ctSiteEditingId = null;  // [Phase 17-CG] 편집 모드 사업장 ID
 
 function ctRenderSitesTable(c, sites){
   // 상태 계산 헬퍼 — 계약기간 기준
@@ -2630,7 +2631,7 @@ function ctRenderSitesTable(c, sites){
       : `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>`;
     const headBg = isExpanded ? 'var(--blue-light, #eff6ff)' : '';
     const headerRow = `<tr style="cursor:pointer;background:${headBg};border-bottom:1px solid var(--border);" onclick="ctToggleSiteExpand('${c.id}','${s.id}')">
-      <td style="padding:14px 12px;width:40px;"><input type="checkbox" onclick="event.stopPropagation();" style="cursor:pointer;"></td>
+      <td style="padding:14px 12px;width:40px;"><input type="checkbox" class="ct-site-check" data-site-id="${s.id}" onclick="event.stopPropagation();" style="cursor:pointer;"></td>
       <td style="padding:14px 12px;font-weight:600;color:var(--navy);">${s.siteName || '-'}</td>
       <td style="padding:14px 12px;">${s.manager || '—'}</td>
       <td style="padding:14px 12px;color:var(--text-sub);">${s.tel || '—'}</td>
@@ -2652,11 +2653,22 @@ function ctRenderSitesTable(c, sites){
     const addrText = s.addr ? `${s.addr}${s.addrDetail?` ${s.addrDetail}`:''}` : '—';
     // 사업장 정보 — 한 줄씩 (라벨 좌 회색 중앙정렬 / 값 우)
     const curStatus = s.siteStatus || '계약대기';
+    // [Phase 17-CG] 계약상태: 편집 모드일 때만 드롭다운 활성, 그 외엔 뱃지 표시
+    const isEditingSite = ctSiteEditingId === s.id;
     const statusSelect = ['계약대기','계약완료','계약만료','계약해지'].map(opt =>
       `<option value="${opt}"${opt===curStatus?' selected':''}>${opt}</option>`
     ).join('');
-    const statusDropdown = `<select onchange="ctSetSiteStatus('${c.id}','${s.id}', this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;">${statusSelect}</select>
-      <span style="margin-left:8px;font-size:11px;color:var(--text-hint);">운영자 직접 변경 가능</span>`;
+    let statusDropdown;
+    if(isEditingSite){
+      statusDropdown = `<select onchange="ctSetSiteStatus('${c.id}','${s.id}', this.value)" style="padding:8px 12px;border:1px solid var(--blue);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;box-shadow:0 0 0 2px rgba(27,95,193,0.1);">${statusSelect}</select>
+        <span style="margin-left:10px;font-size:11px;color:var(--blue);font-weight:500;">편집 중</span>`;
+    } else {
+      const stBadge = curStatus === '계약완료' ? 'badge-done'
+                    : curStatus === '계약대기' ? 'badge-pending'
+                    : curStatus === '계약만료' ? 'badge-gray'
+                    : 'badge-fail';
+      statusDropdown = `<span class="badge ${stBadge}" style="font-size:12px;padding:5px 12px;">${curStatus}</span>`;
+    }
     const siteFields = [
       ['사업장명', s.siteName],
       ['담당자', s.manager],
@@ -2712,14 +2724,19 @@ function ctRenderSitesTable(c, sites){
           <tbody>${docRows}</tbody>
         </table>
       </div>`;
+    // [Phase 17-CG] 편집 모드일 땐 [저장][취소]로 토글
+    const actionButtons = isEditingSite
+      ? `<button class="btn btn-secondary btn-sm" onclick="ctCancelSiteEdit('${c.id}','${s.id}')">취소</button>
+         <button class="btn btn-primary btn-sm" onclick="ctSaveSiteEdit('${c.id}','${s.id}')">저장</button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="ctOpenSiteEdit('${c.id}','${s.id}')">수정</button>
+         <button class="btn btn-danger btn-sm" onclick="ctDeleteSite('${c.id}','${s.id}')">삭제</button>`;
     const expandRow = `<tr style="background:var(--blue-light, #eff6ff);">
       <td colspan="9" style="padding:18px 28px 22px;">
         <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:24px 28px;">
           ${siteInfoTable}
           ${docsTable}
           <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:22px;">
-            <button class="btn btn-secondary btn-sm" onclick="ctOpenSiteEdit('${c.id}','${s.id}')">수정</button>
-            <button class="btn btn-danger btn-sm" onclick="ctDeleteSite('${c.id}','${s.id}')">삭제</button>
+            ${actionButtons}
           </div>
         </div>
       </td>
@@ -2730,13 +2747,16 @@ function ctRenderSitesTable(c, sites){
   return `<div class="r-card">
     <div class="r-card-header" style="display:flex;align-items:center;justify-content:space-between;">
       <div class="r-card-title">사업장 관리</div>
-      <button class="btn btn-primary btn-sm" onclick="ctOpenAddSite('${c.id}')">+ 사업장 추가</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-danger btn-sm" onclick="ctBulkDeleteSites('${c.id}')">선택 삭제</button>
+        <button class="btn btn-primary btn-sm" onclick="ctOpenAddSite('${c.id}')">+ 사업장 추가</button>
+      </div>
     </div>
     <div class="r-card-body" style="padding:0;">
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead>
           <tr style="background:var(--grey50);border-bottom:1px solid var(--border);">
-            <th style="padding:12px;width:40px;"><input type="checkbox" style="cursor:pointer;"></th>
+            <th style="padding:12px;width:40px;"><input type="checkbox" id="ct-site-checkall" onchange="ctToggleAllSites(this.checked)" style="cursor:pointer;"></th>
             <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">사업장명</th>
             <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">담당자</th>
             <th style="padding:12px;text-align:left;color:var(--text-sub);font-weight:600;">담당자 연락처</th>
@@ -2817,8 +2837,50 @@ function ctDeleteSite(bizId, siteId){
 }
 
 /* 사업장 정보 수정 — TODO: 인라인 편집 추가 예정 */
+/* [Phase 17-CG] 사업장 편집 모드 진입 — 계약상태 드롭다운 활성 */
 function ctOpenSiteEdit(bizId, siteId){
-  if(typeof showToast === 'function') showToast('사업장 정보 수정 — 인라인 편집 다음 단계 예정');
+  ctSiteEditingId = siteId;
+  ctExpandedSiteId = siteId;  // 펼쳐진 상태 유지
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  ctRenderDetailPage(c);
+}
+function ctCancelSiteEdit(bizId, siteId){
+  ctSiteEditingId = null;
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  ctRenderDetailPage(c);
+}
+function ctSaveSiteEdit(bizId, siteId){
+  // 드롭다운은 onchange로 즉시 저장됨 (ctSetSiteStatus). 명시적 [저장]은 편집 모드 종료만.
+  ctSiteEditingId = null;
+  if(typeof showToast === 'function') showToast('사업장 정보 저장 완료');
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  ctRenderDetailPage(c);
+}
+
+/* [Phase 17-CG] 전체 선택 + 일괄 삭제 */
+function ctToggleAllSites(checked){
+  document.querySelectorAll('.ct-site-check').forEach(cb => { cb.checked = checked; });
+}
+function ctBulkDeleteSites(bizId){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  if(!Array.isArray(c.sites)) return;
+  const checked = Array.from(document.querySelectorAll('.ct-site-check')).filter(cb => cb.checked);
+  if(checked.length === 0){
+    if(typeof showToast === 'function') showToast('삭제할 사업장을 선택하세요.');
+    return;
+  }
+  const targetIds = checked.map(cb => cb.dataset.siteId);
+  const targetNames = targetIds.map(id => c.sites.find(s => s.id === id)?.siteName).filter(Boolean);
+  if(!confirm(`선택된 ${targetIds.length}개 사업장을 삭제할까요?\n\n${targetNames.join(', ')}\n\n계약 정보·서류도 함께 삭제됩니다.`)) return;
+  c.sites = c.sites.filter(s => !targetIds.includes(s.id));
+  ctExpandedSiteId = null;
+  ctSiteEditingId = null;
+  logAudit?.({objectType:'site', objectId:bizId, action:'sites_bulk_deleted',
+    title:`사업장 일괄 삭제 — ${c.name}`,
+    desc:`${targetIds.length}건: ${targetNames.join(', ')}`,
+    actor:'운영자', tone:'warn'});
+  if(typeof showToast === 'function') showToast(`${targetIds.length}개 사업장 삭제 완료`);
+  ctRenderDetailPage(c);
 }
 
 /* 서류 제거 */
