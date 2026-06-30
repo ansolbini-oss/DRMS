@@ -432,16 +432,16 @@ function pcSelectSite(bizId, siteId){
       }
     }
     return `
-      <div class="step-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;background:#fff;">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
-          <div style="width:22px;height:22px;border-radius:50%;background:${st===2?'var(--green-light)':st===3?'var(--blue-light)':st===0?'var(--red-light,#fef2f2)':'var(--grey100)'};color:${st===2?'var(--green)':st===3?'var(--blue)':st===0?'var(--red)':'var(--text-hint)'};font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+      <div class="step-row" style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 26px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;background:#fff;">
+        <div style="display:flex;align-items:center;gap:18px;min-width:0;flex:1;">
+          <div style="width:40px;height:40px;border-radius:50%;background:${st===2?'var(--green-light)':st===3?'var(--blue-light)':st===0?'var(--red-light,#fef2f2)':'var(--g-100)'};color:${st===2?'var(--green)':st===3?'var(--blue)':st===0?'var(--red)':'var(--text-sub)'};font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
           <div style="min-width:0;">
-            <div style="font-weight:600;font-size:12px;color:var(--navy);">${def.name}</div>
-            <div style="font-size:10px;color:var(--text-hint);margin-top:1px;">${def.desc}</div>
+            <div style="font-weight:700;font-size:18px;color:var(--navy);letter-spacing:-0.01em;">${def.name}</div>
+            <div style="font-size:14px;color:var(--g-600);margin-top:8px;line-height:1.6;">${def.desc}</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-          <span class="badge ${stateCls}" style="font-size:10px;">${stateText}</span>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span class="badge ${stateCls}" style="font-size:13px;padding:6px 14px;font-weight:600;">${stateText}</span>
           ${actionBtn}
         </div>
       </div>
