@@ -397,19 +397,19 @@ tbody tr:hover td{background:#f0f4ff;cursor:pointer;}
 .info-table td:first-child{color:var(--text-sub);width:140px;font-weight:500;}
 .info-table td:last-child{color:var(--navy);font-weight:600;}
 
-.step-progress-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:12px;}
-.steps-list{display:flex;flex-direction:column;gap:8px;}
-.step-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--r);background:#fff;cursor:pointer;transition:.15s;}
+.step-progress-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.steps-list{display:flex;flex-direction:column;gap:10px;}
+.step-item{display:flex;align-items:center;gap:16px;padding:18px 22px;border:1px solid var(--border);border-radius:var(--r);background:#fff;cursor:pointer;transition:.15s;}
 .step-item:hover:not(.locked){border-color:var(--blue-mid);background:var(--blue-light);}
 .step-item.locked{cursor:not-allowed;}
-.step-num{width:28px;height:28px;border-radius:50%;background:var(--g-100);color:var(--text-sub);font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border-dark);}
+.step-num{width:34px;height:34px;border-radius:50%;background:var(--g-100);color:var(--text-sub);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border-dark);}
 .step-num.done{background:var(--green);color:#fff;border-color:var(--green);}
 .step-num.active-step{background:var(--blue);color:#fff;border-color:var(--blue);}
 .step-num.failed{background:var(--red);color:#fff;border-color:var(--red);}
 .step-info{flex:1;min-width:0;}
-.step-name{font-size:14px;font-weight:600;color:var(--navy);}
-.step-desc{font-size:12px;color:var(--text-sub);margin-top:4px;line-height:1.5;}
-.step-badge{font-size:11px;padding:4px 10px;border-radius:var(--r-full);flex-shrink:0;font-weight:500;}
+.step-name{font-size:16px;font-weight:700;color:var(--navy);letter-spacing:-0.01em;}
+.step-desc{font-size:13px;color:var(--text-sub);margin-top:6px;line-height:1.6;}
+.step-badge{font-size:12px;padding:5px 12px;border-radius:var(--r-full);flex-shrink:0;font-weight:600;}
 .step-badge.done{background:var(--green-light);color:var(--green);}
 .step-badge.active-step{background:var(--blue-light);color:var(--blue);}
 .step-badge.failed{background:var(--red-light);color:var(--red);}
