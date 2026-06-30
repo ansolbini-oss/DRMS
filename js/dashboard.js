@@ -256,6 +256,18 @@ function dashGoToRiskGroup(gid){
   }, 0);
 }
 
+/* [Phase 17-BZ] 참여고객 현황 행 클릭 → 사전검증 페이지로 + 상태 필터 적용 */
+function dashGoToPrecheck(statusKey){
+  navigate('precheck');
+  setTimeout(()=>{
+    if(typeof pcFilterByStatus === 'function'){
+      // pcFilterByStatus는 같은 값 두 번 호출 시 토글되므로 강제 적용
+      if(typeof pcState !== 'undefined' && pcState && pcState.filter) pcState.filter.status = '';
+      pcFilterByStatus(statusKey);
+    }
+  }, 100);
+}
+
 /* 시험 필요 자원 배너 클릭 → 자원관리 '시험 대기' 필터로 이동 */
 function dashGoToTrialPending(){
   navigate('resource');
