@@ -319,64 +319,64 @@ function stmBasicRenderDetail(){
     </div>
   </div>
 
-  <!-- [Phase 17-BW] 자원 식별 + KPX 입금 + 60hz 마진 — 세로 stack 배치 (스크롤 친화) -->
-  <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:14px;">
-    <!-- 자원 식별 -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-xs);">
-      <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:10px;">자원 식별</div>
-      <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:8px;">${g.name}</div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
-        <span style="color:var(--text-sub);">참여고객</span>
-        <span style="font-weight:600;color:var(--navy);">${customers.length}명</span>
+  <!-- [Phase 17-CA] 자원 정보 + KPX 입금 + 60hz 마진 — 폰트·패딩 가독성 ↑ -->
+  <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:16px;">
+    <!-- 자원 정보 -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:22px 26px;box-shadow:var(--shadow-xs);">
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:18px;letter-spacing:-0.01em;">자원 정보</div>
+      <div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:16px;letter-spacing:-0.01em;">${g.name}</div>
+      <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--text-sub);font-weight:500;">참여고객</span>
+        <span style="font-weight:700;color:var(--navy);font-size:15px;">${customers.length}명</span>
       </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
-        <span style="color:var(--text-sub);">60hz 계약전력 합</span>
-        <span style="font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;">${totalKw.toLocaleString()} kW</span>
+      <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--text-sub);font-weight:500;">60hz 계약전력 합</span>
+        <span style="font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;font-size:15px;">${totalKw.toLocaleString()} kW</span>
       </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
-        <span style="color:var(--text-sub);">DR 유형</span>
-        <span style="font-weight:600;color:var(--navy);">${row.drType}</span>
+      <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--text-sub);font-weight:500;">DR 유형</span>
+        <span style="font-weight:700;color:var(--navy);font-size:15px;">${row.drType}</span>
       </div>
     </div>
 
     <!-- KPX 입금 입력 -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-xs);">
-      <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:10px;">KPX 입금 정보</div>
-      <div style="margin-bottom:8px;">
-        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">공급가액 (₩)</label>
-        <input type="number" id="stmb-d-supply" value="${row.kpxSupply || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:22px 26px;box-shadow:var(--shadow-xs);">
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:18px;letter-spacing:-0.01em;">KPX 입금 정보</div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">공급가액 (₩)</label>
+        <input type="number" id="stmb-d-supply" value="${row.kpxSupply || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:14px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
       </div>
-      <div style="margin-bottom:8px;">
-        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">부가세 10% (₩)</label>
-        <input type="number" id="stmb-d-vat" value="${row.kpxVat || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">부가세 10% (₩)</label>
+        <input type="number" id="stmb-d-vat" value="${row.kpxVat || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:14px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
       </div>
-      <div style="margin-bottom:8px;">
-        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">합계 (₩)</label>
-        <input type="number" id="stmb-d-total" value="${row.kpxTotal || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;background:var(--g-50);box-sizing:border-box;">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">합계 (₩)</label>
+        <input type="number" id="stmb-d-total" value="${row.kpxTotal || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:15px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;background:var(--g-50);box-sizing:border-box;">
       </div>
-      <div>
-        <label style="display:block;font-size:11px;color:var(--text-hint);margin-bottom:3px;">입금일</label>
-        <input type="date" id="stmb-d-date" value="${row.kpxDate || ''}" style="width:100%;padding:7px 10px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:12px;box-sizing:border-box;">
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">입금일</label>
+        <input type="date" id="stmb-d-date" value="${row.kpxDate || ''}" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:14px;box-sizing:border-box;">
       </div>
-      <button class="btn btn-primary btn-sm" onclick="stmBasicSaveKpx()" style="width:100%;margin-top:10px;">저장 + 배분 산정</button>
+      <button class="btn btn-primary" onclick="stmBasicSaveKpx()" style="width:100%;height:42px;font-size:14px;">저장 + 배분 산정</button>
     </div>
 
     <!-- 60hz 마진 요약 -->
-    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow-xs);">
-      <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:10px;">60hz 마진 요약</div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;">
-        <span style="color:var(--text-sub);">자원 총 매출 (KPX)</span>
-        <span style="font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;">₩ ${(row.kpxSupply||0).toLocaleString()}</span>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:22px 26px;box-shadow:var(--shadow-xs);">
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:18px;letter-spacing:-0.01em;">60hz 마진 요약</div>
+      <div style="display:flex;justify-content:space-between;padding:14px 0;font-size:14px;">
+        <span style="color:var(--text-sub);font-weight:500;">자원 총 매출 (KPX)</span>
+        <span style="font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;font-size:16px;">₩ ${(row.kpxSupply||0).toLocaleString()}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
-        <span style="color:var(--text-sub);">60hz 수수료 총합</span>
-        <span style="font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;">₩ ${totalFee.toLocaleString()}</span>
+      <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--text-sub);font-weight:500;">60hz 수수료 총합</span>
+        <span style="font-weight:700;color:var(--green);font-variant-numeric:tabular-nums;font-size:16px;">₩ ${totalFee.toLocaleString()}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--border);font-size:12px;">
-        <span style="color:var(--text-sub);">사업자 지급 합계</span>
-        <span style="font-weight:600;color:var(--navy);font-variant-numeric:tabular-nums;">₩ ${totalPayout.toLocaleString()}</span>
+      <div style="display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);font-size:14px;">
+        <span style="color:var(--text-sub);font-weight:500;">사업자 지급 합계</span>
+        <span style="font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;font-size:16px;">₩ ${totalPayout.toLocaleString()}</span>
       </div>
-      <div style="margin-top:10px;padding:8px 10px;background:var(--g-50);border-radius:var(--r);font-size:10px;color:var(--text-hint);line-height:1.5;">
+      <div style="margin-top:16px;padding:12px 14px;background:var(--g-50);border-radius:var(--r);font-size:12px;color:var(--text-sub);line-height:1.7;">
         수수료 = 배분금액 × 사업자 평균 feeRate<br>
         실 지급 = 배분금액 − 수수료
       </div>
