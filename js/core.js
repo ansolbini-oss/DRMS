@@ -522,7 +522,11 @@ function statusBadgeClass(s){
   }
 }
 function statusLabelRM(s){
-  return s==='active'?'활성':s==='waiting'?'승인대기':s==='suspended'?'일시중지':s;
+  // [Phase 17-CJ] 자원 상태 라벨 재정의 (KPX 등록 흐름 반영)
+  //   waiting → KPX 등록대기 (자원 생성 초기)
+  //   active → 등록완료 (KPX 등록 완료 = 활성 상태)
+  //   suspended → 운영정지
+  return s==='active'?'등록완료':s==='waiting'?'KPX 등록대기':s==='suspended'?'운영정지':s;
 }
 function dataBadgeClass(d){ return d==='수집완료'?'badge-done':d==='수집중'?'badge-collecting':'badge-fail'; }
 

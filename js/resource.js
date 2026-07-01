@@ -458,18 +458,43 @@ function rmTabInfoHtml(g){
       ${r.landSubRegion?`<div class="detail-field full"><div class="detail-field-label">육지권 세부구분</div><div class="detail-field-val">${r.landSubRegion.join(', ')}</div></div>`:''}`;
     return '';
   })();
-  const fileBox = g.file
-    ? `<div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">
-         <div><div style="font-size:11px;color:var(--green);font-weight:600;">등록신청서 업로드 완료</div>
-         <div style="font-size:11px;color:var(--text-sub);margin-top:3px;">${g.file.name}</div>
-         <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${g.file.uploadedAt}</div></div>
-         <button class="btn btn-secondary btn-sm">변경</button>
+  // [Phase 17-CJ] 서류 업로드 영역 확장 — 등록신청서 + 추가 서류 여러 개
+  if(!Array.isArray(g.docs)) g.docs = [];
+  const regFileRow = g.file
+    ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--green-border);background:var(--green-light);border-radius:var(--r);">
+         <div style="flex:1;min-width:0;">
+           <div style="font-size:12px;color:var(--green);font-weight:600;">📄 등록신청서 <span style="font-size:10px;color:var(--text-hint);font-weight:400;margin-left:6px;">필수</span></div>
+           <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${g.file.name}</div>
+           <div style="font-size:11px;color:var(--text-hint);margin-top:2px;">${g.file.uploadedAt}</div>
+         </div>
+         <button class="btn btn-secondary btn-sm" onclick="rmUploadFile()">변경</button>
        </div>`
-    : `<div style="background:var(--amber-light);border:1px solid var(--amber-border);border-radius:var(--radius);padding:12px 14px;">
-         <div style="font-size:11px;color:var(--amber);font-weight:600;margin-bottom:6px;">※ 등록신청서 업로드 필요</div>
-         <div style="font-size:11px;color:var(--text-sub);margin-bottom:8px;">활성 전환 전 수요반응자원 등록신청서 파일을 업로드해야 합니다.</div>
+    : `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px dashed var(--amber-border);background:var(--amber-light);border-radius:var(--r);">
+         <div style="flex:1;">
+           <div style="font-size:12px;color:var(--amber);font-weight:600;">📄 등록신청서 <span style="font-size:10px;color:var(--text-hint);font-weight:400;margin-left:6px;">필수 · 미업로드</span></div>
+           <div style="font-size:11px;color:var(--text-sub);margin-top:3px;">등록완료 전 업로드 필요</div>
+         </div>
          <button class="btn btn-primary btn-sm" onclick="rmUploadFile()">파일 업로드</button>
        </div>`;
+  const extraDocRows = g.docs.map(d => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--border);background:#fff;border-radius:var(--r);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;color:var(--navy);font-weight:600;">📄 ${d.label || d.name}</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${d.name}</div>
+        <div style="font-size:11px;color:var(--text-hint);margin-top:2px;">${d.uploadedAt || ''}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary btn-sm" onclick="rmUpdateExtraDoc('${g.id}','${d.id}')">변경</button>
+        <button class="btn btn-danger btn-sm" onclick="rmRemoveExtraDoc('${g.id}','${d.id}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
+  const fileBox = `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${regFileRow}
+      ${extraDocRows}
+      <button class="btn btn-secondary btn-sm" onclick="rmAddExtraDoc('${g.id}')" style="align-self:flex-start;margin-top:4px;">+ 추가 서류 업로드</button>
+    </div>`;
 
   const suspendBox = g.status==='suspended' && g.suspendReason
     ? `<div style="background:var(--gray-light);border:1px solid var(--border-dark);border-radius:var(--radius);padding:12px 14px;margin-top:12px;">
@@ -478,34 +503,30 @@ function rmTabInfoHtml(g){
          <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${g.suspendReason.at}</div>
        </div>`
     : '';
-  // [Phase 17-CI] 자원 상태 관리 카드 — 편집 모드 토글로 상태 직접 변경
+  // [Phase 17-CJ] 자원 상태 관리 — 컴팩트 한 줄 (도메인 라벨: KPX 등록대기/등록완료/운영정지)
   const isStatusEditing = rmStatusEditingId === g.id;
   const statusOpts = [
-    { key:'waiting',   label:'승인대기' },
-    { key:'active',    label:'활성' },
-    { key:'suspended', label:'일시중지' },
+    { key:'waiting',   label:'KPX 등록대기' },
+    { key:'active',    label:'등록완료' },
+    { key:'suspended', label:'운영정지' },
   ];
   const statusEditCard = `
-  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow-xs);">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="font-size:14px;font-weight:700;color:var(--navy);letter-spacing:-0.01em;">자원 상태 관리</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--g-50);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:var(--text-sub);font-weight:500;">자원 상태</span>
       ${isStatusEditing
-        ? `<div style="display:flex;gap:8px;">
-             <button class="btn btn-secondary btn-sm" onclick="rmCancelStatusEdit(${g.id})">취소</button>
-             <button class="btn btn-primary btn-sm" onclick="rmSaveStatus(${g.id})">저장</button>
-           </div>`
-        : `<button class="btn btn-secondary btn-sm" onclick="rmOpenStatusEdit(${g.id})">수정</button>`}
-    </div>
-    <div style="display:flex;align-items:center;gap:14px;">
-      <label style="font-size:13px;color:var(--text-sub);font-weight:500;">KPX 등록/활성 상태</label>
-      ${isStatusEditing
-        ? `<select id="rm-status-edit-${g.id}" style="padding:9px 14px;border:1px solid var(--blue);border-radius:var(--r);font-size:13px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;box-shadow:0 0 0 2px rgba(27,95,193,0.1);">
+        ? `<select id="rm-status-edit-${g.id}" style="padding:6px 10px;border:1px solid var(--blue);border-radius:6px;font-size:12px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;">
              ${statusOpts.map(opt => `<option value="${opt.key}"${opt.key===g.status?' selected':''}>${opt.label}</option>`).join('')}
-           </select>
-           <span style="font-size:11px;color:var(--blue);font-weight:500;">편집 중</span>`
-        : `<span class="badge ${statusBadgeClass(g.status)}" style="font-size:13px;padding:5px 14px;">${statusLabelRM(g.status)}</span>
-           <span style="font-size:11px;color:var(--text-hint);">활성 상태는 매월 KPX 기본정산금 대상</span>`}
+           </select>`
+        : `<span class="badge ${statusBadgeClass(g.status)}" style="font-size:12px;padding:4px 10px;">${statusLabelRM(g.status)}</span>`}
+      <span style="font-size:10px;color:var(--text-hint);">등록완료 시 매월 KPX 기본정산금 대상</span>
     </div>
+    ${isStatusEditing
+      ? `<div style="display:flex;gap:6px;">
+           <button class="btn btn-secondary btn-sm" onclick="rmCancelStatusEdit(${g.id})">취소</button>
+           <button class="btn btn-primary btn-sm" onclick="rmSaveStatus(${g.id})">저장</button>
+         </div>`
+      : `<button class="btn btn-secondary btn-sm" onclick="rmOpenStatusEdit(${g.id})">상태 수정</button>`}
   </div>`;
 
   return `${statusEditCard}
@@ -1133,6 +1154,48 @@ function rmUploadFile(){
   rmRenderDetailBody(g);
   rmRenderDetailFooter(g);
   showToast('신청서가 업로드되었습니다.');
+}
+
+/* [Phase 17-CJ] 추가 서류 업로드/변경/삭제 */
+function rmAddExtraDoc(gid){
+  const g = groupById(gid); if(!g) return;
+  const label = prompt('서류 이름을 입력하세요 (예: 사업자등록증, 통장사본, 위임장 등)');
+  if(!label) return;
+  if(!Array.isArray(g.docs)) g.docs = [];
+  const docId = 'doc_' + (Math.floor(Math.random()*100000).toString(36));
+  g.docs.push({
+    id: docId,
+    label: label.trim(),
+    name: `${label.trim()}_${g.name}.pdf`,
+    size: 200000 + Math.floor(Math.random()*300000),
+    uploadedAt: nowStr(),
+  });
+  logAudit?.({objectType:'group', objectId:gid, action:'doc_uploaded',
+    title:`서류 업로드 — ${g.name}`, desc:label.trim(), actor:'운영자', tone:'info'});
+  showToast(`${label.trim()} 업로드 완료`);
+  rmRenderDetailBody(g);
+}
+function rmUpdateExtraDoc(gid, docId){
+  const g = groupById(gid); if(!g) return;
+  const doc = (g.docs||[]).find(d => d.id === docId);
+  if(!doc) return;
+  doc.name = `${doc.label}_${g.name}_v${Math.floor(Math.random()*99)+1}.pdf`;
+  doc.uploadedAt = nowStr();
+  logAudit?.({objectType:'group', objectId:gid, action:'doc_updated',
+    title:`서류 변경 — ${g.name}`, desc:doc.label, actor:'운영자', tone:'info'});
+  showToast(`${doc.label} 파일 변경 완료`);
+  rmRenderDetailBody(g);
+}
+function rmRemoveExtraDoc(gid, docId){
+  const g = groupById(gid); if(!g) return;
+  const doc = (g.docs||[]).find(d => d.id === docId);
+  if(!doc) return;
+  if(!confirm(`'${doc.label}' 서류를 삭제할까요?`)) return;
+  g.docs = g.docs.filter(d => d.id !== docId);
+  logAudit?.({objectType:'group', objectId:gid, action:'doc_deleted',
+    title:`서류 삭제 — ${g.name}`, desc:doc.label, actor:'운영자', tone:'warn'});
+  showToast(`${doc.label} 삭제 완료`);
+  rmRenderDetailBody(g);
 }
 function rmActivate(gid){
   const g = groupById(gid); if(!g) return;
