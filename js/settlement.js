@@ -254,14 +254,17 @@ function stmBasicGotoList(){
 
 /* list mode ↔ detail mode 토글 — KPI·필터·list 영역 숨김/표시 */
 function stmBasicToggleViews(showDetail){
-  // [Phase 17-BW] ID 기반 강제 hide — querySelector가 못 찾던 케이스 해결
-  const hideStyle = showDetail ? 'none' : '';
-  ['stmb-wfnote', 'stmb-kpi-row', 'stmb-filter-row', 'stmb-list-body'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = hideStyle;
+  // [Phase 17-CH] stm-basic-view 자식 순회 강제 — 새 요소 추가돼도 자동 처리
+  // 상세 진입 시 detail-body 외 KPI/필터/wf-note/list 모두 확실히 hide
+  const view = document.getElementById('stm-basic-view');
+  if(!view) return;
+  Array.from(view.children).forEach(child => {
+    if(child.id === 'stmb-detail-body'){
+      child.style.display = showDetail ? '' : 'none';
+    } else {
+      child.style.display = showDetail ? 'none' : '';
+    }
   });
-  const detailBody = document.getElementById('stmb-detail-body');
-  if(detailBody) detailBody.style.display = showDetail ? '' : 'none';
 }
 
 /* 상세 렌더 — 자원그룹별 정산 row의 detail view */
