@@ -243,9 +243,6 @@ function rmRenderGroupList(list){
         <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;font-weight:500;">${cnt}명</span>
         <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;font-weight:600;color:var(--blue);">${cap.toLocaleString()}</span>
         <span style="text-align:center;">
-          ${g.status==='active'?`<button class="btn btn-secondary btn-sm" onclick="rmOpenMapping(${g.id})">+ 추가</button>`:'<span style="font-size:10px;color:var(--text-hint);">—</span>'}
-        </span>
-        <span style="text-align:center;">
           <button class="btn btn-primary btn-sm" onclick="rmOpenDetail(${g.id})">상세</button>
         </span>
       </div>
@@ -481,9 +478,39 @@ function rmTabInfoHtml(g){
          <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${g.suspendReason.at}</div>
        </div>`
     : '';
-  return `<div class="detail-field-grid">
+  // [Phase 17-CI] 자원 상태 관리 카드 — 편집 모드 토글로 상태 직접 변경
+  const isStatusEditing = rmStatusEditingId === g.id;
+  const statusOpts = [
+    { key:'waiting',   label:'승인대기' },
+    { key:'active',    label:'활성' },
+    { key:'suspended', label:'일시중지' },
+  ];
+  const statusEditCard = `
+  <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow-xs);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:14px;font-weight:700;color:var(--navy);letter-spacing:-0.01em;">자원 상태 관리</div>
+      ${isStatusEditing
+        ? `<div style="display:flex;gap:8px;">
+             <button class="btn btn-secondary btn-sm" onclick="rmCancelStatusEdit(${g.id})">취소</button>
+             <button class="btn btn-primary btn-sm" onclick="rmSaveStatus(${g.id})">저장</button>
+           </div>`
+        : `<button class="btn btn-secondary btn-sm" onclick="rmOpenStatusEdit(${g.id})">수정</button>`}
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <label style="font-size:13px;color:var(--text-sub);font-weight:500;">KPX 등록/활성 상태</label>
+      ${isStatusEditing
+        ? `<select id="rm-status-edit-${g.id}" style="padding:9px 14px;border:1px solid var(--blue);border-radius:var(--r);font-size:13px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;box-shadow:0 0 0 2px rgba(27,95,193,0.1);">
+             ${statusOpts.map(opt => `<option value="${opt.key}"${opt.key===g.status?' selected':''}>${opt.label}</option>`).join('')}
+           </select>
+           <span style="font-size:11px;color:var(--blue);font-weight:500;">편집 중</span>`
+        : `<span class="badge ${statusBadgeClass(g.status)}" style="font-size:13px;padding:5px 14px;">${statusLabelRM(g.status)}</span>
+           <span style="font-size:11px;color:var(--text-hint);">활성 상태는 매월 KPX 기본정산금 대상</span>`}
+    </div>
+  </div>`;
+
+  return `${statusEditCard}
+  <div class="detail-field-grid">
     <div class="detail-field"><div class="detail-field-label">자원유형</div><div class="detail-field-val">${g.type}</div></div>
-    <div class="detail-field"><div class="detail-field-label">상태</div><div class="detail-field-val"><span class="badge ${statusBadgeClass(g.status)}">${statusLabelRM(g.status)}</span></div></div>
     ${extra}
     <div class="detail-field"><div class="detail-field-label">참여고객</div><div class="detail-field-val">${rmGroupCustomerCount(g)}명</div></div>
     <div class="detail-field"><div class="detail-field-label">참여용량</div><div class="detail-field-val blue">${rmGroupCapacityTotal(g).toLocaleString()} kW</div></div>
@@ -492,6 +519,40 @@ function rmTabInfoHtml(g){
   <div style="font-size:12px;font-weight:600;color:var(--text-sub);margin-bottom:8px;">등록 신청서</div>
   ${fileBox}
   ${suspendBox}`;
+}
+
+/* [Phase 17-CI] 자원 상태 편집 모드 관리 */
+let rmStatusEditingId = null;
+function rmOpenStatusEdit(gid){
+  rmStatusEditingId = gid;
+  const g = groupById(gid); if(!g) return;
+  rmOpenDetail(gid, 'info');
+}
+function rmCancelStatusEdit(gid){
+  rmStatusEditingId = null;
+  const g = groupById(gid); if(!g) return;
+  rmOpenDetail(gid, 'info');
+}
+function rmSaveStatus(gid){
+  const g = groupById(gid); if(!g) return;
+  const sel = document.getElementById(`rm-status-edit-${gid}`);
+  if(!sel) return;
+  const newStatus = sel.value;
+  const oldStatus = g.status;
+  if(newStatus !== oldStatus){
+    g.status = newStatus;
+    if(typeof logAudit === 'function'){
+      logAudit({objectType:'group', objectId:gid, action:'status_manual_override',
+        title:`자원그룹 상태 변경 — ${g.name}`,
+        desc:`${statusLabelRM(oldStatus)} → ${statusLabelRM(newStatus)}`,
+        actor:'운영자', tone:'info'});
+    }
+  }
+  rmStatusEditingId = null;
+  if(typeof showToast === 'function') showToast(`자원 상태 저장 — ${statusLabelRM(newStatus)}`);
+  rmOpenDetail(gid, 'info');
+  if(typeof rmApplyFilter === 'function') rmApplyFilter();
+  if(typeof rmRefreshSummary === 'function') rmRefreshSummary();
 }
 function rmTabOpHtml(g){
   if(!g.operational) return '<div class="empty">가동 데이터가 없습니다.</div>';
