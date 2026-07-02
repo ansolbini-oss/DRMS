@@ -117,6 +117,11 @@ const stmBasicState = {
 };
 
 function stmBasicInit(){
+  // [Phase 17-CP] 사이드바로 기본 정산금 재진입 시 항상 리스트 모드로 리셋
+  //   (상세 진입 상태에서 다른 페이지 갔다 돌아와도 리스트 노출)
+  stmBasicState.currentDetailId = null;
+  stmBasicToggleViews(false);
+
   // 필터 초기값 설정 (한 번만)
   const monthEl = document.getElementById('stmb-month');
   if(monthEl && !monthEl.value) monthEl.value = stmBasicState.month;
@@ -254,8 +259,7 @@ function stmBasicGotoList(){
 
 /* list mode ↔ detail mode 토글 — KPI·필터·list 영역 숨김/표시 */
 function stmBasicToggleViews(showDetail){
-  // [Phase 17-CH] stm-basic-view 자식 순회 강제 — 새 요소 추가돼도 자동 처리
-  // 상세 진입 시 detail-body 외 KPI/필터/wf-note/list 모두 확실히 hide
+  // [Phase 17-CP] 이중 안전화 — 자식 순회 + 명시적 ID hide 병행
   const view = document.getElementById('stm-basic-view');
   if(!view) return;
   Array.from(view.children).forEach(child => {
@@ -265,6 +269,14 @@ function stmBasicToggleViews(showDetail){
       child.style.display = showDetail ? 'none' : '';
     }
   });
+  // 자식 순회 놓쳐도 확실히 처리
+  const listMode = !showDetail;
+  ['stmb-wfnote','stmb-kpi-row','stmb-filter-row','stmb-list-body'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = listMode ? '' : 'none';
+  });
+  const detail = document.getElementById('stmb-detail-body');
+  if(detail) detail.style.display = showDetail ? '' : 'none';
 }
 
 /* 상세 렌더 — 자원그룹별 정산 row의 detail view */
