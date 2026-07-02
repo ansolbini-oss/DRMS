@@ -6,13 +6,13 @@
 const pcState = { filter:{status:'',data:'',type:'',q:''}, currentId:null };
 
 // [Phase 17-L] 사전검증 단계 재정리 (도메인 통합)
-//   - 옛 'SMD 데이터 분석' → 인프라 검증의 미터링 데이터 측면이라 인프라 검증에 통합
-//   - 옛 '악의성 검증' → RRMSE 분석이 악의성 탐지의 핵심 통계 도구이므로 RRMSE에 통합
+//   - 옛 'SMD 데이터 분석' → 인프라 검증에 통합 (Phase 17-CX에서 완전 제거)
+//   - 옛 '악의성 검증' → RRMSE 분석에 통합
 // 결과: 4단계 (외부데이터 → 인프라 → RRMSE → CBL)
-// [Phase 17-CW] 사전검증 desc에서 RTU 삭제 — 사전검증 시점엔 RTU가 아직 없고 AMI/SMD 계량 데이터만 검증 대상
+// [Phase 17-CX] 사전검증 인프라 검증은 한전 AMI 계량 데이터만 확인 (RTU·SMD 모두 제거)
 const pcStepDefs = [
-  {key:'ext',   name:'외부데이터 조회', desc:'한전·파워플래너 연동',                       auto:false},
-  {key:'infra', name:'인프라 검증',      desc:'AMI/SMD 설치·통신 및 계량 데이터 수집 확인', auto:false},
+  {key:'ext',   name:'외부데이터 조회', desc:'한전·파워플래너 연동',                    auto:false},
+  {key:'infra', name:'인프라 검증',      desc:'한전 AMI 설치·통신 및 계량 데이터 수집 확인', auto:false},
   {key:'rrmse', name:'RRMSE 분석',       desc:'부하 패턴 오차 분석 — 악의성 탐지 (자동)',   auto:true},
   {key:'cbl',   name:'CBL 분석',         desc:'기준부하 산정 및 유형 선택',                  auto:false},
 ];
@@ -858,22 +858,11 @@ function pcStepBodyHtml(key, c, st){
     ${st===0?'<div class="info-box danger">조회 실패 — 한전 API 응답 오류 (KEPCO-404)</div>':''}`;
   }
   if(key==='infra'){
-    // [Phase 17-CW] 사전검증 인프라 검증에서 RTU 필드 제거
-    //   RTU는 계약 이후 자원관리에서 관리 (사전검증 단계엔 계량 데이터만 검증 대상)
-    return `<div class="info-box">AMI/SMD 계량기 설치·통신 상태를 확인합니다.</div>
-    <div class="form-row"><label class="form-label">AMI 계량기 설치</label>
+    // [Phase 17-CX] 사전검증 인프라 검증에서 RTU·SMD 모두 제거 — 한전 AMI만 확인
+    return `<div class="info-box">한전 AMI 계량기 설치·통신 상태를 확인합니다.</div>
+    <div class="form-row"><label class="form-label">한전 AMI 계량기 설치</label>
       <select class="form-select" id="infra-ami"><option value="설치">설치</option><option value="미설치">미설치</option><option value="설치예정">설치예정</option></select>
     </div>`;
-  }
-  if(key==='smd'){
-    return `<div class="info-box">SMD(Smart Metering Device) 기기 설치 여부와 수집 데이터를 확인합니다.</div>
-    <div class="form-row"><label class="form-label">SMD 기기 설치 상태</label>
-      <select class="form-select"><option>설치완료</option><option>설치중</option><option>미설치</option></select>
-    </div>
-    <div class="form-row"><label class="form-label">기기 ID</label>
-      <div style="display:flex;gap:8px;"><input class="form-input" id="smd-id" placeholder="SMD 기기 ID" style="flex:1"><button class="btn btn-primary btn-sm" onclick="pcCheckSmd()">조회</button></div>
-    </div>
-    <div id="smd-result-box"></div>`;
   }
   if(key==='mali'){
     return `<div class="info-box">이상 사용 패턴을 자동으로 분석합니다. (AUTO)</div>
@@ -918,12 +907,6 @@ function pcStepBodyHtml(key, c, st){
     ${st===2?`<div class="info-box success">산정 완료 — CBL 유형: <b>${c.cblType}</b>, 평균: <b>${c.cblAvg}</b></div>`:''}`;
   }
   return '';
-}
-
-function pcCheckSmd(){
-  const id = $('smd-id')?.value?.trim();
-  if(!id){ showToast('SMD 기기 ID를 입력하세요.'); return; }
-  $('smd-result-box').innerHTML = `<div class="info-box success" style="margin-top:10px;">SMD 통신 정상 · 15분 데이터 수신 중 · 완결성 98.7%</div>`;
 }
 
 function pcCompleteStep(stepIdx){
