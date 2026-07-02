@@ -172,13 +172,14 @@ function stmBasicStatusBadge(s){
 
 function stmBasicRender(){
   const rows = stmBasicFilteredRows();
-  // KPI 갱신
+  // [Phase 17-CQ] KPI 카드 제거로 갱신 코드 무효화 — element 있으면 유지, 없으면 skip
+  const setKpi = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
   const countBy = s => stmBasicSeed.filter(r => r.month === stmBasicState.month && r.status === s).length;
-  document.getElementById('stmb-kpi-total').textContent    = stmBasicSeed.filter(r => r.month === stmBasicState.month).length;
-  document.getElementById('stmb-kpi-pending').textContent  = countBy('pending');
-  document.getElementById('stmb-kpi-invoiced').textContent = countBy('invoiced');
-  document.getElementById('stmb-kpi-inprog').textContent   = countBy('in_progress');
-  document.getElementById('stmb-kpi-done').textContent     = countBy('completed');
+  setKpi('stmb-kpi-total',    stmBasicSeed.filter(r => r.month === stmBasicState.month).length);
+  setKpi('stmb-kpi-pending',  countBy('pending'));
+  setKpi('stmb-kpi-invoiced', countBy('invoiced'));
+  setKpi('stmb-kpi-inprog',   countBy('in_progress'));
+  setKpi('stmb-kpi-done',     countBy('completed'));
 
   const body = document.getElementById('stmb-list-body');
   if(!body) return;
