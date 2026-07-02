@@ -6,12 +6,13 @@
 const pcState = { filter:{status:'',data:'',type:'',q:''}, currentId:null };
 
 // [Phase 17-L] 사전검증 단계 재정리 (도메인 통합)
-//   - 옛 'SMD 데이터 분석' → 인프라 검증의 RTU·미터링 데이터 측면이라 인프라 검증에 통합
+//   - 옛 'SMD 데이터 분석' → 인프라 검증의 미터링 데이터 측면이라 인프라 검증에 통합
 //   - 옛 '악의성 검증' → RRMSE 분석이 악의성 탐지의 핵심 통계 도구이므로 RRMSE에 통합
 // 결과: 4단계 (외부데이터 → 인프라 → RRMSE → CBL)
+// [Phase 17-CW] 사전검증 desc에서 RTU 삭제 — 사전검증 시점엔 RTU가 아직 없고 AMI/SMD 계량 데이터만 검증 대상
 const pcStepDefs = [
   {key:'ext',   name:'외부데이터 조회', desc:'한전·파워플래너 연동',                       auto:false},
-  {key:'infra', name:'인프라 검증',      desc:'AMI/RTU/SMD 설치·통신 및 데이터 수집 확인',  auto:false},
+  {key:'infra', name:'인프라 검증',      desc:'AMI/SMD 설치·통신 및 계량 데이터 수집 확인', auto:false},
   {key:'rrmse', name:'RRMSE 분석',       desc:'부하 패턴 오차 분석 — 악의성 탐지 (자동)',   auto:true},
   {key:'cbl',   name:'CBL 분석',         desc:'기준부하 산정 및 유형 선택',                  auto:false},
 ];
@@ -857,14 +858,12 @@ function pcStepBodyHtml(key, c, st){
     ${st===0?'<div class="info-box danger">조회 실패 — 한전 API 응답 오류 (KEPCO-404)</div>':''}`;
   }
   if(key==='infra'){
-    return `<div class="info-box">AMI 계량기 및 RTU 설치·통신 상태를 확인합니다.</div>
+    // [Phase 17-CW] 사전검증 인프라 검증에서 RTU 필드 제거
+    //   RTU는 계약 이후 자원관리에서 관리 (사전검증 단계엔 계량 데이터만 검증 대상)
+    return `<div class="info-box">AMI/SMD 계량기 설치·통신 상태를 확인합니다.</div>
     <div class="form-row"><label class="form-label">AMI 계량기 설치</label>
       <select class="form-select" id="infra-ami"><option value="설치">설치</option><option value="미설치">미설치</option><option value="설치예정">설치예정</option></select>
-    </div>
-    <div class="form-row"><label class="form-label">RTU 통신</label>
-      <div style="display:flex;gap:8px;"><input class="form-input" id="infra-rtu" placeholder="RTU ID" style="flex:1"><button class="btn btn-primary btn-sm" onclick="pcCheckRtu()">조회</button></div>
-    </div>
-    <div id="infra-rtu-box"></div>`;
+    </div>`;
   }
   if(key==='smd'){
     return `<div class="info-box">SMD(Smart Metering Device) 기기 설치 여부와 수집 데이터를 확인합니다.</div>
@@ -921,11 +920,6 @@ function pcStepBodyHtml(key, c, st){
   return '';
 }
 
-function pcCheckRtu(){
-  const id = $('infra-rtu')?.value?.trim();
-  if(!id){ showToast('RTU ID를 입력하세요.'); return; }
-  $('infra-rtu-box').innerHTML = `<div class="info-box success" style="margin-top:10px;">RTU 통신 정상 · 실시간 데이터 수신 중</div>`;
-}
 function pcCheckSmd(){
   const id = $('smd-id')?.value?.trim();
   if(!id){ showToast('SMD 기기 ID를 입력하세요.'); return; }
