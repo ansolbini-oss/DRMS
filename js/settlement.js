@@ -1040,12 +1040,19 @@ function stmRenderProgress(ev){
         <td>${transferCell}</td>
       </tr>`;
     }
+    // 개별 안내/이체 = 상태 표시(비활성). 처리는 앞 체크박스 선택 후 상단 [일괄] 버튼으로.
+    const notifyCell = d.notifiedAt
+      ? `<span style="color:var(--green);font-weight:500;">☑ ${d.notifiedAt.substring(5,10)}</span>`
+      : `<span style="color:var(--text-hint);">☐ 미처리</span>`;
+    const transferCell = d.transferredAt
+      ? `<span style="color:var(--green);font-weight:500;">☑ ${d.transferredAt.substring(5,10)}</span>`
+      : `<span style="color:var(--text-hint);">☐ 미처리</span>`;
     return `<tr>
       <td style="width:40px;text-align:center;"><input type="checkbox" class="stm-prog-select" data-cid="${d.customerId}"></td>
       <td>${d.customerName}</td>
       <td class="num">${(d.finalAmount||d.amount||0).toLocaleString()}</td>
-      <td><label><input type="checkbox" ${d.notifiedAt?'checked':''} onchange="stmToggleNotify('${d.customerId}', this.checked)"> ${d.notifiedAt?d.notifiedAt.substring(5,10):'안내'}</label></td>
-      <td><label><input type="checkbox" ${d.transferredAt?'checked':''} onchange="stmToggleTransfer('${d.customerId}', this.checked)"> ${d.transferredAt?d.transferredAt.substring(5,10):'이체'}</label></td>
+      <td>${notifyCell}</td>
+      <td>${transferCell}</td>
     </tr>`;
   }).join('');
 
