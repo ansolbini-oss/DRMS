@@ -260,24 +260,18 @@ function stmBasicGotoList(){
 
 /* list mode ↔ detail mode 토글 — KPI·필터·list 영역 숨김/표시 */
 function stmBasicToggleViews(showDetail){
-  // [Phase 17-CP] 이중 안전화 — 자식 순회 + 명시적 ID hide 병행
-  const view = document.getElementById('stm-basic-view');
-  if(!view) return;
-  Array.from(view.children).forEach(child => {
-    if(child.id === 'stmb-detail-body'){
-      child.style.display = showDetail ? '' : 'none';
-    } else {
-      child.style.display = showDetail ? 'none' : '';
-    }
-  });
-  // 자식 순회 놓쳐도 확실히 처리
-  const listMode = !showDetail;
+  // [Phase 17-CS] CSS `!important` override 대응 — setProperty로 강제
+  //   .rp-kpi-grid / .rp-filter-bar에 display:grid/flex !important가 걸려있어
+  //   element.style.display='none'이 무시됨. setProperty(...,'important') 로 강제.
+  const setHide = (el, hide) => {
+    if(!el) return;
+    if(hide) el.style.setProperty('display', 'none', 'important');
+    else     el.style.removeProperty('display');
+  };
   ['stmb-wfnote','stmb-kpi-row','stmb-filter-row','stmb-list-body'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = listMode ? '' : 'none';
+    setHide(document.getElementById(id), showDetail);
   });
-  const detail = document.getElementById('stmb-detail-body');
-  if(detail) detail.style.display = showDetail ? '' : 'none';
+  setHide(document.getElementById('stmb-detail-body'), !showDetail);
 }
 
 /* 상세 렌더 — 자원그룹별 정산 row의 detail view */
