@@ -522,11 +522,18 @@ function statusBadgeClass(s){
   }
 }
 function statusLabelRM(s){
-  // [Phase 17-CJ] 자원 상태 라벨 재정의 (KPX 등록 흐름 반영)
-  //   waiting → KPX 등록대기 (자원 생성 초기)
-  //   active → 등록완료 (KPX 등록 완료 = 활성 상태)
-  //   suspended → 운영정지
-  return s==='active'?'등록완료':s==='waiting'?'KPX 등록대기':s==='suspended'?'운영정지':s;
+  // [Phase 17-CY] 자원 상태 라벨 재정의 — 운영 상태 축으로 통합
+  //   waiting → 시험대기  (자원 생성됐지만 아직 등록시험 전)
+  //   active → 운영중    (시험 합격 또는 면제, 실제 감축 대상)
+  //   suspended → 운영정지 (계약해지 or 지속적 이상)
+  return s==='active'?'운영중':s==='waiting'?'시험대기':s==='suspended'?'운영정지':s;
+}
+/* [Phase 17-CY] 자원그룹의 최종 운영 상태 — trial.FAILED 우선, 그 외는 status 매핑 */
+function operationalStatusMeta(g){
+  if(g && g.trial && g.trial.status === 'FAILED'){
+    return {label:'등록불합격', cls:'badge-fail'};
+  }
+  return {label: statusLabelRM(g?.status), cls: statusBadgeClass(g?.status)};
 }
 function dataBadgeClass(d){ return d==='수집완료'?'badge-done':d==='수집중'?'badge-collecting':'badge-fail'; }
 

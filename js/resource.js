@@ -219,14 +219,10 @@ function rmRenderGroupList(list){
     };
     const dcMeta = dcStatus ? dcMap[dcStatus] : {cls:'dc-none', label:'미수집'};
     const dcChip = `<span class="dc-chip ${dcMeta.cls}" title="데이터 수집: ${dcMeta.label}"><span class="dc-led"></span>${dcMeta.label}</span>`;
-    // 등록시험 셀: 면제면 회색 '면제', 시험 대상이면 상태 뱃지만 표시 (상세 탭에서 이력 확인)
-    let trialCell = '';
-    if(!g.trial || !g.trial.required){
-      trialCell = `<span class="badge badge-gray" style="font-size:10px;">면제</span>`;
-    } else {
-      const tm = trialStatusMeta(g.trial);
-      trialCell = `<span class="badge ${tm.badge}" style="font-size:10px;">${tm.label}</span>`;
-    }
+    // [Phase 17-CY] 상태 + 등록시험 두 컬럼 → 운영 상태 하나로 통합
+    //   등록불합격(trial.status=FAILED)은 이동 경로 없이 리스트에 계속 표기
+    const opMeta = operationalStatusMeta(g);
+    const opCell = `<span class="badge ${opMeta.cls}" style="font-size:11px;">${opMeta.label}</span>`;
     return `<div class="group-row">
       <div class="group-header">
         <span style="display:flex;align-items:center;justify-content:center;">
@@ -237,8 +233,7 @@ function rmRenderGroupList(list){
         </span>
         <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;"><span class="badge badge-gray">${g.type}</span></span>
         <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;text-align:center;">${dcChip}</span>
-        <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;"><span class="badge ${statusBadgeClass(g.status)}">${statusLabelRM(g.status)}</span></span>
-        <span onclick="rmOpenDetail(${g.id}, 'trial')" style="cursor:pointer;">${trialCell}</span>
+        <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;">${opCell}</span>
         <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;color:var(--text-sub);font-size:11px;">${g.date}</span>
         <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;font-weight:500;">${cnt}명</span>
         <span onclick="rmOpenDetail(${g.id})" style="cursor:pointer;font-weight:600;color:var(--blue);">${cap.toLocaleString()}</span>
@@ -503,23 +498,25 @@ function rmTabInfoHtml(g){
          <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${g.suspendReason.at}</div>
        </div>`
     : '';
-  // [Phase 17-CJ] 자원 상태 관리 — 컴팩트 한 줄 (도메인 라벨: KPX 등록대기/등록완료/운영정지)
+  // [Phase 17-CY] 자원 상태 관리 — 컴팩트 한 줄 (운영 상태 축: 시험대기/운영중/운영정지)
+  //   등록불합격은 trial.status에서 자동 파생되어 편집 불가 (재시험/이관 별도 흐름)
   const isStatusEditing = rmStatusEditingId === g.id;
   const statusOpts = [
-    { key:'waiting',   label:'KPX 등록대기' },
-    { key:'active',    label:'등록완료' },
+    { key:'waiting',   label:'시험대기' },
+    { key:'active',    label:'운영중' },
     { key:'suspended', label:'운영정지' },
   ];
+  const opMeta = (typeof operationalStatusMeta === 'function') ? operationalStatusMeta(g) : {label:statusLabelRM(g.status), cls:statusBadgeClass(g.status)};
   const statusEditCard = `
   <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--g-50);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;">
     <div style="display:flex;align-items:center;gap:10px;">
-      <span style="font-size:12px;color:var(--text-sub);font-weight:500;">자원 상태</span>
+      <span style="font-size:12px;color:var(--text-sub);font-weight:500;">운영 상태</span>
       ${isStatusEditing
         ? `<select id="rm-status-edit-${g.id}" style="padding:6px 10px;border:1px solid var(--blue);border-radius:6px;font-size:12px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;">
              ${statusOpts.map(opt => `<option value="${opt.key}"${opt.key===g.status?' selected':''}>${opt.label}</option>`).join('')}
            </select>`
-        : `<span class="badge ${statusBadgeClass(g.status)}" style="font-size:12px;padding:4px 10px;">${statusLabelRM(g.status)}</span>`}
-      <span style="font-size:10px;color:var(--text-hint);">등록완료 시 매월 KPX 기본정산금 대상</span>
+        : `<span class="badge ${opMeta.cls}" style="font-size:12px;padding:4px 10px;">${opMeta.label}</span>`}
+      <span style="font-size:10px;color:var(--text-hint);">운영중일 때 매월 KPX 기본정산금 대상</span>
     </div>
     ${isStatusEditing
       ? `<div style="display:flex;gap:6px;">
