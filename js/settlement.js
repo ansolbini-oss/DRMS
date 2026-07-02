@@ -309,24 +309,10 @@ function stmBasicRenderDetail(){
   const totalPayout = allocations.reduce((s,x) => s + x.payout, 0);
 
   body.innerHTML = `
-  <!-- [Phase 17-BU] 헤더 — 정보 위계 재정리: 목록 버튼(좌상단) / 자원명(L1) / 메타(L2) / 상태 뱃지 -->
-  <div style="padding:8px 0 16px;">
-    <button class="btn btn-secondary btn-sm" onclick="stmBasicGotoList()" style="margin-bottom:14px;">← 목록으로</button>
-    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:20px 24px;box-shadow:var(--shadow-xs);">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:20px;font-weight:700;color:var(--navy);letter-spacing:-0.01em;line-height:1.2;">${g.name}</div>
-          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-sub);">
-            <span><span style="color:var(--text-hint);">정산월</span> <b style="color:var(--navy);font-weight:600;font-variant-numeric:tabular-nums;">${row.month}</b></span>
-            <span style="color:var(--border-dark);">|</span>
-            <span><span style="color:var(--text-hint);">DR 유형</span> <b style="color:var(--navy);font-weight:600;">${row.drType}</b></span>
-            <span style="color:var(--border-dark);">|</span>
-            <span><span style="color:var(--text-hint);">의무감축용량</span> <b style="color:var(--navy);font-weight:600;font-variant-numeric:tabular-nums;">${row.mandatoryCapacity.toLocaleString()} kW</b></span>
-          </div>
-        </div>
-        <span class="badge ${badge.cls}" style="flex-shrink:0;">${badge.label}</span>
-      </div>
-    </div>
+  <!-- [Phase 17-CT] 헤더 간소화 — 자원명/메타는 아래 '자원 정보' 카드에서 중복 제공, 상태 뱃지만 남김 -->
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 16px;">
+    <button class="btn btn-secondary btn-sm" onclick="stmBasicGotoList()">← 목록으로</button>
+    <span class="badge ${badge.cls}" style="font-size:13px;padding:6px 14px;">${badge.label}</span>
   </div>
 
   <!-- [Phase 17-CA] 자원 정보 + KPX 입금 + 60hz 마진 — 폰트·패딩 가독성 ↑ -->
