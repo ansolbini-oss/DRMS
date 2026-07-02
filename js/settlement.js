@@ -338,6 +338,11 @@ function stmBasicRenderDetail(){
     <!-- KPX 입금 입력 -->
     <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:22px 26px;box-shadow:var(--shadow-xs);">
       <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:18px;letter-spacing:-0.01em;">KPX 입금 정보</div>
+      <!-- [Phase 17-CU] 입금일을 맨 위로 — 시간 순서(입금일 → 금액)에 맞춤 -->
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">입금일</label>
+        <input type="date" id="stmb-d-date" value="${row.kpxDate || ''}" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:14px;box-sizing:border-box;">
+      </div>
       <div style="margin-bottom:16px;">
         <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">공급가액 (₩)</label>
         <input type="number" id="stmb-d-supply" value="${row.kpxSupply || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:14px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
@@ -346,13 +351,9 @@ function stmBasicRenderDetail(){
         <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">부가세 10% (₩)</label>
         <input type="number" id="stmb-d-vat" value="${row.kpxVat || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:14px;font-variant-numeric:tabular-nums;box-sizing:border-box;">
       </div>
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:18px;">
         <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">합계 (₩)</label>
         <input type="number" id="stmb-d-total" value="${row.kpxTotal || 0}" oninput="stmBasicRecalc()" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:15px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;background:var(--g-50);box-sizing:border-box;">
-      </div>
-      <div style="margin-bottom:18px;">
-        <label style="display:block;font-size:13px;color:var(--text-sub);font-weight:500;margin-bottom:8px;">입금일</label>
-        <input type="date" id="stmb-d-date" value="${row.kpxDate || ''}" style="width:100%;padding:11px 14px;border:1px solid var(--border-dark);border-radius:var(--r);font-size:14px;box-sizing:border-box;">
       </div>
       <button class="btn btn-primary" onclick="stmBasicSaveKpx()" style="width:100%;height:42px;font-size:14px;">저장 + 배분 산정</button>
     </div>
