@@ -986,88 +986,36 @@ function stmRenderDistribution(ev){
   `;
 }
 
-/* [Phase 17-CK] 단계 ③ 고객별 진행 — 편집 모드 토글 + 일괄 처리 + 임시 draft */
-let stmProgressEditingEvId = null;
-let stmProgressDraft = null;   // { [customerId]: { notify, transfer } }
+/* [Phase 17-CM] 단계 ③ 고객별 진행 — 즉시 반영 + 일괄 처리 (편집 모드 X) */
 
-function stmProgressOpenEdit(eventId){
-  const ev = store.events.reduction.find(e => e.id === eventId);
-  if(!ev) return;
-  stmProgressEditingEvId = eventId;
-  const dist = ev.settlement?.customerDistribution || [];
-  stmProgressDraft = {};
-  dist.forEach(d => {
-    stmProgressDraft[d.customerId] = {
-      notify:   !!d.notifiedAt,
-      transfer: !!d.transferredAt,
-    };
-  });
-  stmRenderProgress(ev);
-}
-function stmProgressCancel(eventId){
-  stmProgressEditingEvId = null;
-  stmProgressDraft = null;
-  const ev = store.events.reduction.find(e => e.id === eventId);
-  if(ev) stmRenderProgress(ev);
-}
-function stmProgressSave(eventId){
-  const ev = store.events.reduction.find(e => e.id === eventId);
-  if(!ev || !stmProgressDraft) return;
-  const dist = ev.settlement.customerDistribution || [];
-  const now = nowStr();
-  let changed = 0;
-  dist.forEach(d => {
-    const draft = stmProgressDraft[d.customerId];
-    if(!draft) return;
-    if(draft.notify && !d.notifiedAt){ d.notifiedAt = now; changed++; }
-    else if(!draft.notify && d.notifiedAt){ d.notifiedAt = null; changed++; }
-    if(draft.transfer && !d.transferredAt){ d.transferredAt = now; changed++; }
-    else if(!draft.transfer && d.transferredAt){ d.transferredAt = null; changed++; }
-  });
-  if(typeof logAudit === 'function' && changed > 0){
-    logAudit({objectType:'settlement', objectId:ev.id, action:'progress_bulk_update',
-      title:`고객별 진행 저장 — ${ev.id}`, desc:`${changed}건 변경`,
-      actor:'운영자', tone:'info'});
-  }
-  stmProgressEditingEvId = null;
-  stmProgressDraft = null;
-  if(typeof showToast === 'function') showToast(changed > 0 ? `${changed}건 저장 완료` : '변경 사항 없음');
-  stmRenderProgress(ev);
-  if(typeof stmRenderActions === 'function') stmRenderActions(ev);
-}
-
-/* 임시 draft 갱신 */
-function stmProgressDraftToggle(customerId, field, checked){
-  if(!stmProgressDraft) return;
-  if(!stmProgressDraft[customerId]) stmProgressDraft[customerId] = {notify:false, transfer:false};
-  stmProgressDraft[customerId][field] = checked;
-}
-
-/* 전체 선택/해제 (편집 모드) */
-function stmProgressCheckAll(field, checked){
-  document.querySelectorAll(`.stm-prog-${field}`).forEach(cb => {
-    cb.checked = checked;
-    const cid = cb.dataset.cid;
-    if(cid) stmProgressDraftToggle(cid, field, checked);
-  });
-}
-
-/* 일괄 처리 (선택된 행만 field=true로) */
+/* 개별 체크박스 → 즉시 저장 (기존 stmToggleNotify/Transfer 재활용) */
+/* 일괄 처리 — 선택된 행의 field를 즉시 완료 처리 */
 function stmProgressBulkApply(field){
+  const ev = store.events.reduction.find(e => e.id === stmState.selectedEventId);
+  if(!ev) return;
   const checked = document.querySelectorAll('.stm-prog-select:checked');
   if(checked.length === 0){
     if(typeof showToast === 'function') showToast('처리할 항목을 선택하세요.');
     return;
   }
+  const dist = ev.settlement.customerDistribution || [];
+  const now = nowStr();
+  let changed = 0;
   checked.forEach(cb => {
     const cid = cb.dataset.cid;
-    if(!cid) return;
-    stmProgressDraftToggle(cid, field, true);
-    // 화면상 체크박스도 즉시 반영
-    const target = document.querySelector(`.stm-prog-${field}[data-cid="${cid}"]`);
-    if(target) target.checked = true;
+    const d = dist.find(x => x.customerId === cid);
+    if(!d) return;
+    if(field === 'notify' && !d.notifiedAt){ d.notifiedAt = now; changed++; }
+    if(field === 'transfer' && !d.transferredAt){ d.transferredAt = now; changed++; }
   });
-  if(typeof showToast === 'function') showToast(`${checked.length}건 ${field === 'notify' ? '안내' : '이체'} 처리 표시 — [저장] 클릭 시 반영`);
+  if(typeof logAudit === 'function' && changed > 0){
+    logAudit({objectType:'settlement', objectId:ev.id, action:`bulk_${field}`,
+      title:`고객별 ${field === 'notify' ? '안내' : '이체'} 일괄 완료 — ${ev.id}`,
+      desc:`${changed}건`, actor:'운영자', tone:'info'});
+  }
+  if(typeof showToast === 'function') showToast(`${changed}건 ${field === 'notify' ? '안내' : '이체'} 완료`);
+  stmRenderProgress(ev);
+  if(typeof stmRenderActions === 'function') stmRenderActions(ev);
 }
 
 function stmRenderProgress(ev){
@@ -1079,10 +1027,8 @@ function stmRenderProgress(ev){
     return;
   }
   const locked = s.status==='completed';
-  const isEditing = stmProgressEditingEvId === ev.id;
 
   const rows = dist.map(d => {
-    const draft = stmProgressDraft?.[d.customerId] || { notify: !!d.notifiedAt, transfer: !!d.transferredAt };
     if(locked){
       const notifyCell = d.notifiedAt ? `<span style="color:var(--green);">☑ ${d.notifiedAt.substring(5,10)}</span>` : '<span style="color:var(--text-hint);">☐</span>';
       const transferCell = d.transferredAt ? `<span style="color:var(--green);">☑ ${d.transferredAt.substring(5,10)}</span>` : '<span style="color:var(--text-hint);">☐</span>';
@@ -1094,49 +1040,32 @@ function stmRenderProgress(ev){
         <td>${transferCell}</td>
       </tr>`;
     }
-    // 편집 모드: 체크박스 활성 + draft 갱신 / 조회 모드: disabled + 상태 표시
-    const notifyCheck = isEditing
-      ? `<input type="checkbox" class="stm-prog-notify" data-cid="${d.customerId}" ${draft.notify?'checked':''} onchange="stmProgressDraftToggle('${d.customerId}','notify',this.checked)">`
-      : `<input type="checkbox" ${d.notifiedAt?'checked':''} disabled>`;
-    const transferCheck = isEditing
-      ? `<input type="checkbox" class="stm-prog-transfer" data-cid="${d.customerId}" ${draft.transfer?'checked':''} onchange="stmProgressDraftToggle('${d.customerId}','transfer',this.checked)">`
-      : `<input type="checkbox" ${d.transferredAt?'checked':''} disabled>`;
-    const selectCheck = isEditing
-      ? `<input type="checkbox" class="stm-prog-select" data-cid="${d.customerId}">`
-      : '';
     return `<tr>
-      <td style="width:40px;text-align:center;">${selectCheck}</td>
+      <td style="width:40px;text-align:center;"><input type="checkbox" class="stm-prog-select" data-cid="${d.customerId}"></td>
       <td>${d.customerName}</td>
       <td class="num">${(d.finalAmount||d.amount||0).toLocaleString()}</td>
-      <td><label>${notifyCheck} ${d.notifiedAt?d.notifiedAt.substring(5,10):'안내'}</label></td>
-      <td><label>${transferCheck} ${d.transferredAt?d.transferredAt.substring(5,10):'이체'}</label></td>
+      <td><label><input type="checkbox" ${d.notifiedAt?'checked':''} onchange="stmToggleNotify('${d.customerId}', this.checked)"> ${d.notifiedAt?d.notifiedAt.substring(5,10):'안내'}</label></td>
+      <td><label><input type="checkbox" ${d.transferredAt?'checked':''} onchange="stmToggleTransfer('${d.customerId}', this.checked)"> ${d.transferredAt?d.transferredAt.substring(5,10):'이체'}</label></td>
     </tr>`;
   }).join('');
 
-  const headerActions = locked ? '' : (isEditing
-    ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-         <span style="font-size:11px;color:var(--text-hint);margin-right:auto;">체크박스로 선택 후 일괄 처리 → 저장 클릭 시 반영</span>
-         <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('notify')">일괄 안내 완료</button>
-         <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('transfer')">일괄 이체 완료</button>
-         <button class="btn btn-secondary btn-sm" onclick="stmProgressCancel('${ev.id}')">취소</button>
-         <button class="btn btn-primary btn-sm" onclick="stmProgressSave('${ev.id}')">저장</button>
-       </div>`
-    : `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;justify-content:flex-end;">
-         <button class="btn btn-secondary btn-sm" onclick="stmProgressOpenEdit('${ev.id}')">수정</button>
-       </div>`);
+  const headerActions = locked ? '' : `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;justify-content:flex-end;">
+      <span style="font-size:11px;color:var(--text-hint);margin-right:auto;">체크박스로 선택 후 일괄 처리 가능</span>
+      <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('notify')">일괄 안내 완료</button>
+      <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('transfer')">일괄 이체 완료</button>
+    </div>`;
 
-  // [Phase 17-CL] 헤더 전체 선택 체크박스에 명시적 '전체' 라벨
-  const selectAllHeader = isEditing
-    ? `<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:500;color:var(--text-sub);">
-         <input type="checkbox" onchange="document.querySelectorAll('.stm-prog-select').forEach(cb=>cb.checked=this.checked)"> 전체
-       </label>`
-    : '';
+  const selectAllHeader = locked ? '' : `
+    <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:500;color:var(--text-sub);">
+      <input type="checkbox" onchange="document.querySelectorAll('.stm-prog-select').forEach(cb=>cb.checked=this.checked)"> 전체
+    </label>`;
 
   box.innerHTML = `
     ${headerActions}
     <table class="rp-table">
       <thead><tr>
-        <th style="width:40px;text-align:center;">${selectAllHeader}</th>
+        <th style="text-align:center;">${selectAllHeader}</th>
         <th>고객</th>
         <th style="text-align:right;">지급액</th>
         <th>안내</th>
