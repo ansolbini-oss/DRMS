@@ -1030,8 +1030,8 @@ function stmRenderProgress(ev){
 
   const rows = dist.map(d => {
     if(locked){
-      const notifyCell = d.notifiedAt ? `<span style="color:var(--green);">☑ ${d.notifiedAt.substring(5,10)}</span>` : '<span style="color:var(--text-hint);">☐</span>';
-      const transferCell = d.transferredAt ? `<span style="color:var(--green);">☑ ${d.transferredAt.substring(5,10)}</span>` : '<span style="color:var(--text-hint);">☐</span>';
+      const notifyCell = d.notifiedAt ? `<span style="color:var(--green);">완료 · ${d.notifiedAt.substring(5,10)}</span>` : '<span style="color:var(--text-hint);">미처리</span>';
+      const transferCell = d.transferredAt ? `<span style="color:var(--green);">완료 · ${d.transferredAt.substring(5,10)}</span>` : '<span style="color:var(--text-hint);">미처리</span>';
       return `<tr>
         <td></td>
         <td>${d.customerName}</td>
@@ -1042,11 +1042,11 @@ function stmRenderProgress(ev){
     }
     // 개별 안내/이체 = 상태 표시(비활성). 처리는 앞 체크박스 선택 후 상단 [일괄] 버튼으로.
     const notifyCell = d.notifiedAt
-      ? `<span style="color:var(--green);font-weight:500;">☑ ${d.notifiedAt.substring(5,10)}</span>`
-      : `<span style="color:var(--text-hint);">☐ 미처리</span>`;
+      ? `<span style="color:var(--green);font-weight:500;">완료 · ${d.notifiedAt.substring(5,10)}</span>`
+      : `<span style="color:var(--text-hint);">미처리</span>`;
     const transferCell = d.transferredAt
-      ? `<span style="color:var(--green);font-weight:500;">☑ ${d.transferredAt.substring(5,10)}</span>`
-      : `<span style="color:var(--text-hint);">☐ 미처리</span>`;
+      ? `<span style="color:var(--green);font-weight:500;">완료 · ${d.transferredAt.substring(5,10)}</span>`
+      : `<span style="color:var(--text-hint);">미처리</span>`;
     return `<tr>
       <td style="width:40px;text-align:center;"><input type="checkbox" class="stm-prog-select" data-cid="${d.customerId}"></td>
       <td>${d.customerName}</td>
