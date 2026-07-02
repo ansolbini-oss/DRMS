@@ -1116,8 +1116,8 @@ function stmRenderProgress(ev){
   const headerActions = locked ? '' : (isEditing
     ? `<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
          <span style="font-size:11px;color:var(--text-hint);margin-right:auto;">체크박스로 선택 후 일괄 처리 → 저장 클릭 시 반영</span>
-         <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('notify')">선택 일괄 안내</button>
-         <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('transfer')">선택 일괄 이체</button>
+         <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('notify')">일괄 안내 완료</button>
+         <button class="btn btn-secondary btn-sm" onclick="stmProgressBulkApply('transfer')">일괄 이체 완료</button>
          <button class="btn btn-secondary btn-sm" onclick="stmProgressCancel('${ev.id}')">취소</button>
          <button class="btn btn-primary btn-sm" onclick="stmProgressSave('${ev.id}')">저장</button>
        </div>`
@@ -1125,8 +1125,11 @@ function stmRenderProgress(ev){
          <button class="btn btn-secondary btn-sm" onclick="stmProgressOpenEdit('${ev.id}')">수정</button>
        </div>`);
 
+  // [Phase 17-CL] 헤더 전체 선택 체크박스에 명시적 '전체' 라벨
   const selectAllHeader = isEditing
-    ? `<input type="checkbox" onchange="document.querySelectorAll('.stm-prog-select').forEach(cb=>cb.checked=this.checked)">`
+    ? `<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:500;color:var(--text-sub);">
+         <input type="checkbox" onchange="document.querySelectorAll('.stm-prog-select').forEach(cb=>cb.checked=this.checked)"> 전체
+       </label>`
     : '';
 
   box.innerHTML = `
