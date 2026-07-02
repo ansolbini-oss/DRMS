@@ -380,11 +380,17 @@ function stmBasicRenderDetail(){
     </div>
   </div>
 
-  <!-- [Phase 17-BX] 참여고객별 배분 — 체크박스 + 폰트 가독성 + 사업자별 상태 -->
+  <!-- [Phase 17-CV] 참여고객별 배분 — 액션 버튼바를 표 위로 이동 (조작 우선 배치) -->
   <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-xs);">
-    <div style="padding:14px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;color:var(--navy);">
-      참여고객별 배분 <span style="font-size:13px;color:var(--text-hint);font-weight:400;margin-left:6px;">${customers.length}명</span>
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:600;color:var(--navy);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>참여고객별 배분 <span style="font-size:13px;color:var(--text-hint);font-weight:400;margin-left:6px;">${customers.length}명</span></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary btn-sm" onclick="stmBasicBulkUpdate('invoiced')">선택 항목 세금계산서 발행 표시</button>
+        <button class="btn btn-secondary btn-sm" onclick="stmBasicBulkUpdate('uninvoiced')">발행 취소</button>
+        <button class="btn btn-primary btn-sm" onclick="stmBasicBulkUpdate('settled')">선택 항목 입금 완료 표시</button>
+      </div>
     </div>
+    <div style="padding:8px 20px;background:var(--g-50);border-bottom:1px solid var(--border);font-size:11px;color:var(--text-hint);">※ 세금계산서는 외부 발행, 본 시스템은 상태 기록만</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
         <tr style="background:var(--g-100);">
@@ -425,12 +431,6 @@ function stmBasicRenderDetail(){
         }).join('')}
       </tbody>
     </table>
-    <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:var(--g-50);align-items:center;">
-      <span style="font-size:11px;color:var(--text-hint);margin-right:auto;">※ 세금계산서는 외부 발행, 본 시스템은 상태 기록만</span>
-      <button class="btn btn-secondary btn-sm" onclick="stmBasicBulkUpdate('invoiced')">선택 항목 세금계산서 발행 표시</button>
-      <button class="btn btn-secondary btn-sm" onclick="stmBasicBulkUpdate('uninvoiced')">발행 취소</button>
-      <button class="btn btn-primary btn-sm" onclick="stmBasicBulkUpdate('settled')">선택 항목 입금 완료 표시</button>
-    </div>
   </div>
 
   <!-- 진행 이력 -->
