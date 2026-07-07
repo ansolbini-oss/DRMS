@@ -6,20 +6,22 @@
 const pcState = { filter:{status:'',data:'',type:'',q:''}, currentId:null };
 
 // [Phase 17-L] 사전검증 단계 재정리 (도메인 통합)
-//   - 옛 'SMD 데이터 분석' → 인프라 검증에 통합 (Phase 17-CX에서 완전 제거)
+//   - 옛 'SMD 데이터 분석' → 인프라 검증에 통합 (17-CX에서 제거)
 //   - 옛 '악의성 검증' → RRMSE 분석에 통합
-// 결과: 4단계 (외부데이터 → 인프라 → RRMSE → CBL)
-// [Phase 17-CX] 사전검증 인프라 검증은 한전 AMI 계량 데이터만 확인 (RTU·SMD 모두 제거)
+//   - 4단계 (ext / infra / rrmse / cbl)
+// [Phase 17-CZ] 사전검증에서 '인프라 검증' 단계 자체 삭제
+//   - 외부데이터 조회(한전 API)로 이미 계량 데이터 수신 여부 확인됨 → 중복
+//   - 결과: 3단계 (외부데이터 → RRMSE → CBL)
 const pcStepDefs = [
-  {key:'ext',   name:'외부데이터 조회', desc:'한전·파워플래너 연동',                    auto:false},
-  {key:'infra', name:'인프라 검증',      desc:'한전 AMI 설치·통신 및 계량 데이터 수집 확인', auto:false},
-  {key:'rrmse', name:'RRMSE 분석',       desc:'부하 패턴 오차 분석 — 악의성 탐지 (자동)',   auto:true},
-  {key:'cbl',   name:'CBL 분석',         desc:'기준부하 산정 및 유형 선택',                  auto:false},
+  {key:'ext',   name:'외부데이터 조회', desc:'한전 고객번호 조회·계량 데이터 수신 확인',   auto:false},
+  {key:'rrmse', name:'RRMSE 분석',       desc:'부하 패턴 오차 분석 — 악의성/이상치 탐지 (자동)', auto:true},
+  {key:'cbl',   name:'CBL 분석',         desc:'기준부하 산정 및 유형 선택',                     auto:false},
 ];
 
-// 옛 6단계 steps 배열을 새 4단계로 변환 (시드 호환).
-// 옛 인덱스: 0:ext, 1:infra, 2:smd, 3:mali, 4:rrmse, 5:cbl
-// 새 인덱스: 0:ext, 1:infra(+smd), 2:rrmse(+mali), 3:cbl
+// 옛 6단계 / 4단계 steps 배열을 새 3단계로 변환 (시드 호환).
+// 옛 6단계: 0:ext, 1:infra, 2:smd, 3:mali, 4:rrmse, 5:cbl
+// 옛 4단계: 0:ext, 1:infra(+smd), 2:rrmse(+mali), 3:cbl
+// 새 3단계: 0:ext, 1:rrmse, 2:cbl  (infra 완전 삭제)
 function pcMergeStepStates(a, b){
   // 둘 중 하나라도 실패면 실패 / 둘 다 완료면 완료 / 진행중 우선
   if(a === 0 || b === 0) return 0;
@@ -28,17 +30,21 @@ function pcMergeStepStates(a, b){
   return 1;
 }
 function pcNormalizeSteps(raw){
-  if(!Array.isArray(raw)) return [1,1,1,1];
-  if(raw.length === 4) return [...raw];
+  if(!Array.isArray(raw)) return [1,1,1];
+  if(raw.length === 3) return [...raw];
+  if(raw.length === 4){
+    // 옛 4단계: [ext, infra, rrmse, cbl] → [ext, rrmse, cbl]
+    return [raw[0], raw[2], raw[3]];
+  }
   if(raw.length === 6){
+    // 옛 6단계: [ext, infra, smd, mali, rrmse, cbl] → [ext, mali+rrmse, cbl]
     return [
       raw[0],
-      pcMergeStepStates(raw[1], raw[2]),
       pcMergeStepStates(raw[3], raw[4]),
       raw[5]
     ];
   }
-  return [1,1,1,1];
+  return [1,1,1];
 }
 
 function pcFilterByStatus(s){
@@ -225,9 +231,9 @@ function pcShowDetail(id){
 // 사업자 → 사업장 배열 정규화. sites 없으면 customer 자체를 단일 사업장으로 변환
 function pcGetSites(c){
   if(Array.isArray(c.sites) && c.sites.length > 0){
-    // [Phase 17-L] 각 사이트의 steps를 4단계로 정규화 (옛 시드 6단계 호환)
+    // [Phase 17-CZ] 각 사이트의 steps를 3단계로 정규화 (옛 시드 4/6단계 호환)
     c.sites.forEach(s => {
-      if(Array.isArray(s.steps) && s.steps.length !== 4){
+      if(Array.isArray(s.steps) && s.steps.length !== 3){
         s.steps = pcNormalizeSteps(s.steps);
       }
     });
@@ -495,12 +501,12 @@ function pcSelectSite(bizId, siteId){
       <div class="r-card-header"><div class="r-card-title">산정 결과 요약</div></div>
       <div class="r-card-body">
         <div class="result-grid">
+          <!-- [Phase 17-CZ] 인프라 검증 삭제 → 결과 요약 5개로 재구성 -->
+          <div class="result-item"><div class="result-item-label">외부데이터</div><div class="result-item-val">${extS}</div></div>
+          <div class="result-item"><div class="result-item-label">RRMSE</div><div class="result-item-val">${rrmseVal}</div></div>
           <div class="result-item"><div class="result-item-label">CBL 유형</div><div class="result-item-val">${cblType}</div></div>
           <div class="result-item"><div class="result-item-label">CBL 평균</div><div class="result-item-val">${cblAvg}</div></div>
-          <div class="result-item"><div class="result-item-label">RRMSE</div><div class="result-item-val">${rrmseVal}</div></div>
-          <div class="result-item"><div class="result-item-label">인프라 검증</div><div class="result-item-val">${infraS}</div></div>
           <div class="result-item"><div class="result-item-label">예상 감축용량</div><div class="result-item-val">${reduction!==null && reduction!==undefined ? reduction+' kW' : '-'}</div></div>
-          <div class="result-item"><div class="result-item-label">외부데이터</div><div class="result-item-val">${extS}</div></div>
         </div>
       </div>
     </div>
@@ -720,8 +726,9 @@ function pcDoCblChange(bizId, siteId){
   const baseAvg = parseInt(String(s.cblAvg||'200').replace(/\D/g,''), 10) || 200;
   const delta = newType==='High 5 of 10' ? 0 : newType==='Mid 4 of 6' ? -8 : -15;
   s.cblAvg = (baseAvg + delta) + 'kW';
-  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1];
-  s.steps[5] = 2;
+  if(!Array.isArray(s.steps)) s.steps = [1,1,1];
+  // [Phase 17-CZ] 3단계 스텝의 마지막(cbl)은 index 2
+  s.steps[2] = 2;
   s.cblS = '완료';
   logAudit?.({objectType:'site', objectId:siteId, action:'cbl_changed',
     title:`CBL 유형 변경 — ${s.siteName}`,
@@ -734,18 +741,17 @@ function pcDoCblChange(bizId, siteId){
   pcSelectSite(bizId, siteId);
 }
 
-// ── 일반 단계 재실행 (infra/smd/malicious/rrmse) ──
+// ── 일반 단계 재실행 (ext/rrmse) ──
 function pcRerunSiteStep(bizId, siteId, stepIdx){
   const s = pcFindSite(bizId, siteId); if(!s) return;
   const def = pcStepDefs[stepIdx];
-  if(!Array.isArray(s.steps)) s.steps = [1,1,1,1];
+  if(!Array.isArray(s.steps)) s.steps = [1,1,1];
   // 시뮬레이션: 1초 후 완료
   s.steps[stepIdx] = 3; // 진행중
   pcSelectSite(bizId, siteId);
   setTimeout(()=>{
     s.steps[stepIdx] = 2; // 완료
     // step별 status 필드 갱신
-    if(def.key==='infra')     s.infraS = '완료';
     if(def.key==='rrmse')     s.rrmseS = '완료';
     logAudit?.({objectType:'site', objectId:siteId, action:'step_rerun',
       title:`${def.name} 재실행 완료 — ${s.siteName}`,
@@ -761,15 +767,14 @@ function pcRerunSiteStep(bizId, siteId, stepIdx){
 function pcRenderSteps(c){
   const list = $('pc-steps-list'); list.innerHTML='';
   let done = 0;
-  // [Phase 17-L] 사업자 c.steps도 4단계로 정규화 (옛 6 길이 시드 호환)
+  // [Phase 17-CZ] 사업자 c.steps도 3단계로 정규화 (옛 4/6 길이 시드 호환)
   const cSteps = pcNormalizeSteps(c.steps);
   c.steps = cSteps;  // 영구 저장
   pcStepDefs.forEach((s,i)=>{
     const st = cSteps[i];
-    // 잠금조건: 순차 실행 (infra: ext 완료 / rrmse: infra 완료 / cbl: rrmse 완료)
+    // 잠금조건: 순차 실행 (rrmse: ext 완료 / cbl: rrmse 완료)
     const isLocked = (i===1 && cSteps[0]!==2)
-                 || (i===2 && cSteps[1]!==2)
-                 || (i===3 && cSteps[2]!==2);
+                 || (i===2 && cSteps[1]!==2);
     let nc='step-num', bc='wait', bt='대기';
     if(st===2){nc+=' done'; bc='done'; bt='완료'; done++;}
     else if(st===3){nc+=' active-step'; bc='active-step'; bt=s.auto?'자동 실행중':'진행중';}
@@ -857,13 +862,7 @@ function pcStepBodyHtml(key, c, st){
     ${st===2?'<div class="info-box success">조회 완료 — 데이터 포인트 8,760개 수집, 완결성 99.2%</div>':''}
     ${st===0?'<div class="info-box danger">조회 실패 — 한전 API 응답 오류 (KEPCO-404)</div>':''}`;
   }
-  if(key==='infra'){
-    // [Phase 17-CX] 사전검증 인프라 검증에서 RTU·SMD 모두 제거 — 한전 AMI만 확인
-    return `<div class="info-box">한전 AMI 계량기 설치·통신 상태를 확인합니다.</div>
-    <div class="form-row"><label class="form-label">한전 AMI 계량기 설치</label>
-      <select class="form-select" id="infra-ami"><option value="설치">설치</option><option value="미설치">미설치</option><option value="설치예정">설치예정</option></select>
-    </div>`;
-  }
+  // [Phase 17-CZ] infra 단계 삭제 — key='infra'로 진입할 수 없지만 방어적으로 빈 반환
   if(key==='mali'){
     return `<div class="info-box">이상 사용 패턴을 자동으로 분석합니다. (AUTO)</div>
     <div class="check-item-row"><span>급격한 사용량 변동 (±30% 초과)</span><span class="badge badge-${st===2?'done':'gray'}">${st===2?'없음':'대기'}</span></div>
@@ -920,32 +919,20 @@ function pcCompleteStep(stepIdx){
     }
   }
   if(pcStepDefs[stepIdx].key==='ext') c.extS = '통과';
-  if(pcStepDefs[stepIdx].key==='infra') c.infraS = '완료';
   if(pcStepDefs[stepIdx].key==='cbl') c.cblS = '완료';
   c.steps[stepIdx] = 2;
   pcAddLog(c, pcStepDefs[stepIdx].name+' 완료', `${c.recno} · ${pcStepDefs[stepIdx].name} 완료 처리`, 'done');
   // 상태 업데이트
   if(c.status==='검증대기' && c.steps.some(s=>s===2)) c.status='검증중';
   if(c.steps.every(s=>s===2)) c.status='검증완료';
-  // 반려 상태였는데 재검증으로 다시 통과한 경우 검증중 상태로 복귀
   if(c.status==='반려' && c.steps.some(s=>s===2) && !c.steps.some(s=>s===0)) c.status='검증중';
   closeModal('stepModal');
   pcShowDetail(c.id);
   showToast(`${pcStepDefs[stepIdx].name} 완료 처리되었습니다.`);
-  // 자동 실행 체인: 외부+인프라+SMD 모두 완료되면 → 악의성 → RRMSE 자동
-  // ※ 이미 완료된 단계는 재실행하지 않음 (RRMSE 랜덤값 덮어쓰기 방지)
-  const prereqDone = c.steps[0]===2 && c.steps[1]===2 && c.steps[2]===2;
-  const maliDone = c.steps[3]===2;
-  const rrmseDone = c.steps[4]===2;
-  if((stepIdx===0||stepIdx===1||stepIdx===2) && prereqDone && !maliDone){
-    setTimeout(()=>pcRunAuto(c, 3, '악의성 검증 자동 실행 중...', ()=>{
-      if(!rrmseDone){
-        setTimeout(()=>pcRunAuto(c, 4, 'RRMSE 분석 자동 실행 중...', null), 800);
-      }
-    }), 600);
-  } else if((stepIdx===0||stepIdx===1||stepIdx===2) && prereqDone && maliDone && !rrmseDone){
-    // 악의성은 이미 완료되어 있고 RRMSE만 남은 경우
-    setTimeout(()=>pcRunAuto(c, 4, 'RRMSE 분석 자동 실행 중...', null), 600);
+  // [Phase 17-CZ] 3단계 자동 실행 체인 — ext 완료 시 RRMSE 자동
+  const rrmseDone = c.steps[1]===2;
+  if(stepIdx===0 && c.steps[0]===2 && !rrmseDone){
+    setTimeout(()=>pcRunAuto(c, 1, 'RRMSE 분석 자동 실행 중...', null), 600);
   }
 }
 
