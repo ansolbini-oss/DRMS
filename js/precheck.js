@@ -47,6 +47,61 @@ function pcNormalizeSteps(raw){
   return [1,1,1];
 }
 
+// [Phase 17-DB] KPX 별표28 §1.0 기준 자원 유형별 CBL 산정방식 매핑
+//   Max(4/5) / Mid(6/10)    → 표준DR·중소형DR·제주DR
+//   Mid(4/6)                → 플러스DR·국민DR
+//   Mid(8/10)               → 국민DR
+//   Past(10min)             → 주파수DR
+//   H-Mid(4/6)              → 플러스DR (공휴일·토요일 부하증대)
+const CBL_MATRIX = {
+  '표준DR':   [
+    {k:'Max(4/5)',    desc:'최근 평일 5일 중 사용량 상위 4일 평균'},
+    {k:'Mid(6/10)',   desc:'최근 평일 10일 중 상·하위 2일 제외한 6일 평균'},
+  ],
+  '중소형DR': [
+    {k:'Max(4/5)',    desc:'최근 평일 5일 중 사용량 상위 4일 평균'},
+    {k:'Mid(6/10)',   desc:'최근 평일 10일 중 상·하위 2일 제외한 6일 평균'},
+  ],
+  '제주DR':   [
+    {k:'Max(4/5)',    desc:'최근 평일 5일 중 사용량 상위 4일 평균'},
+    {k:'Mid(6/10)',   desc:'최근 평일 10일 중 상·하위 2일 제외한 6일 평균'},
+  ],
+  '플러스DR': [
+    {k:'Mid(4/6)',    desc:'최근 평일 6일 중 상·하위 1일 제외한 4일 평균 (평일 부하증대)'},
+    {k:'H-Mid(4/6)',  desc:'공휴일·토요일 6일 중 상·하위 1일 제외한 4일 평균'},
+  ],
+  '국민DR':   [
+    {k:'Mid(4/6)',    desc:'최근 평일 6일 중 상·하위 1일 제외한 4일 평균'},
+    {k:'Mid(8/10)',   desc:'최근 평일 10일 중 상·하위 1일 제외한 8일 평균'},
+  ],
+  '주파수DR': [
+    {k:'Past(10min)', desc:'감축 시작 10분 전 1분 단위 사용량 × 6 (실시간)'},
+  ],
+};
+
+/* 자원 유형 드롭다운 변경 시 CBL 방식 옵션 재생성 */
+function pcCblSyncOptions(){
+  const drSel = document.getElementById('cbl-drtype');
+  const cblSel = document.getElementById('cbl-formula');
+  const descBox = document.getElementById('cbl-formula-desc');
+  if(!drSel || !cblSel) return;
+  const list = CBL_MATRIX[drSel.value] || [];
+  const prev = window.__pcCblSelected || '';
+  const optionsHtml = list.map(o => `<option value="${o.k}"${o.k===prev?' selected':''}>${o.k}</option>`).join('');
+  cblSel.innerHTML = optionsHtml;
+  // 기본 선택: 이전 선택값이 새 옵션에 없으면 첫 번째
+  if(!list.some(o => o.k === prev) && list.length) cblSel.value = list[0].k;
+  window.__pcCblSelected = cblSel.value;
+  // 설명 갱신
+  const render = () => {
+    const cur = list.find(o => o.k === cblSel.value);
+    if(descBox && cur) descBox.textContent = cur.desc;
+    else if(descBox) descBox.textContent = '';
+  };
+  render();
+  cblSel.onchange = () => { window.__pcCblSelected = cblSel.value; render(); };
+}
+
 function pcFilterByStatus(s){
   pcState.filter.status = (pcState.filter.status===s)? '' : s;
   ['pc-card-all','pc-card-progress','pc-card-done','pc-card-contracted','pc-card-reject']
@@ -851,6 +906,12 @@ function pcOpenStep(stepIdx){
     }
   }
   openModal('stepModal');
+  // [Phase 17-DB] CBL 폼 열릴 때 자원 유형 → CBL 옵션 필터링 실행
+  //   innerHTML로 삽입한 <script>는 실행 안 되므로 명시 호출
+  if(s.key === 'cbl'){
+    window.__pcCblSelected = c.cblType || '';
+    setTimeout(() => { if(typeof pcCblSyncOptions === 'function') pcCblSyncOptions(); }, 0);
+  }
 }
 
 function pcStepBodyHtml(key, c, st){
@@ -884,40 +945,48 @@ function pcStepBodyHtml(key, c, st){
     ${st===2?`<div class="info-box success">현재 오차율 <b>${c.rrmseVal}</b> — 매우 우수</div>`:''}`;
   }
   if(key==='cbl'){
-    const selected = c.cblType || 'High 5 of 10';
-    return `<div class="info-box">기준부하(CBL)를 산정하고 적용 유형을 선택합니다.</div>
-    <div class="form-row"><label class="form-label">CBL 유형 선택</label>
-      <div class="radio-group">
-        <label class="radio-item" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);">
-          <input type="radio" name="cbl-type" value="High 5 of 10" ${selected==='High 5 of 10'?'checked':''}>
-          <div><div style="font-weight:500;">High 5 of 10 <span class="badge badge-done" style="margin-left:6px;">권장</span></div>
-            <div style="font-size:11px;color:var(--text-hint);margin-top:2px;">최근 10 영업일 중 상위 5일 평균</div></div>
-        </label>
-        <label class="radio-item" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);">
-          <input type="radio" name="cbl-type" value="동일요일 평균" ${selected==='동일요일 평균'?'checked':''}>
-          <div><div style="font-weight:500;">동일 요일 평균</div>
-            <div style="font-size:11px;color:var(--text-hint);margin-top:2px;">최근 4주 동일 요일 평균값</div></div>
-        </label>
-        <label class="radio-item" style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);">
-          <input type="radio" name="cbl-type" value="회귀분석" ${selected==='회귀분석'?'checked':''}>
-          <div><div style="font-weight:500;">회귀분석</div>
-            <div style="font-size:11px;color:var(--text-hint);margin-top:2px;">기온 등 변수 활용 회귀 모델</div></div>
-        </label>
-      </div>
+    // [Phase 17-DB] KPX 별표28 기준 CBL 산정방식으로 재구성
+    //   - 상위: 자원 유형 드롭다운 (기본값 = 사업자 drType)
+    //   - 하위: 자원 유형에 매핑된 CBL 방식만 필터링해 노출
+    //   - CBL_MATRIX는 pc-cbl-matrix data attr로 상세 폼 안에 관리
+    const drType = c.drType || '표준DR';
+    const drTypes = ['표준DR','중소형DR','제주DR','플러스DR','국민DR','주파수DR'];
+    const optsHtml = drTypes.map(t => `<option value="${t}" ${t===drType?'selected':''}>${t}</option>`).join('');
+    // 초기 렌더 시 자원 유형에 맞춰 CBL 옵션 그리기 (pcCblSyncOptions가 렌더 후 재호출)
+    return `<div class="info-box">KPX 규정(별표28)에 정의된 자원 유형별 CBL 산정방식만 노출됩니다.<br>자원 유형을 먼저 확정한 뒤, 산정방식을 선택하세요.</div>
+    <div class="form-row">
+      <label class="form-label">자원 유형 (KPX)</label>
+      <select class="form-select" id="cbl-drtype" onchange="pcCblSyncOptions()">${optsHtml}</select>
     </div>
-    ${st===2?`<div class="info-box success">산정 완료 — CBL 유형: <b>${c.cblType}</b>, 평균: <b>${c.cblAvg}</b></div>`:''}`;
+    <div class="form-row">
+      <label class="form-label">CBL 산정방식</label>
+      <select class="form-select" id="cbl-formula"><!-- pcCblSyncOptions가 채움 --></select>
+    </div>
+    <div id="cbl-formula-desc" style="margin-top:8px;padding:10px 12px;background:var(--g-50);border:1px solid var(--border);border-radius:var(--r);font-size:12px;color:var(--text-sub);line-height:1.6;"></div>
+    ${st===2?`<div class="info-box success" style="margin-top:12px;">산정 완료 — CBL 유형: <b>${c.cblType}</b>, 평균: <b>${c.cblAvg}</b></div>`:''}`;
   }
   return '';
 }
 
 function pcCompleteStep(stepIdx){
   const c = custById(pcState.currentId); if(!c) return;
-  // CBL은 라디오 선택 반영
+  // [Phase 17-DB] CBL은 드롭다운(cbl-drtype, cbl-formula) 기반
   if(pcStepDefs[stepIdx].key==='cbl'){
-    const sel = document.querySelector('input[name="cbl-type"]:checked')?.value;
-    if(sel){
-      c.cblType = sel;
-      c.cblAvg = sel==='High 5 of 10'?Math.round(c.power*0.95)+'kW':sel==='동일요일 평균'?Math.round(c.power*0.90)+'kW':Math.round(c.power*0.92)+'kW';
+    const drSel  = document.getElementById('cbl-drtype')?.value;
+    const cblSel = document.getElementById('cbl-formula')?.value;
+    if(drSel) c.drType = drSel;
+    if(cblSel){
+      c.cblType = cblSel;
+      // 산식별 대략적인 평균값 — 시뮬레이션 (실제 산정은 KPX 데이터 기반)
+      const factor = ({
+        'Max(4/5)':    0.98,
+        'Mid(6/10)':   0.92,
+        'Mid(4/6)':    0.93,
+        'Mid(8/10)':   0.90,
+        'Past(10min)': 0.99,
+        'H-Mid(4/6)':  0.94,
+      })[cblSel] || 0.92;
+      c.cblAvg = Math.round(c.power * factor) + 'kW';
     }
   }
   if(pcStepDefs[stepIdx].key==='ext') c.extS = '통과';
