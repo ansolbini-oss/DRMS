@@ -753,35 +753,51 @@ function pcManualUploadSite(bizId, siteId){
 }
 
 // ── ⑥ CBL 유형 변경 ──
+// [Phase 17-DB] KPX 별표28 기준 — 자원 유형별 CBL 방식 필터링
 function pcOpenCblChange(bizId, siteId){
   const s = pcFindSite(bizId, siteId); if(!s) return;
   const c = custById(bizId);
-  const current = s.cblType ?? c.cblType ?? 'High 5 of 10';
+  const drType = c.drType || '표준DR';
+  const drTypes = ['표준DR','중소형DR','제주DR','플러스DR','국민DR','주파수DR'];
+  const drOptsHtml = drTypes.map(t => `<option value="${t}" ${t===drType?'selected':''}>${t}</option>`).join('');
+  const current = s.cblType ?? c.cblType ?? '';
+  window.__pcCblSelected = current;
   $('cm-title').textContent = 'CBL 유형 변경';
   $('cm-sub').textContent = `${c.name} - ${s.siteName}`;
   $('cm-body').innerHTML = `<div class="info-box">
-    CBL(Customer Baseline Load) 유형을 선택하면 사업장 기준부하가 재산정됩니다.
+    KPX 규정(별표28)에 정의된 자원 유형별 CBL 산정방식만 노출됩니다. 변경 시 사업장 기준부하가 재산정됩니다.
   </div>
-  <div style="margin-top:12px;font-size:12px;color:var(--text-sub);margin-bottom:6px;">CBL 유형</div>
-  <select id="pc-cbl-select" class="filter-select" style="width:100%;">
-    <option value="High 5 of 10" ${current==='High 5 of 10'?'selected':''}>High 5 of 10 (최근 10영업일 중 상위 5일 평균)</option>
-    <option value="Mid 4 of 6"   ${current==='Mid 4 of 6'?'selected':''}>Mid 4 of 6 (최근 6영업일 중 중간 4일 평균)</option>
-    <option value="동일요일 평균" ${current==='동일요일 평균'?'selected':''}>동일요일 평균 (최근 4주 동일 요일)</option>
-  </select>
+  <div style="margin-top:12px;font-size:12px;color:var(--text-sub);margin-bottom:6px;">자원 유형 (KPX)</div>
+  <select id="cbl-drtype" class="filter-select" style="width:100%;" onchange="pcCblSyncOptions()">${drOptsHtml}</select>
+  <div style="margin-top:12px;font-size:12px;color:var(--text-sub);margin-bottom:6px;">CBL 산정방식</div>
+  <select id="cbl-formula" class="filter-select" style="width:100%;"></select>
+  <div id="cbl-formula-desc" style="margin-top:8px;padding:10px 12px;background:var(--g-50);border:1px solid var(--border);border-radius:var(--r);font-size:12px;color:var(--text-sub);line-height:1.6;"></div>
   <div class="check-item-row" style="margin-top:14px;"><span>현재 CBL 평균</span><span style="font-weight:600;">${s.cblAvg ?? c.cblAvg ?? '—'}</span></div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
     <button class="btn btn-primary" onclick="pcDoCblChange('${bizId}','${siteId}')">재산정</button>`;
   openModal('commonModal');
+  setTimeout(() => { if(typeof pcCblSyncOptions === 'function') pcCblSyncOptions(); }, 0);
 }
 
 function pcDoCblChange(bizId, siteId){
   const s = pcFindSite(bizId, siteId); if(!s) return;
-  const newType = $('pc-cbl-select')?.value;
+  const c = custById(bizId);
+  const newDrType = $('cbl-drtype')?.value;
+  const newType = $('cbl-formula')?.value;
   if(!newType) return;
-  // 시뮬레이션: CBL 유형 적용 + 평균 약간 변동
+  // 자원 유형 변경도 반영 (사업자 c.drType)
+  if(newDrType && c && c.drType !== newDrType) c.drType = newDrType;
   s.cblType = newType;
   const baseAvg = parseInt(String(s.cblAvg||'200').replace(/\D/g,''), 10) || 200;
-  const delta = newType==='High 5 of 10' ? 0 : newType==='Mid 4 of 6' ? -8 : -15;
+  // [Phase 17-DB] 산식별 시뮬레이션 delta
+  const delta = ({
+    'Max(4/5)':     2,
+    'Mid(6/10)':   -5,
+    'Mid(4/6)':    -3,
+    'Mid(8/10)':   -8,
+    'Past(10min)':  0,
+    'H-Mid(4/6)':  -4,
+  })[newType] ?? -5;
   s.cblAvg = (baseAvg + delta) + 'kW';
   if(!Array.isArray(s.steps)) s.steps = [1,1,1];
   // [Phase 17-CZ] 3단계 스텝의 마지막(cbl)은 index 2
