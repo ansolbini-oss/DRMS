@@ -511,14 +511,16 @@ function pcSelectSite(bizId, siteId){
       </div>
     </div>
 
-    <!-- 외부데이터 검증 결과 -->
+    <!-- [Phase 17-DA] 외부데이터 조회 결과 재구성
+         - 한전 데이터 연동 = 파워플래너 → 하나로 통합
+         - 데이터 완결성 = 인프라 관련이라 제거 (인프라 단계 삭제됨)
+         - 이상치 검출 = RRMSE 분석 결과라 산정 요약으로 이관 (여기 중복) -->
     <div class="r-card">
-      <div class="r-card-header"><div class="r-card-title">외부데이터 검증 결과</div></div>
+      <div class="r-card-header"><div class="r-card-title">외부데이터 조회 결과</div></div>
       <div class="r-card-body">
-        <div class="check-item-line"><span>한전 데이터 연동</span><span class="badge badge-done">통과</span></div>
-        <div class="check-item-line"><span>파워플래너 데이터</span><span class="badge badge-done">통과</span></div>
-        <div class="check-item-line"><span>데이터 완결성</span><span class="badge badge-done">99.2%</span></div>
-        <div class="check-item-line"><span>이상치 검출</span><span class="badge badge-gray">없음</span></div>
+        <div class="check-item-line"><span>한전 API (파워플래너 채널)</span><span class="badge badge-done">연동</span></div>
+        <div class="check-item-line"><span>조회 기간</span><span class="badge badge-gray">2025-01-01 ~ 2026-04-10</span></div>
+        <div class="check-item-line"><span>데이터 포인트</span><span class="badge badge-gray">8,760개 (365일 × 24h)</span></div>
       </div>
     </div>
   `;
