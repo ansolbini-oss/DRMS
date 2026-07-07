@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260707-2002. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260707-2002">
+<!-- css/js 모두 ?v=260708-0810. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260708-0810">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260707-2002</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-0810</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -377,9 +377,9 @@
     </div>
 
     <div class="filter-area">
-      <input class="search-input" type="text" placeholder=" 사업장명 · 사업자 · 담당자 · 접수번호 · KEPCO" id="pc-search" onkeydown="if(event.key==='Enter') pcRenderTable()">
+      <input class="search-input" type="text" placeholder=" 사업자 번호 · 사업자 이름 · 사업장 이름 · 한전 번호" id="pc-search" onkeydown="if(event.key==='Enter') pcRenderTable()">
       <select class="filter-select" id="pc-filter-type">
-        <option value="">DR유형 전체</option>
+        <option value="">예상 DR 유형 전체</option>
         <option>표준DR</option><option>중소형DR</option><option>국민DR</option>
         <option>제주DR</option><option>주파수DR</option><option>플러스DR</option>
       </select>
@@ -397,7 +397,7 @@
           <th style="width:120px;text-align:left;">연락처</th>
           <th style="width:140px;text-align:left;">주소</th>
           <th style="width:110px;text-align:left;">KEPCO</th>
-          <th style="width:90px;text-align:center;">DR 유형</th>
+          <th style="width:100px;text-align:center;">예상 DR 유형</th>
           <th style="width:70px;text-align:center;">유입경로</th>
           <th style="width:140px;text-align:center;">검증 진행</th>
           <th style="width:100px;text-align:center;">접수일</th>
@@ -2156,20 +2156,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260707-2002"></script>
-<script src="data/tips.js?v=260707-2002"></script>
-<script src="js/core.js?v=260707-2002"></script>
-<script src="js/dashboard.js?v=260707-2002"></script>
-<script src="js/precheck.js?v=260707-2002"></script>
-<script src="js/resource.js?v=260707-2002"></script>
-<script src="js/monitoring.js?v=260707-2002"></script>
-<script src="js/report.js?v=260707-2002"></script>
-<script src="js/settlement.js?v=260707-2002"></script>
-<script src="js/datacollect.js?v=260707-2002"></script>
-<script src="js/rtu.js?v=260707-2002"></script>
-<script src="js/communication.js?v=260707-2002"></script>
-<script src="js/bidding.js?v=260707-2002"></script>
-<script src="js/account.js?v=260707-2002"></script>
-<script src="js/system.js?v=260707-2002"></script>
+<script src="data/store.js?v=260708-0810"></script>
+<script src="data/tips.js?v=260708-0810"></script>
+<script src="js/core.js?v=260708-0810"></script>
+<script src="js/dashboard.js?v=260708-0810"></script>
+<script src="js/precheck.js?v=260708-0810"></script>
+<script src="js/resource.js?v=260708-0810"></script>
+<script src="js/monitoring.js?v=260708-0810"></script>
+<script src="js/report.js?v=260708-0810"></script>
+<script src="js/settlement.js?v=260708-0810"></script>
+<script src="js/datacollect.js?v=260708-0810"></script>
+<script src="js/rtu.js?v=260708-0810"></script>
+<script src="js/communication.js?v=260708-0810"></script>
+<script src="js/bidding.js?v=260708-0810"></script>
+<script src="js/account.js?v=260708-0810"></script>
+<script src="js/system.js?v=260708-0810"></script>
 
 </body></html>

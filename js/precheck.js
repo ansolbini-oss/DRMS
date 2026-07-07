@@ -147,8 +147,9 @@ function pcFilteredList(){
     }
     if(tF && c.drType!==tF) return false;
     if(q){
-      // 사업자명·대표자·접수번호 + 사업장명·KEPCO 다중 검색
-      let hay = `${c.name} ${c.ceo} ${c.recno} ${c.kepco||''}`;
+      // [Phase 17-DC] 검색 필드: 사업자 번호(bizno) · 사업자 이름 · 사업장 이름 · 한전 번호
+      //   담당자(ceo)·접수번호(recno) 제외
+      let hay = `${c.bizno||''} ${c.name||''} ${c.kepco||''}`;
       if(Array.isArray(c.sites)){
         c.sites.forEach(s => { hay += ` ${s.siteName||''} ${s.kepco||''}`; });
       }
