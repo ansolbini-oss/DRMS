@@ -774,15 +774,6 @@ function renderDashboard(){
     <div class="pend-item"><span class="p-label">계약 전환 대기</span><span class="${contractWait>0?'p-warn':'p-num'}">${contractWait}건</span></div>`;
 }
 
-(function clock(){
-  function tick(){
-    const d=new Date(), pad=n=>String(n).padStart(2,'0');
-    const el=$('dashClock');
-    if(el) el.textContent=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-  tick(); setInterval(tick,1000);
-})();
-
 /* ════════════════════════════════════════════════════════════
    ★ PAGE: 이행검증
    - 감축 모니터링에서 종료된 이벤트(live:false && !scheduled && category:'operation')를 대상으로
@@ -793,15 +784,6 @@ function renderDashboard(){
      (3) 정산 상태 생명주기 관리 (pending → requested → received, 이력 보존)
      (4) 월별 요약 · 자원 랭킹 (운영·영업 리포팅)
 ════════════════════════════════════════════════════════════ */
-(function clock(){
-  function tick(){
-    const d=new Date(), pad=n=>String(n).padStart(2,'0');
-    const el=$('dashClock');
-    if(el) el.textContent=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  }
-  tick(); setInterval(tick,1000);
-})();
-
 /* ════════════════════════════════════════════════════════════
    ★ PAGE: 데이터 관리 › 전력데이터 수집현황 (DATA-01)
    - 기존 pcDmGenerateData를 재사용하여 자원그룹×기간 집계
