@@ -557,12 +557,12 @@ function pcSelectSite(bizId, siteId){
       <div class="r-card-header"><div class="r-card-title">산정 결과 요약</div></div>
       <div class="r-card-body">
         <div class="result-grid">
-          <!-- [Phase 17-CZ] 인프라 검증 삭제 → 결과 요약 5개로 재구성 -->
+          <!-- [Phase 17-DM] 예상 감축용량 카드 제거 — 사전검증 단계에서는 원천 데이터만 노출.
+               감축용량 산정(PRECHECK-018)은 계약·자원관리 단계에서 확정. -->
           <div class="result-item"><div class="result-item-label">외부데이터</div><div class="result-item-val">${extS}</div></div>
           <div class="result-item"><div class="result-item-label">RRMSE</div><div class="result-item-val">${rrmseVal}</div></div>
           <div class="result-item"><div class="result-item-label">CBL 유형</div><div class="result-item-val">${cblType}</div></div>
           <div class="result-item"><div class="result-item-label">CBL 평균</div><div class="result-item-val">${cblAvg}</div></div>
-          <div class="result-item"><div class="result-item-label">예상 감축용량</div><div class="result-item-val">${reduction!==null && reduction!==undefined ? reduction+' kW' : '-'}</div></div>
         </div>
       </div>
     </div>
