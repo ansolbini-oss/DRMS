@@ -2327,13 +2327,17 @@ function ctEligibleCustomers(){
     return c;
   });
 }
+// [Phase 17-DE] 계약관리 KPI 카드 클릭 필터 상태
+window.__ctCardFilter = window.__ctCardFilter || ''; // '' | 'all' | 'pending' | 'approved' | 'expiring' | 'expired'
+
 function ctFilteredCustomers(){
   const q = ($('ct-search')?.value || '').trim().toLowerCase();
   const type = $('ct-filter-type')?.value || '';
   const stage = $('ct-filter-status')?.value || '';
+  const cardKind = window.__ctCardFilter || '';
   return ctEligibleCustomers().filter(c=>{
     const s = ctGetStage(c);
-    // 사업자 + 사업장 정보 모두 검색 hay에 포함 (Phase 17-AS: 사업자명·사업자번호 중심)
+    const biz = (typeof ctComputeBizStatus === 'function') ? ctComputeBizStatus(c) : null;
     const hayParts = [c.name, c.bizno, c.ceo, c.tel, c.recno, c.kepco, c.id, c.addr];
     if(Array.isArray(c.sites)){
       c.sites.forEach(site => hayParts.push(site.siteName||'', site.kepco||'', site.manager||'', site.tel||''));
@@ -2341,8 +2345,27 @@ function ctFilteredCustomers(){
     const matchQ = !q || hayParts.join(' ').toLowerCase().includes(q);
     const matchType = !type || c.drType===type;
     const matchStage = !stage || s===stage;
-    return matchQ && matchType && matchStage;
+    // KPI 카드 필터
+    let matchCard = true;
+    if(cardKind === 'pending')       matchCard = biz?.status === '계약대기';
+    else if(cardKind === 'approved') matchCard = biz?.status === '계약완료';
+    else if(cardKind === 'expired')  matchCard = biz?.status === '계약만료';
+    else if(cardKind === 'expiring') matchCard = (biz?.expiringCount || 0) > 0;
+    return matchQ && matchType && matchStage && matchCard;
   });
+}
+
+/* [Phase 17-DE] KPI 카드 클릭 시 필터 적용 (동일 카드 재클릭 시 해제) */
+function ctFilterByCard(kind){
+  window.__ctCardFilter = (window.__ctCardFilter === kind) ? '' : kind;
+  // 카드 활성 스타일 갱신
+  ['all','pending','approved','review','expired'].forEach(k => {
+    const el = document.getElementById('ct-kpi-card-' + k);
+    if(el) el.classList.toggle('active', window.__ctCardFilter === (k==='review'?'expiring':k));
+  });
+  // 'all' 클릭 시 필터 완전 해제
+  if(kind === 'all') window.__ctCardFilter = '';
+  ctRenderTable();
 }
 
 // 계약관리 사업자 행 ▶/▼ 토글 (사전검증의 pcToggleBusiness와 동일 패턴)
@@ -2420,6 +2443,12 @@ function ctResetFilters(){
   const s = $('ct-search');         if(s) s.value = '';
   const ft = $('ct-filter-type');   if(ft) ft.value = '';
   const fs = $('ct-filter-status'); if(fs) fs.value = '';
+  // [Phase 17-DE] KPI 카드 필터도 초기화
+  window.__ctCardFilter = '';
+  ['all','pending','approved','review','expired'].forEach(k => {
+    const el = document.getElementById('ct-kpi-card-' + k);
+    if(el) el.classList.remove('active');
+  });
   ctRenderTable();
 }
 /* [Phase 17-AN] 계약관리 상세 — 사이드 패널 → 페이지뷰 라우팅 */
