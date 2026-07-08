@@ -576,7 +576,7 @@ function pcSelectSite(bizId, siteId){
       <div class="r-card-body">
         <div class="check-item-line"><span>한전 API (파워플래너 채널)</span><span class="badge badge-done">연동</span></div>
         <div class="check-item-line"><span>조회 기간</span><span class="badge badge-gray">2025-01-01 ~ 2026-04-10</span></div>
-        <div class="check-item-line"><span>데이터 포인트</span><span class="badge badge-gray">8,760개 (365일 × 24h)</span></div>
+        <div class="check-item-line"><span>데이터 포인트</span><span class="badge badge-gray">35,040개 (365일 × 96슬롯/15분 단위)</span></div>
       </div>
     </div>
   `;
@@ -722,7 +722,7 @@ function pcHandleExtFile(evt){
     <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;">
       <div style="font-weight:600;color:var(--navy);margin-bottom:6px;">파일 확인 (시뮬레이션)</div>
       <div style="color:var(--text-sub);line-height:1.7;">
-        · 15분 단위 계량 데이터 8,760 포인트 인식<br>
+        · 15분 단위 계량 데이터 35,040 포인트 인식 (365일 × 96슬롯)<br>
         · 조회 기간: 최근 12개월<br>
         · 결측 구간: <b style="color:var(--green);">없음</b>
       </div>
@@ -736,7 +736,7 @@ function pcDownloadExtTemplate(){
     '2025-01-01,00:00,120.5',
     '2025-01-01,00:15,118.3',
     '2025-01-01,00:30,115.7',
-    '# ... 15분 단위 12개월치 데이터 (8,760행) ...',
+    '# ... 15분 단위 12개월치 데이터 (총 35,040행 = 365일 × 96슬롯) ...',
   ].join('\n');
   const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
@@ -1072,7 +1072,7 @@ function pcStepBodyHtml(key, c, st){
     <div class="form-row"><label class="form-label">조회 기간</label>
       <div style="display:flex;gap:8px;align-items:center;"><input class="form-input" type="date" value="2025-01-01" style="flex:1"><span style="color:var(--text-hint);font-size:12px;">~</span><input class="form-input" type="date" value="2026-04-10" style="flex:1"></div>
     </div>
-    ${st===2?'<div class="info-box success">조회 완료 — 데이터 포인트 8,760개 수집, 완결성 99.2%</div>':''}
+    ${st===2?'<div class="info-box success">조회 완료 — 데이터 포인트 35,040개 (15분 단위) 수집, 완결성 99.2%</div>':''}
     ${st===0?'<div class="info-box danger">조회 실패 — 한전 API 응답 오류 (KEPCO-404)</div>':''}`;
   }
   // [Phase 17-CZ] infra 단계 삭제 — key='infra'로 진입할 수 없지만 방어적으로 빈 반환
