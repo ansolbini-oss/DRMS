@@ -610,41 +610,174 @@ function pcSiteOutcome(site){
 }
 
 // ── ① 외부데이터 재조회 (KEPCO 정보 수정 + 재조회) ──
+// [Phase 17-DD] 조회 방식 선택 — 직접 입력 / 엑셀 업로드
 function pcOpenExtRecheck(bizId, siteId){
   const s = pcFindSite(bizId, siteId); if(!s) return;
   const c = custById(bizId);
   $('cm-title').textContent = '외부데이터 조회';
   $('cm-sub').textContent = `${c.name} - ${s.siteName}`;
-  $('cm-body').innerHTML = `<div class="info-box">
-    한전 AMI·파워플래너 데이터를 조회합니다. KEPCO 정보가 잘못 등록된 경우 아래에서 수정 후 [조회 실행].
+  $('cm-body').innerHTML = `
+  <div style="display:flex;gap:8px;background:var(--g-100);padding:4px;border-radius:8px;margin-bottom:14px;">
+    <button id="pc-ext-tab-manual" class="pc-ext-tab-btn" data-active="1"
+      onclick="pcSwitchExtMode('manual')"
+      style="flex:1;padding:9px 12px;border:none;background:#fff;color:var(--navy);font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+      직접 입력
+    </button>
+    <button id="pc-ext-tab-excel" class="pc-ext-tab-btn" data-active="0"
+      onclick="pcSwitchExtMode('excel')"
+      style="flex:1;padding:9px 12px;border:none;background:transparent;color:var(--text-sub);font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;">
+      엑셀 업로드
+    </button>
   </div>
-  <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
-    <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">KEPCO 고객번호 <span style="color:var(--red);">*</span></label>
-      <input id="pc-ext-kepco" type="text" value="${s.kepco||''}" placeholder="예: 10012001"
-        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
-    </div>
-    <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">한전 계약전력 (kW)</label>
-      <input id="pc-ext-power" type="number" value="${s.power||''}" placeholder="예: 500"
-        style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
-    </div>
-    <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">현장 책임자 / 연락처</label>
-      <div style="display:flex;gap:8px;">
-        <input id="pc-ext-manager" type="text" value="${s.manager||''}" placeholder="이름"
-          style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
-        <input id="pc-ext-tel" type="text" value="${s.tel||''}" placeholder="010-0000-0000"
-          style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+
+  <!-- 직접 입력 모드 -->
+  <div id="pc-ext-mode-manual">
+    <div class="info-box">한전 AMI·파워플래너 데이터를 조회합니다. KEPCO 정보가 잘못 등록된 경우 아래에서 수정 후 [조회 실행].</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">KEPCO 고객번호 <span style="color:var(--red);">*</span></label>
+        <input id="pc-ext-kepco" type="text" value="${s.kepco||''}" placeholder="예: 10012001"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">한전 계약전력 (kW)</label>
+        <input id="pc-ext-power" type="number" value="${s.power||''}" placeholder="예: 500"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">현장 책임자 / 연락처</label>
+        <div style="display:flex;gap:8px;">
+          <input id="pc-ext-manager" type="text" value="${s.manager||''}" placeholder="이름"
+            style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+          <input id="pc-ext-tel" type="text" value="${s.tel||''}" placeholder="010-0000-0000"
+            style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
       </div>
     </div>
+    <div style="margin-top:10px;padding:8px 12px;background:var(--g-50);border-radius:6px;font-size:10px;color:var(--text-hint);">
+      ⓘ KEPCO 고객번호는 한전 AMI 시스템 등록 번호와 일치해야 합니다. 변경 시 감사로그가 기록됩니다.
+    </div>
   </div>
-  <div style="margin-top:10px;padding:8px 12px;background:var(--grey-light,#f8f9fa);border-radius:6px;font-size:10px;color:var(--text-hint);">
-    ⓘ KEPCO 고객번호는 한전 AMI 시스템 등록 번호와 일치해야 합니다. 변경 시 감사로그가 기록됩니다.
+
+  <!-- 엑셀 업로드 모드 -->
+  <div id="pc-ext-mode-excel" style="display:none;">
+    <div class="info-box">사업장 여러 곳의 한전 정보를 일괄 등록·수정합니다. 아래 템플릿을 다운로드해 채운 뒤 업로드하세요.</div>
+    <div style="margin-top:10px;padding:12px;border:1.5px dashed var(--border-dark);border-radius:8px;text-align:center;background:var(--g-50);">
+      <input type="file" id="pc-ext-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="pcHandleExtFile(event)">
+      <div style="font-size:32px;color:var(--text-hint);margin-bottom:6px;">📄</div>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pc-ext-file').click()">파일 선택</button>
+      <div id="pc-ext-file-name" style="margin-top:8px;font-size:11px;color:var(--text-hint);">선택된 파일 없음</div>
+      <div style="margin-top:6px;font-size:10px;color:var(--text-hint);">.xlsx / .xls / .csv (최대 5MB)</div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="pcDownloadExtTemplate()" style="flex:1;">📥 템플릿 다운로드</button>
+      <button class="btn btn-secondary btn-sm" onclick="pcShowExtSchema()" style="flex:1;">📋 항목 안내</button>
+    </div>
+    <div id="pc-ext-preview" style="margin-top:10px;"></div>
+    <div style="margin-top:10px;padding:8px 12px;background:var(--g-50);border-radius:6px;font-size:10px;color:var(--text-hint);line-height:1.6;">
+      ⓘ 필수 컬럼: <b>KEPCO 고객번호</b>, <b>한전 계약전력</b>, <b>사업장명</b><br>
+      선택 컬럼: 현장 책임자, 연락처, 주소<br>
+      업로드 파일의 각 행은 한 사업장에 매핑되며, 기존 KEPCO 번호와 일치하면 갱신, 없으면 신규 생성됩니다.
+    </div>
   </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-primary" onclick="pcDoExtRecheck('${bizId}','${siteId}')">조회 실행</button>`;
+    <button class="btn btn-primary" id="pc-ext-submit" onclick="pcDoExtRecheck('${bizId}','${siteId}')">조회 실행</button>`;
   openModal('commonModal');
+  window.__pcExtMode = 'manual';
+  window.__pcExtBizId = bizId;
+  window.__pcExtSiteId = siteId;
+}
+
+/* 조회 방식 탭 전환 */
+function pcSwitchExtMode(mode){
+  window.__pcExtMode = mode;
+  const manual = $('pc-ext-mode-manual');
+  const excel  = $('pc-ext-mode-excel');
+  const tabM = $('pc-ext-tab-manual');
+  const tabE = $('pc-ext-tab-excel');
+  const submit = $('pc-ext-submit');
+  if(mode === 'manual'){
+    manual.style.display = '';
+    excel.style.display = 'none';
+    tabM.style.background = '#fff'; tabM.style.color = 'var(--navy)'; tabM.style.fontWeight = '600';
+    tabM.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+    tabE.style.background = 'transparent'; tabE.style.color = 'var(--text-sub)'; tabE.style.fontWeight = '500';
+    tabE.style.boxShadow = 'none';
+    if(submit) submit.textContent = '조회 실행';
+    if(submit) submit.onclick = () => pcDoExtRecheck(window.__pcExtBizId, window.__pcExtSiteId);
+  } else {
+    manual.style.display = 'none';
+    excel.style.display = '';
+    tabE.style.background = '#fff'; tabE.style.color = 'var(--navy)'; tabE.style.fontWeight = '600';
+    tabE.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
+    tabM.style.background = 'transparent'; tabM.style.color = 'var(--text-sub)'; tabM.style.fontWeight = '500';
+    tabM.style.boxShadow = 'none';
+    if(submit) submit.textContent = '업로드·일괄 조회';
+    if(submit) submit.onclick = () => pcDoExtUpload(window.__pcExtBizId);
+  }
+}
+
+/* 파일 선택 시 미리보기 */
+function pcHandleExtFile(evt){
+  const file = evt.target.files?.[0];
+  if(!file) return;
+  const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+  $('pc-ext-file-name').innerHTML = `<b style="color:var(--navy);">${file.name}</b> · ${sizeMB} MB`;
+  // 시뮬레이션 프리뷰 (실제 파싱은 목업 밖 구현)
+  $('pc-ext-preview').innerHTML = `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;">
+      <div style="font-weight:600;color:var(--navy);margin-bottom:6px;">파일 미리보기 (시뮬레이션)</div>
+      <div style="color:var(--text-sub);line-height:1.7;">
+        · 3개 행 인식 · 필수 컬럼 3개 확인 완료<br>
+        · KEPCO 매칭: 기존 갱신 2건 · 신규 생성 1건<br>
+        · 필드 오류: <b style="color:var(--green);">없음</b>
+      </div>
+    </div>`;
+}
+
+/* 템플릿 다운로드 (시뮬레이션 CSV 생성) */
+function pcDownloadExtTemplate(){
+  const csv = [
+    'KEPCO 고객번호,한전 계약전력(kW),사업장명,현장 책임자,연락처,주소',
+    '10012001,500,수원사업장,홍길동,010-0000-0000,경기 수원시 영통구 xx',
+    '10012002,300,평택공장,김담당,010-1234-5678,경기 평택시 xx',
+  ].join('\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '외부데이터_조회_템플릿.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  if(typeof showToast === 'function') showToast('템플릿 다운로드 완료');
+}
+
+function pcShowExtSchema(){
+  alert('필수 컬럼\n  · KEPCO 고객번호 (10자리 숫자)\n  · 한전 계약전력 (숫자, kW)\n  · 사업장명\n\n선택 컬럼\n  · 현장 책임자\n  · 연락처\n  · 주소');
+}
+
+/* 엑셀 업로드 실행 (시뮬레이션) */
+function pcDoExtUpload(bizId){
+  const file = $('pc-ext-file')?.files?.[0];
+  if(!file){
+    alert('업로드할 파일을 선택하세요.');
+    return;
+  }
+  $('cm-title').textContent = '엑셀 일괄 조회 중';
+  $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
+      <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:pc-spin 0.9s linear infinite;"></div>
+      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">엑셀 파싱 · 한전 AMI 조회 중...</div>
+      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">${file.name}</div>
+    </div>`;
+  $('cm-footer').innerHTML = '';
+  setTimeout(() => {
+    logAudit?.({objectType:'customer', objectId:bizId, action:'ext_bulk_upload',
+      title:'외부데이터 엑셀 일괄 업로드', desc:`${file.name} · 3행 처리`, actor:'운영자', tone:'success'});
+    closeModal('commonModal');
+    if(typeof showToast === 'function') showToast('엑셀 일괄 조회 완료 — 3건 반영');
+    const c = custById(bizId);
+    if(c && typeof pcRenderSitesTab === 'function') pcRenderSitesTab(c);
+  }, 1400);
 }
 
 function pcDoExtRecheck(bizId, siteId){
