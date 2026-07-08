@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260708-1523. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260708-1523">
+<!-- css/js 모두 ?v=260708-1537. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260708-1537">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-1523</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-1537</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -1508,7 +1508,7 @@
           <div style="display:flex;gap:8px;align-items:center;">
             <input type="text" class="acct-form-input" id="acctNewPwAuto" readonly
               style="font-family:monospace;background:var(--g-50);flex:1;color:var(--navy);font-weight:600;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="acctRegenPwAuto()">재생성</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="acctRegenPwAuto()">초기화</button>
           </div>
           <div class="acct-form-hint">계정 생성 시 자동 부여됩니다. 최초 로그인 시 재설정 정책(정책서 §4.3)에 따라 사용자가 직접 변경합니다.</div>
         </div>
@@ -1516,7 +1516,7 @@
     </div>
     <div class="acct-modal-foot">
       <button class="btn btn-secondary" onclick="closeModalAcct('acctModalCreate')">취소</button>
-      <button class="btn btn-primary" onclick="acctSubmitCreate()">계정 생성 및 초대 발송</button>
+      <button class="btn btn-primary" onclick="acctSubmitCreate()">생성 완료</button>
     </div>
   </div>
 </div>
@@ -2150,20 +2150,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260708-1523"></script>
-<script src="data/tips.js?v=260708-1523"></script>
-<script src="js/core.js?v=260708-1523"></script>
-<script src="js/dashboard.js?v=260708-1523"></script>
-<script src="js/precheck.js?v=260708-1523"></script>
-<script src="js/resource.js?v=260708-1523"></script>
-<script src="js/monitoring.js?v=260708-1523"></script>
-<script src="js/report.js?v=260708-1523"></script>
-<script src="js/settlement.js?v=260708-1523"></script>
-<script src="js/datacollect.js?v=260708-1523"></script>
-<script src="js/rtu.js?v=260708-1523"></script>
-<script src="js/communication.js?v=260708-1523"></script>
-<script src="js/bidding.js?v=260708-1523"></script>
-<script src="js/account.js?v=260708-1523"></script>
-<script src="js/system.js?v=260708-1523"></script>
+<script src="data/store.js?v=260708-1537"></script>
+<script src="data/tips.js?v=260708-1537"></script>
+<script src="js/core.js?v=260708-1537"></script>
+<script src="js/dashboard.js?v=260708-1537"></script>
+<script src="js/precheck.js?v=260708-1537"></script>
+<script src="js/resource.js?v=260708-1537"></script>
+<script src="js/monitoring.js?v=260708-1537"></script>
+<script src="js/report.js?v=260708-1537"></script>
+<script src="js/settlement.js?v=260708-1537"></script>
+<script src="js/datacollect.js?v=260708-1537"></script>
+<script src="js/rtu.js?v=260708-1537"></script>
+<script src="js/communication.js?v=260708-1537"></script>
+<script src="js/bidding.js?v=260708-1537"></script>
+<script src="js/account.js?v=260708-1537"></script>
+<script src="js/system.js?v=260708-1537"></script>
 
 </body></html>
