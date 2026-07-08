@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260708-1518. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260708-1518">
+<!-- css/js 모두 ?v=260708-1523. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260708-1523">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-1518</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-1523</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -1397,7 +1397,7 @@
   </div>
 
   <div class="acct-filter-area">
-    <input type="text" class="acct-search" id="acctSearchBox" placeholder="이름 · 아이디 · 이메일로 검색" onkeydown="if(event.key==='Enter') acctRender()">
+    <input type="text" class="acct-search" id="acctSearchBox" placeholder="담당자명 · ID(이메일) · 전화번호로 검색" onkeydown="if(event.key==='Enter') acctRender()">
     <button class="btn btn-primary btn-sm" onclick="acctRender()">조회</button>
     <button class="btn btn-secondary btn-sm" onclick="acctResetFilters()">초기화</button>
     <div class="acct-spacer"></div>
@@ -1501,23 +1501,16 @@
       </table>
       <div class="acct-form-hint" style="margin-top:4px;">역할 변경 시 기본 권한이 자동 적용되며, 개별 체크박스로 세부 조정 가능합니다.</div>
       <div class="acct-divider"></div>
+      <!-- [Phase 17-DI] 초기 비밀번호 자동 생성 (예: drms2026 프리픽스) — MFA 옵션은 목업에서 제거 -->
       <div class="acct-form-row">
         <div class="acct-form-field full">
           <label class="acct-form-label">초기 비밀번호</label>
-          <select class="acct-form-select" id="acctNewPwMode">
-            <option value="invite">이메일 초대 링크 (권장)</option>
-            <option value="auto">자동 생성 후 담당자 전달</option>
-          </select>
-          <div class="acct-form-hint">이메일 초대 시 사용자가 직접 설정합니다.</div>
-        </div>
-      </div>
-      <div class="acct-form-row">
-        <div class="acct-form-field full">
-          <label class="acct-form-label" style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" id="acctNewMfa" checked style="width:14px;height:14px;accent-color:var(--blue);">
-            2단계 인증(MFA) 필수
-          </label>
-          <div class="acct-form-hint">OTP 앱 또는 SMS 인증. 시스템관리자/정산담당자는 MFA 필수 권장.</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" class="acct-form-input" id="acctNewPwAuto" readonly
+              style="font-family:monospace;background:var(--g-50);flex:1;color:var(--navy);font-weight:600;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="acctRegenPwAuto()">재생성</button>
+          </div>
+          <div class="acct-form-hint">계정 생성 시 자동 부여됩니다. 최초 로그인 시 재설정 정책(정책서 §4.3)에 따라 사용자가 직접 변경합니다.</div>
         </div>
       </div>
     </div>
@@ -2157,20 +2150,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260708-1518"></script>
-<script src="data/tips.js?v=260708-1518"></script>
-<script src="js/core.js?v=260708-1518"></script>
-<script src="js/dashboard.js?v=260708-1518"></script>
-<script src="js/precheck.js?v=260708-1518"></script>
-<script src="js/resource.js?v=260708-1518"></script>
-<script src="js/monitoring.js?v=260708-1518"></script>
-<script src="js/report.js?v=260708-1518"></script>
-<script src="js/settlement.js?v=260708-1518"></script>
-<script src="js/datacollect.js?v=260708-1518"></script>
-<script src="js/rtu.js?v=260708-1518"></script>
-<script src="js/communication.js?v=260708-1518"></script>
-<script src="js/bidding.js?v=260708-1518"></script>
-<script src="js/account.js?v=260708-1518"></script>
-<script src="js/system.js?v=260708-1518"></script>
+<script src="data/store.js?v=260708-1523"></script>
+<script src="data/tips.js?v=260708-1523"></script>
+<script src="js/core.js?v=260708-1523"></script>
+<script src="js/dashboard.js?v=260708-1523"></script>
+<script src="js/precheck.js?v=260708-1523"></script>
+<script src="js/resource.js?v=260708-1523"></script>
+<script src="js/monitoring.js?v=260708-1523"></script>
+<script src="js/report.js?v=260708-1523"></script>
+<script src="js/settlement.js?v=260708-1523"></script>
+<script src="js/datacollect.js?v=260708-1523"></script>
+<script src="js/rtu.js?v=260708-1523"></script>
+<script src="js/communication.js?v=260708-1523"></script>
+<script src="js/bidding.js?v=260708-1523"></script>
+<script src="js/account.js?v=260708-1523"></script>
+<script src="js/system.js?v=260708-1523"></script>
 
 </body></html>

@@ -10,8 +10,8 @@ function acctResetFilters(){
 function acctRender(){
   const q = ($('acctSearchBox').value||'').trim().toLowerCase();
   let rows = accounts.slice();
-  // [Phase 17-I] 사번(empNo) 검색 제거 — 정책서에 없는 필드. 이름·이메일·소속 사업자명·부서·역할명 위주로
-  if(q) rows = rows.filter(a=> (a.name+a.email+(a.company||'')+(a.team||'')+(ROLE_MAP[a.role]?.name||'')).toLowerCase().includes(q));
+  // [Phase 17-DI] 검색 대상: 담당자명 · ID(이메일) · 전화번호로 한정
+  if(q) rows = rows.filter(a=> (a.name+a.email+(a.phone||'')).toLowerCase().includes(q));
   const tbody = $('acctBody');
   if(rows.length===0){
     tbody.innerHTML = '<tr><td colspan="7" class="acct-empty">검색 조건에 해당하는 계정이 없습니다.</td></tr>';
@@ -86,7 +86,8 @@ function acctOpenCreate(){
     const setCls = (id, v) => { const el = document.getElementById(id); if(el) el.className = v; };
     setVal('acctNewName',''); setVal('acctNewEmail','');
     setVal('acctNewPhone',''); setVal('acctNewTeam',''); setVal('acctNewPosition','');
-    setVal('acctNewPwMode','invite'); setChecked('acctNewMfa', true);
+    // [Phase 17-DI] 초기 비밀번호 자동 생성 (drms2026 프리픽스 + 랜덤 4자리)
+    setVal('acctNewPwAuto', acctGeneratePwAuto());
     setCls('acctNewEmailHint', 'acct-form-hint');
     setText('acctNewEmailHint', '회사 이메일만 허용 (@60hz.io 도메인)');
     const sel = document.getElementById('acctNewRoleSelect');
@@ -150,21 +151,35 @@ function acctSubmitCreate(){
   const role = $('acctNewRoleSelect')?.value;
   if(!name||!email||!company||!role){ showToast('필수 항목(담당자명·이메일·소속 사업자명·역할)을 모두 입력하세요.'); return; }
   if(accounts.some(a=>a.email===email)){ showToast('이미 사용 중인 이메일입니다.'); return; }
+  const phone = $('acctNewPhone')?.value.trim() || '';
+  const initPw = $('acctNewPwAuto')?.value || acctGeneratePwAuto();
   accounts.unshift({
     id:'u'+Date.now(), email, name, empNo:'-', role,
-    company,                  // Phase 14-D: 소속 사업자명
-    team: team || '',          // 부서명(선택)
+    company, phone,
+    team: team || '',
     position:$('acctNewPosition')?.value||'-',
-    status: $('acctNewPwMode')?.value==='invite'?'INVITED':'RESET_REQUIRED', // 정책서 9장 상태 코드
-    lastLogin:'-', lastIp:'-', validUntil:null, mfa:$('acctNewMfa').checked,
-    // [Phase 17-I] 신규 계정 생성일은 오늘. 옛 하드코딩 '2026-04-21' 제거.
+    // [Phase 17-DI] 자동 발급 초기 비밀번호 → 최초 로그인 시 재설정 필요 상태
+    status: 'RESET_REQUIRED',
+    lastLogin:'-', lastIp:'-', validUntil:null,
     createdAt: (typeof todayStr === 'function') ? todayStr() : new Date().toISOString().slice(0,10),
     customPerms: JSON.parse(JSON.stringify(newPermOverrides||ROLE_MAP[role].perms))
   });
-  logAudit('계정 생성', `${name} (${email}) — ${ROLE_MAP[role].name}`);
+  logAudit('계정 생성', `${name} (${email}) — ${ROLE_MAP[role].name} · 초기 비밀번호 발급`);
   closeModalAcct('acctModalCreate');
-  showToast(`${name} 계정이 생성되었습니다.`);
+  showToast(`${name} 계정 생성 완료. 초기 비밀번호: ${initPw}`);
   acctRender();
+}
+
+/* [Phase 17-DI] 초기 비밀번호 자동 생성기 — drms2026 프리픽스 + 랜덤 4자리 */
+function acctGeneratePwAuto(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let suffix = '';
+  for(let i=0;i<4;i++) suffix += chars[Math.floor(Math.random()*chars.length)];
+  return 'drms2026' + suffix;
+}
+function acctRegenPwAuto(){
+  const el = document.getElementById('acctNewPwAuto');
+  if(el) el.value = acctGeneratePwAuto();
 }
 
 /* ── 권한 수정 ── */
@@ -320,7 +335,7 @@ function acctOpenDrawer(id){
       ${a.team?`<div class="acct-detail-row"><div class="acct-detail-row-label">부서</div><div class="acct-detail-row-val">${a.team}</div></div>`:''}
       ${a.position?`<div class="acct-detail-row"><div class="acct-detail-row-label">직책</div><div class="acct-detail-row-val">${a.position}</div></div>`:''}
       <div class="acct-detail-row"><div class="acct-detail-row-label">상태</div><div class="acct-detail-row-val"><span class="badge ${st.badge}">${st.label}</span></div></div>
-      <div class="acct-detail-row"><div class="acct-detail-row-label">MFA</div><div class="acct-detail-row-val">${a.mfa?'활성':'비활성'}</div></div>
+      ${a.phone?`<div class="acct-detail-row"><div class="acct-detail-row-label">전화번호</div><div class="acct-detail-row-val" style="font-variant-numeric:tabular-nums;">${a.phone}</div></div>`:''}
       <div class="acct-detail-row"><div class="acct-detail-row-label">생성일</div><div class="acct-detail-row-val">${a.createdAt}</div></div>
       ${a.validUntil?`<div class="acct-detail-row"><div class="acct-detail-row-label">유효기간</div><div class="acct-detail-row-val">${a.validUntil}</div></div>`:''}
     </div>
