@@ -752,6 +752,8 @@ function renderDashboard(){
   dashRenderRiskList();
   // 전력 데이터 수집 현황
   dashRenderBars();
+  // [Phase 17-DK] 정산 현황 카드 (§ dashboard.md §10)
+  if(typeof dashRenderSettlement === 'function') dashRenderSettlement();
   // 대시보드 참여고객 현황
   $('d-cust-total').textContent = totalCust;
   const d = new Date();

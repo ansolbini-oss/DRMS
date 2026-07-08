@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260708-1537. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260708-1537">
+<!-- css/js 모두 ?v=260708-1611. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260708-1611">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-1537</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-1611</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -293,37 +293,37 @@
         <div class="dash-card-title">정산 현황 <span id="dashSettleMonth" style="font-weight:500;color:var(--text-sub);margin-left:4px;">— 이번 달</span></div>
         <button class="dash-card-link" onclick="event.stopPropagation();navigate('settlement')">고객정산관리 →</button>
       </div>
-      <!-- 월 총액 -->
+      <!-- [Phase 17-DK] 월 총액 — dashRenderSettlement가 값 채움. 라벨: 정산 대기 / 정산 완료 -->
       <div style="display:flex;align-items:baseline;gap:12px;padding:14px 16px;background:var(--g-50);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;">
-        <div style="font-size:11px;color:var(--text-hint);font-weight:500;">6월 정산 총액</div>
-        <div style="font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-0.02em;">₩ 42,800만</div>
-        <div style="font-size:11px;color:var(--text-hint);margin-left:auto;">정산확정 <b style="color:var(--green);">13건</b> · 승인대기 <b style="color:var(--amber);">5건</b></div>
+        <div style="font-size:11px;color:var(--text-hint);font-weight:500;" id="dashStlMonthLabel">이번 달 정산 총액</div>
+        <div style="font-size:22px;font-weight:700;color:var(--navy);letter-spacing:-0.02em;" id="dashStlTotal">₩ 0만</div>
+        <div style="font-size:11px;color:var(--text-hint);margin-left:auto;">정산 완료 <b style="color:var(--green);" id="dashStlDoneCnt">0건</b> · 정산 대기 <b style="color:var(--amber);" id="dashStlPendCnt">0건</b></div>
       </div>
-      <!-- 3분화 카드 — [Phase 17-BZ] 각 카드 클릭 → 해당 sub-tab으로 점프 -->
+      <!-- 3분화 카드 -->
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
         <div class="stl-block" style="cursor:pointer;" onclick="event.stopPropagation();navigate('settlement','basic')">
           <div class="stl-head">
             <div><div class="stl-name">① 기본 정산금 <span style="font-size:9px;color:var(--text-hint);">(매월 KPX 수령)</span></div></div>
-            <div class="stl-amount" style="color:var(--navy);">₩ 15,000만</div>
+            <div class="stl-amount" id="dashStlAmtBasic" style="color:var(--navy);">₩ 0만</div>
           </div>
-          <div class="stl-row"><span>정산 확정</span><span style="color:var(--green);font-weight:600;">5건</span></div>
-          <div class="stl-row"><span>승인 대기</span><span style="color:var(--amber);font-weight:600;">1건</span></div>
+          <div class="stl-row"><span>정산 대기</span><span style="color:var(--amber);font-weight:600;" id="dashStlPendBasic">0건</span></div>
+          <div class="stl-row"><span>정산 완료</span><span style="color:var(--green);font-weight:600;" id="dashStlDoneBasic">0건</span></div>
         </div>
         <div class="stl-block" style="cursor:pointer;" onclick="event.stopPropagation();navigate('settlement','mandatory')">
           <div class="stl-head">
             <div><div class="stl-name">② 실적정산금 (의무) <span style="font-size:9px;color:var(--text-hint);">(신뢰성DR 이행)</span></div></div>
-            <div class="stl-amount" style="color:var(--green);">₩ 13,400만</div>
+            <div class="stl-amount" id="dashStlAmtMand" style="color:var(--green);">₩ 0만</div>
           </div>
-          <div class="stl-row"><span>정산 확정</span><span style="color:var(--green);font-weight:600;">4건</span></div>
-          <div class="stl-row"><span>승인 대기</span><span style="color:var(--amber);font-weight:600;">2건</span></div>
+          <div class="stl-row"><span>정산 대기</span><span style="color:var(--amber);font-weight:600;" id="dashStlPendMand">0건</span></div>
+          <div class="stl-row"><span>정산 완료</span><span style="color:var(--green);font-weight:600;" id="dashStlDoneMand">0건</span></div>
         </div>
         <div class="stl-block" style="cursor:pointer;" onclick="event.stopPropagation();navigate('settlement','voluntary')">
           <div class="stl-head">
             <div><div class="stl-name">③ 실적정산금 (자발) <span style="font-size:9px;color:var(--text-hint);">(자발DR 초과감축)</span></div></div>
-            <div class="stl-amount" style="color:var(--blue);">₩ 14,400만</div>
+            <div class="stl-amount" id="dashStlAmtVol" style="color:var(--blue);">₩ 0만</div>
           </div>
-          <div class="stl-row"><span>정산 확정</span><span style="color:var(--green);font-weight:600;">4건</span></div>
-          <div class="stl-row"><span>승인 대기</span><span style="color:var(--amber);font-weight:600;">2건</span></div>
+          <div class="stl-row"><span>정산 대기</span><span style="color:var(--amber);font-weight:600;" id="dashStlPendVol">0건</span></div>
+          <div class="stl-row"><span>정산 완료</span><span style="color:var(--green);font-weight:600;" id="dashStlDoneVol">0건</span></div>
         </div>
       </div>
     </div>
@@ -2150,20 +2150,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260708-1537"></script>
-<script src="data/tips.js?v=260708-1537"></script>
-<script src="js/core.js?v=260708-1537"></script>
-<script src="js/dashboard.js?v=260708-1537"></script>
-<script src="js/precheck.js?v=260708-1537"></script>
-<script src="js/resource.js?v=260708-1537"></script>
-<script src="js/monitoring.js?v=260708-1537"></script>
-<script src="js/report.js?v=260708-1537"></script>
-<script src="js/settlement.js?v=260708-1537"></script>
-<script src="js/datacollect.js?v=260708-1537"></script>
-<script src="js/rtu.js?v=260708-1537"></script>
-<script src="js/communication.js?v=260708-1537"></script>
-<script src="js/bidding.js?v=260708-1537"></script>
-<script src="js/account.js?v=260708-1537"></script>
-<script src="js/system.js?v=260708-1537"></script>
+<script src="data/store.js?v=260708-1611"></script>
+<script src="data/tips.js?v=260708-1611"></script>
+<script src="js/core.js?v=260708-1611"></script>
+<script src="js/dashboard.js?v=260708-1611"></script>
+<script src="js/precheck.js?v=260708-1611"></script>
+<script src="js/resource.js?v=260708-1611"></script>
+<script src="js/monitoring.js?v=260708-1611"></script>
+<script src="js/report.js?v=260708-1611"></script>
+<script src="js/settlement.js?v=260708-1611"></script>
+<script src="js/datacollect.js?v=260708-1611"></script>
+<script src="js/rtu.js?v=260708-1611"></script>
+<script src="js/communication.js?v=260708-1611"></script>
+<script src="js/bidding.js?v=260708-1611"></script>
+<script src="js/account.js?v=260708-1611"></script>
+<script src="js/system.js?v=260708-1611"></script>
 
 </body></html>
