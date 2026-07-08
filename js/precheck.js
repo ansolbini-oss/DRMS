@@ -659,9 +659,9 @@ function pcOpenExtRecheck(bizId, siteId){
     </div>
   </div>
 
-  <!-- 엑셀 업로드 모드 -->
+  <!-- 엑셀 업로드 모드 — 이 사업장의 한전 데이터 fallback 업로드 -->
   <div id="pc-ext-mode-excel" style="display:none;">
-    <div class="info-box">사업장 여러 곳의 한전 정보를 일괄 등록·수정합니다. 아래 템플릿을 다운로드해 채운 뒤 업로드하세요.</div>
+    <div class="info-box">한전 API 자동 조회가 실패했거나 이상이 있을 때, 이 사업장의 계량 데이터를 파일로 직접 업로드합니다.</div>
     <div style="margin-top:10px;padding:12px;border:1.5px dashed var(--border-dark);border-radius:8px;text-align:center;background:var(--g-50);">
       <input type="file" id="pc-ext-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="pcHandleExtFile(event)">
       <div style="font-size:32px;color:var(--text-hint);margin-bottom:6px;">📄</div>
@@ -669,16 +669,10 @@ function pcOpenExtRecheck(bizId, siteId){
       <div id="pc-ext-file-name" style="margin-top:8px;font-size:11px;color:var(--text-hint);">선택된 파일 없음</div>
       <div style="margin-top:6px;font-size:10px;color:var(--text-hint);">.xlsx / .xls / .csv (최대 5MB)</div>
     </div>
-    <div style="margin-top:10px;display:flex;gap:8px;">
-      <button class="btn btn-secondary btn-sm" onclick="pcDownloadExtTemplate()" style="flex:1;">📥 템플릿 다운로드</button>
-      <button class="btn btn-secondary btn-sm" onclick="pcShowExtSchema()" style="flex:1;">📋 항목 안내</button>
+    <div style="margin-top:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="pcDownloadExtTemplate()" style="width:100%;">📥 템플릿 다운로드</button>
     </div>
     <div id="pc-ext-preview" style="margin-top:10px;"></div>
-    <div style="margin-top:10px;padding:8px 12px;background:var(--g-50);border-radius:6px;font-size:10px;color:var(--text-hint);line-height:1.6;">
-      ⓘ 필수 컬럼: <b>KEPCO 고객번호</b>, <b>한전 계약전력</b>, <b>사업장명</b><br>
-      선택 컬럼: 현장 책임자, 연락처, 주소<br>
-      업로드 파일의 각 행은 한 사업장에 매핑되며, 기존 KEPCO 번호와 일치하면 갱신, 없으면 신규 생성됩니다.
-    </div>
   </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
     <button class="btn btn-primary" id="pc-ext-submit" onclick="pcDoExtRecheck('${bizId}','${siteId}')">조회 실행</button>`;
@@ -712,8 +706,8 @@ function pcSwitchExtMode(mode){
     tabE.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
     tabM.style.background = 'transparent'; tabM.style.color = 'var(--text-sub)'; tabM.style.fontWeight = '500';
     tabM.style.boxShadow = 'none';
-    if(submit) submit.textContent = '업로드·일괄 조회';
-    if(submit) submit.onclick = () => pcDoExtUpload(window.__pcExtBizId);
+    if(submit) submit.textContent = '업로드';
+    if(submit) submit.onclick = () => pcDoExtUpload(window.__pcExtBizId, window.__pcExtSiteId);
   }
 }
 
@@ -723,60 +717,66 @@ function pcHandleExtFile(evt){
   if(!file) return;
   const sizeMB = (file.size / 1024 / 1024).toFixed(2);
   $('pc-ext-file-name').innerHTML = `<b style="color:var(--navy);">${file.name}</b> · ${sizeMB} MB`;
-  // 시뮬레이션 프리뷰 (실제 파싱은 목업 밖 구현)
+  // 시뮬레이션 프리뷰 — 단일 사업장의 계량 데이터 파일 검사
   $('pc-ext-preview').innerHTML = `
     <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;">
-      <div style="font-weight:600;color:var(--navy);margin-bottom:6px;">파일 미리보기 (시뮬레이션)</div>
+      <div style="font-weight:600;color:var(--navy);margin-bottom:6px;">파일 확인 (시뮬레이션)</div>
       <div style="color:var(--text-sub);line-height:1.7;">
-        · 3개 행 인식 · 필수 컬럼 3개 확인 완료<br>
-        · KEPCO 매칭: 기존 갱신 2건 · 신규 생성 1건<br>
-        · 필드 오류: <b style="color:var(--green);">없음</b>
+        · 15분 단위 계량 데이터 8,760 포인트 인식<br>
+        · 조회 기간: 최근 12개월<br>
+        · 결측 구간: <b style="color:var(--green);">없음</b>
       </div>
     </div>`;
 }
 
-/* 템플릿 다운로드 (시뮬레이션 CSV 생성) */
+/* 템플릿 다운로드 — 이 사업장의 15분 단위 계량 데이터 예시 */
 function pcDownloadExtTemplate(){
   const csv = [
-    'KEPCO 고객번호,한전 계약전력(kW),사업장명,현장 책임자,연락처,주소',
-    '10012001,500,수원사업장,홍길동,010-0000-0000,경기 수원시 영통구 xx',
-    '10012002,300,평택공장,김담당,010-1234-5678,경기 평택시 xx',
+    '일자,시간,사용전력량(kWh)',
+    '2025-01-01,00:00,120.5',
+    '2025-01-01,00:15,118.3',
+    '2025-01-01,00:30,115.7',
+    '# ... 15분 단위 12개월치 데이터 (8,760행) ...',
   ].join('\n');
   const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = '외부데이터_조회_템플릿.csv';
+  a.download = '한전_계량데이터_템플릿.csv';
   a.click();
   URL.revokeObjectURL(url);
   if(typeof showToast === 'function') showToast('템플릿 다운로드 완료');
 }
 
-function pcShowExtSchema(){
-  alert('필수 컬럼\n  · KEPCO 고객번호 (10자리 숫자)\n  · 한전 계약전력 (숫자, kW)\n  · 사업장명\n\n선택 컬럼\n  · 현장 책임자\n  · 연락처\n  · 주소');
-}
-
-/* 엑셀 업로드 실행 (시뮬레이션) */
-function pcDoExtUpload(bizId){
+/* 엑셀 업로드 실행 (시뮬레이션) — 단일 사업장 fallback */
+function pcDoExtUpload(bizId, siteId){
   const file = $('pc-ext-file')?.files?.[0];
   if(!file){
     alert('업로드할 파일을 선택하세요.');
     return;
   }
-  $('cm-title').textContent = '엑셀 일괄 조회 중';
+  const s = pcFindSite(bizId, siteId);
+  $('cm-title').textContent = '계량 데이터 업로드 중';
   $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
       <div style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:pc-spin 0.9s linear infinite;"></div>
-      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">엑셀 파싱 · 한전 AMI 조회 중...</div>
-      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">${file.name}</div>
+      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">엑셀 파싱 · 계량 데이터 처리 중...</div>
+      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">${s?.siteName||''} · ${file.name}</div>
     </div>`;
   $('cm-footer').innerHTML = '';
   setTimeout(() => {
-    logAudit?.({objectType:'customer', objectId:bizId, action:'ext_bulk_upload',
-      title:'외부데이터 엑셀 일괄 업로드', desc:`${file.name} · 3행 처리`, actor:'운영자', tone:'success'});
+    if(s){
+      s.extS = '통과';
+      if(!Array.isArray(s.steps)) s.steps = [1,1,1];
+      s.steps[0] = 2;
+    }
+    logAudit?.({objectType:'site', objectId:siteId, action:'ext_manual_upload',
+      title:`계량 데이터 수동 업로드 — ${s?.siteName||''}`,
+      desc:`${file.name} · 한전 API 조회 실패 대비 fallback`, actor:'운영자', tone:'info'});
     closeModal('commonModal');
-    if(typeof showToast === 'function') showToast('엑셀 일괄 조회 완료 — 3건 반영');
+    if(typeof showToast === 'function') showToast('계량 데이터 업로드 완료');
     const c = custById(bizId);
     if(c && typeof pcRenderSitesTab === 'function') pcRenderSitesTab(c);
+    if(typeof pcSelectSite === 'function') pcSelectSite(bizId, siteId);
   }, 1400);
 }
 
