@@ -1088,7 +1088,9 @@ function doLogin(e){
     lockUntil = null;
     alertBox.classList.add('show','info');
     alertBox.textContent = '로그인 성공. 운영시스템으로 이동합니다...';
-    try{ if($('loginKeep').checked) sessionStorage.setItem('dr_last_id', id); }catch(_){}
+    // [Phase 17-DH] 아이디 저장 정책 (auth-policy §5.2) 준수 — localStorage 사용
+    //   체크 활성 시: 최신 값으로 갱신 / 체크 해제 시: 기존 저장값 유지 (삭제 X)
+    try{ if($('loginKeep').checked) localStorage.setItem('dr_last_id', id); }catch(_){}
     if(window.store && store.auditLog){
       store.auditLog.unshift({
         at: new Date().toISOString().substring(0,19).replace('T',' '),
@@ -1305,9 +1307,10 @@ let newPermOverrides = null;
    ★ 계약관리
 ════════════════════════════════════════════════════════════ */
 (function boot(){
-  // 세션 복구: 이전에 아이디 저장 체크했다면 자동 채움
+  // [Phase 17-DH] 로컬 저장소 복구 (auth-policy §5.2) — localStorage 사용
+  //   저장된 값이 있으면 자동 채우고 '아이디 저장' 체크박스 활성
   try{
-    const last = sessionStorage.getItem('dr_last_id');
+    const last = localStorage.getItem('dr_last_id');
     if(last){ $('loginId').value = last; $('loginKeep').checked = true; }
   }catch(_){}
   $('loginId').focus();
