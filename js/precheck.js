@@ -227,7 +227,7 @@ function pcRenderTable(){
         <td style="text-align:center;">${c.inflow==='사이트'?'<span class="badge badge-progress">사이트</span>':c.inflow==='영업'?'<span class="badge badge-purple">영업</span>':'<span style="color:var(--text-hint);">—</span>'}</td>
         <td style="text-align:center;">${pcStepBarHtml(s.steps)}</td>
         <td style="text-align:center;font-variant-numeric:tabular-nums;">${s.date || c.date || '—'}</td>
-        <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pcShowDetailWithSite('${c.id}','${s.id}')">상세</button></td>`;
+        <td style="text-align:center;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();pcShowDetailWithSite('${c.id}','${s.id}')">상세보기</button></td>`;
       tr.onclick = (e) => { if(e.target.tagName !== 'BUTTON') pcShowDetailWithSite(c.id, s.id); };
       tbody.appendChild(tr);
     });
