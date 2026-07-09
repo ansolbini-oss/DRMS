@@ -102,21 +102,28 @@ function pcCblSyncOptions(){
   cblSel.onchange = () => { window.__pcCblSelected = cblSel.value; render(); };
 }
 
+// [Phase 17-DO] 사전검증 카드 6개로 확장 — 신규 접수(검증대기) 분리
+const PC_CARD_IDS = ['pc-card-all','pc-card-new','pc-card-progress','pc-card-done','pc-card-contracted','pc-card-reject'];
+const PC_CARD_MAP = {
+  '':          'pc-card-all',
+  '검증대기':   'pc-card-new',
+  '검증중':     'pc-card-progress',
+  '검증완료':   'pc-card-done',
+  '계약완료':   'pc-card-contracted',
+  '반려':      'pc-card-reject',
+};
+
 function pcFilterByStatus(s){
   pcState.filter.status = (pcState.filter.status===s)? '' : s;
-  ['pc-card-all','pc-card-progress','pc-card-done','pc-card-contracted','pc-card-reject']
-    .forEach(id=>{ const el=$(id); if(el) el.classList.remove('active'); });
-  const map = {'':'pc-card-all','검증진행':'pc-card-progress',
-               '검증완료':'pc-card-done','계약완료':'pc-card-contracted','반려':'pc-card-reject'};
-  const activeId = map[pcState.filter.status];
+  PC_CARD_IDS.forEach(id=>{ const el=$(id); if(el) el.classList.remove('active'); });
+  const activeId = PC_CARD_MAP[pcState.filter.status];
   if(activeId){ const el=$(activeId); if(el) el.classList.add('active'); }
   pcRenderTable();
 }
 function pcResetFilter(){
   $('pc-search').value=''; $('pc-filter-type').value='';
   pcState.filter = {status:'',data:'',type:'',q:''};
-  ['pc-card-all','pc-card-progress','pc-card-done','pc-card-contracted','pc-card-reject']
-    .forEach(id=>{ const el=$(id); if(el) el.classList.remove('active'); });
+  PC_CARD_IDS.forEach(id=>{ const el=$(id); if(el) el.classList.remove('active'); });
   const allCard = $('pc-card-all'); if(allCard) allCard.classList.add('active');
   pcRenderTable();
 }
@@ -124,12 +131,13 @@ function pcResetFilter(){
 function pcRefreshCards(){
   const all = store.customers;
   $('pc-total').textContent = all.length;
-  // 검증진행 = 검증대기 + 검증중 (통합)
-  const progressCount = all.filter(c=>c.status==='검증대기'||c.status==='검증중').length;
-  $('pc-progress').textContent = progressCount;
-  $('pc-done').textContent = all.filter(c=>c.status==='검증완료').length;
+  // 신규 접수 = 검증대기 (진행 단계 미시작)
+  $('pc-new').textContent      = all.filter(c=>c.status==='검증대기').length;
+  // 검증진행 = 검증중 (하나 이상 단계 진행)
+  $('pc-progress').textContent = all.filter(c=>c.status==='검증중').length;
+  $('pc-done').textContent     = all.filter(c=>c.status==='검증완료').length;
   $('pc-contracted').textContent = all.filter(c=>c.status==='계약완료').length;
-  $('pc-reject').textContent = all.filter(c=>c.status==='반려').length;
+  $('pc-reject').textContent   = all.filter(c=>c.status==='반려').length;
 }
 
 function pcFilteredList(){
@@ -138,10 +146,7 @@ function pcFilteredList(){
   const sF = pcState.filter.status;
   return store.customers.filter(c=>{
     if(sF){
-      // '검증진행' 카드 클릭 시 검증대기 + 검증중 통합 매칭
-      if(sF==='검증진행'){
-        if(c.status!=='검증대기' && c.status!=='검증중') return false;
-      } else if(c.status!==sF){
+      if(c.status!==sF){
         return false;
       }
     }

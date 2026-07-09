@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260708-1853. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260708-1853">
+<!-- css/js 모두 ?v=260709-1858. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260709-1858">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260708-1853</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260709-1858</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -350,26 +350,31 @@
       </div>
     </div>
 
+    <!-- [Phase 17-DO] 카드 확장 — 신규 접수(검증대기) 분리 -->
     <div class="summary-bar">
       <div class="summary-card" id="pc-card-all" onclick="pcFilterByStatus('')">
         <div class="summary-label">전체</div>
-        <div class="summary-val" id="pc-total">31</div>
+        <div class="summary-val" id="pc-total">0</div>
       </div>
-      <div class="summary-card" id="pc-card-progress" onclick="pcFilterByStatus('검증진행')">
+      <div class="summary-card" id="pc-card-new" onclick="pcFilterByStatus('검증대기')">
+        <div class="summary-label">신규 접수</div>
+        <div class="summary-val amber" id="pc-new">0</div>
+      </div>
+      <div class="summary-card" id="pc-card-progress" onclick="pcFilterByStatus('검증중')">
         <div class="summary-label">검증진행</div>
-        <div class="summary-val blue" id="pc-progress">6</div>
+        <div class="summary-val blue" id="pc-progress">0</div>
       </div>
       <div class="summary-card" id="pc-card-done" onclick="pcFilterByStatus('검증완료')">
         <div class="summary-label">검증완료 · 계약대기</div>
-        <div class="summary-val green" id="pc-done">2</div>
+        <div class="summary-val green" id="pc-done">0</div>
       </div>
       <div class="summary-card" id="pc-card-contracted" onclick="pcFilterByStatus('계약완료')">
         <div class="summary-label">계약완료 (자원 풀)</div>
-        <div class="summary-val purple" id="pc-contracted">21</div>
+        <div class="summary-val purple" id="pc-contracted">0</div>
       </div>
       <div class="summary-card" id="pc-card-reject" onclick="pcFilterByStatus('반려')">
         <div class="summary-label">반려</div>
-        <div class="summary-val red" id="pc-reject">2</div>
+        <div class="summary-val red" id="pc-reject">0</div>
       </div>
     </div>
 
@@ -2144,20 +2149,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260708-1853"></script>
-<script src="data/tips.js?v=260708-1853"></script>
-<script src="js/core.js?v=260708-1853"></script>
-<script src="js/dashboard.js?v=260708-1853"></script>
-<script src="js/precheck.js?v=260708-1853"></script>
-<script src="js/resource.js?v=260708-1853"></script>
-<script src="js/monitoring.js?v=260708-1853"></script>
-<script src="js/report.js?v=260708-1853"></script>
-<script src="js/settlement.js?v=260708-1853"></script>
-<script src="js/datacollect.js?v=260708-1853"></script>
-<script src="js/rtu.js?v=260708-1853"></script>
-<script src="js/communication.js?v=260708-1853"></script>
-<script src="js/bidding.js?v=260708-1853"></script>
-<script src="js/account.js?v=260708-1853"></script>
-<script src="js/system.js?v=260708-1853"></script>
+<script src="data/store.js?v=260709-1858"></script>
+<script src="data/tips.js?v=260709-1858"></script>
+<script src="js/core.js?v=260709-1858"></script>
+<script src="js/dashboard.js?v=260709-1858"></script>
+<script src="js/precheck.js?v=260709-1858"></script>
+<script src="js/resource.js?v=260709-1858"></script>
+<script src="js/monitoring.js?v=260709-1858"></script>
+<script src="js/report.js?v=260709-1858"></script>
+<script src="js/settlement.js?v=260709-1858"></script>
+<script src="js/datacollect.js?v=260709-1858"></script>
+<script src="js/rtu.js?v=260709-1858"></script>
+<script src="js/communication.js?v=260709-1858"></script>
+<script src="js/bidding.js?v=260709-1858"></script>
+<script src="js/account.js?v=260709-1858"></script>
+<script src="js/system.js?v=260709-1858"></script>
 
 </body></html>
