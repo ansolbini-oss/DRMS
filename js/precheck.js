@@ -152,9 +152,9 @@ function pcFilteredList(){
     }
     if(tF && c.drType!==tF) return false;
     if(q){
-      // [Phase 17-DC] 검색 필드: 사업자 번호(bizno) · 사업자 이름 · 사업장 이름 · 한전 번호
-      //   담당자(ceo)·접수번호(recno) 제외
-      let hay = `${c.bizno||''} ${c.name||''} ${c.kepco||''}`;
+      // [Phase 17-DP] 검색 필드: 사업자명(name) · 사업장명(siteName) · 한전 고객 번호(kepco)
+      //   사업자 번호(bizno) · 담당자(ceo) · 접수번호(recno) 제외
+      let hay = `${c.name||''} ${c.kepco||''}`;
       if(Array.isArray(c.sites)){
         c.sites.forEach(s => { hay += ` ${s.siteName||''} ${s.kepco||''}`; });
       }
