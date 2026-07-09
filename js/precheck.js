@@ -102,14 +102,14 @@ function pcCblSyncOptions(){
   cblSel.onchange = () => { window.__pcCblSelected = cblSel.value; render(); };
 }
 
-// [Phase 17-DO] 사전검증 카드 6개로 확장 — 신규 접수(검증대기) 분리
-const PC_CARD_IDS = ['pc-card-all','pc-card-new','pc-card-progress','pc-card-done','pc-card-contracted','pc-card-reject'];
+// [Phase 17-DS] 사전검증 카드 5개 — '계약완료(자원 풀)' 제거
+//   계약완료 자원은 계약관리 → 자원관리 페이지 관할이라 사전검증 대상 아님
+const PC_CARD_IDS = ['pc-card-all','pc-card-new','pc-card-progress','pc-card-done','pc-card-reject'];
 const PC_CARD_MAP = {
   '':          'pc-card-all',
   '검증대기':   'pc-card-new',
   '검증중':     'pc-card-progress',
   '검증완료':   'pc-card-done',
-  '계약완료':   'pc-card-contracted',
   '반려':      'pc-card-reject',
 };
 
@@ -129,15 +129,13 @@ function pcResetFilter(){
 }
 
 function pcRefreshCards(){
-  const all = store.customers;
-  $('pc-total').textContent = all.length;
-  // 신규 접수 = 검증대기 (진행 단계 미시작)
-  $('pc-new').textContent      = all.filter(c=>c.status==='검증대기').length;
-  // 검증진행 = 검증중 (하나 이상 단계 진행)
-  $('pc-progress').textContent = all.filter(c=>c.status==='검증중').length;
-  $('pc-done').textContent     = all.filter(c=>c.status==='검증완료').length;
-  $('pc-contracted').textContent = all.filter(c=>c.status==='계약완료').length;
-  $('pc-reject').textContent   = all.filter(c=>c.status==='반려').length;
+  // [Phase 17-DS] 사전검증 대상 = 계약완료 제외 (계약완료는 계약관리 관할)
+  const scope = store.customers.filter(c=>c.status!=='계약완료');
+  $('pc-total').textContent    = scope.length;
+  $('pc-new').textContent      = scope.filter(c=>c.status==='검증대기').length;
+  $('pc-progress').textContent = scope.filter(c=>c.status==='검증중').length;
+  $('pc-done').textContent     = scope.filter(c=>c.status==='검증완료').length;
+  $('pc-reject').textContent   = scope.filter(c=>c.status==='반려').length;
 }
 
 function pcFilteredList(){
@@ -145,6 +143,8 @@ function pcFilteredList(){
   const tF = $('pc-filter-type')?.value||'';
   const sF = pcState.filter.status;
   return store.customers.filter(c=>{
+    // [Phase 17-DS] 사전검증 리스트에서 계약완료 자원 제외 (계약관리 관할)
+    if(c.status === '계약완료') return false;
     if(sF){
       if(c.status!==sF){
         return false;
