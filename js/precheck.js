@@ -1018,23 +1018,22 @@ function pcUpdateContractBtn(c){
   const contracted = c.status==='계약완료';
   const rejected = c.status==='반려';
   const handedOff = ['계약대기','검토중'].includes(c.contractStage);
-  if(contracted){
+  // [Phase 17-DR] 라벨 '계약이관'으로 통일 — 상태별로 이관 완료/반려됨만 대체
+  if(contracted || handedOff){
     btn.disabled = true;
-    btn.textContent = '계약 완료됨';
-    btn.style.display = '';
-  } else if(handedOff){
-    btn.disabled = true;
-    btn.textContent = `계약관리 ${c.contractStage}`;
+    btn.textContent = '이관 완료';
+    btn.title = '이미 계약관리로 이관되었습니다.';
     btn.style.display = '';
   } else if(rejected){
     btn.disabled = true;
     btn.textContent = '반려됨';
+    btn.title = '반려 상태에서는 이관할 수 없습니다.';
     btn.style.display = '';
   } else {
     btn.disabled = !allDone;
-    btn.textContent = '계약관리로 이관';
+    btn.textContent = '계약이관';
+    btn.title = allDone ? '계약관리로 이관합니다. (계약대기 상태로 자동 전환)' : '모든 검증 단계 완료 후 계약이관이 가능합니다.';
     btn.style.display = '';
-    btn.title = allDone?'':'모든 검증 단계 완료 후 계약관리 이관이 가능합니다.';
   }
 }
 
@@ -1856,7 +1855,7 @@ function pcOpenContract(){
     <div class="check-item-row"><span>CBL 유형</span><span style="font-weight:600;">${c.cblType}</span></div>
     <div class="check-item-row"><span>RRMSE</span><span style="font-weight:600;color:var(--green);">${c.rrmseVal}</span></div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-success" onclick="pcConfirmContract()">계약관리 이관</button>`;
+    <button class="btn btn-success" onclick="pcConfirmContract()">계약이관</button>`;
   openModal('commonModal');
 }
 function pcConfirmContract(){
