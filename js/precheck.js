@@ -1645,9 +1645,16 @@ function pcRenderCustomerInfo(c){
         <div style="${labelCell}">업태</div>
         <div style="${valCell}">${c.biztype || '-'}</div>
       </div>
-      <div style="display:grid;grid-template-columns:140px 1fr;">
+      <div style="${rowStyle}">
         <div style="${labelCell}">사업자 주소</div>
         <div style="${valCell}">${c.addr || '-'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:140px 1fr;">
+        <div style="${labelCell}">예상 자원 유형</div>
+        <div style="${valCell}">
+          ${c.drType ? `<span class="badge badge-gray" style="font-size:11px;">${c.drType}</span>` : '<span style="color:var(--text-hint);">미지정</span>'}
+          <span style="margin-left:8px;font-size:10px;color:var(--text-hint);">(사전검증 단계 매트릭스 결정 기준)</span>
+        </div>
       </div>
     </div>`;
     actions.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="pcEnterCustEdit()">사업자 정보 수정</button>`;
@@ -1692,10 +1699,19 @@ function pcRenderCustomerInfo(c){
           <input id="pc-ec-biztype" type="text" value="${esc(c.biztype)}" placeholder="예: 반도체, 도소매" style="${inpStyle};background:#f8fafc;" readonly>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:140px 1fr;">
+      <div style="${rowStyle}">
         <div style="${labelCell}">사업자 주소</div>
         <div style="${inpCell}">
           <input id="pc-ec-addr" type="text" value="${esc(c.addr)}" placeholder="시·구·상세주소" style="${inpStyle}">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:140px 1fr;">
+        <div style="${labelCell}">예상 자원 유형 ${req}</div>
+        <div style="${inpCell}">
+          <select id="pc-ec-drtype" style="${inpStyle};padding:8px 10px;">
+            ${['표준DR','중소형DR','중소형DR-EV','제주DR','국민DR','주파수DR','플러스DR'].map(t =>
+              `<option value="${t}"${t===(c.drType||'')?' selected':''}>${t}${t==='중소형DR-EV'?' (편입 특례)':''}</option>`).join('')}
+          </select>
         </div>
       </div>
       <input id="pc-ec-inflow" type="hidden" value="${esc(c.inflow)}">
@@ -1724,6 +1740,7 @@ function pcSaveCustEdit(){
   const newCeo     = $('pc-ec-ceo')?.value?.trim();
   const newTel     = $('pc-ec-tel')?.value?.trim();
   const newAddr    = $('pc-ec-addr')?.value?.trim();
+  const newDrType  = $('pc-ec-drtype')?.value || c.drType;
   const newInflow  = $('pc-ec-inflow')?.value || c.inflow;
   if(!newName || !newBizno || !newCeo || !newTel){
     alert('필수 항목(사업자번호·상호명·담당자 이름·담당자 연락처)을 모두 입력하세요.');
@@ -1742,6 +1759,8 @@ function pcSaveCustEdit(){
   apply('ceo', c.ceo, newCeo, '담당자 이름');
   apply('tel', c.tel, newTel, '담당자 연락처');
   apply('addr', c.addr, newAddr, '주소');
+  // [Phase 17-DU] 예상 자원 유형 변경 시 사전검증 단계 매트릭스도 재적용됨
+  apply('drType', c.drType, newDrType, '예상 자원 유형');
   logAudit?.({
     objectType:'customer', objectId:c.id, action:'customer_info_updated',
     title:`사업자 정보 수정 — ${c.name}`,
