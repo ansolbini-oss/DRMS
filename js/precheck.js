@@ -1063,7 +1063,7 @@ function pcUpdateContractBtn(c){
   const contracted = c.status==='계약완료';
   const rejected = c.status==='반려';
   const handedOff = ['계약대기','검토중'].includes(c.contractStage);
-  // [Phase 17-DR] 라벨 '계약이관'으로 통일 — 상태별로 이관 완료/반려됨만 대체
+  // [Phase 17-DR] 라벨 '계약관리로 이관'으로 통일 — 상태별로 이관 완료/반려됨만 대체
   if(contracted || handedOff){
     btn.disabled = true;
     btn.textContent = '이관 완료';
@@ -1076,8 +1076,8 @@ function pcUpdateContractBtn(c){
     btn.style.display = '';
   } else {
     btn.disabled = !allDone;
-    btn.textContent = '계약이관';
-    btn.title = allDone ? '계약관리로 이관합니다. (계약대기 상태로 자동 전환)' : '모든 검증 단계 완료 후 계약이관이 가능합니다.';
+    btn.textContent = '계약관리로 이관';
+    btn.title = allDone ? '계약관리로 이관합니다. (계약대기 상태로 자동 전환)' : '모든 검증 단계 완료 후 계약관리로 이관이 가능합니다.';
     btn.style.display = '';
   }
 }
@@ -1919,7 +1919,7 @@ function pcOpenContract(){
     <div class="check-item-row"><span>CBL 유형</span><span style="font-weight:600;">${c.cblType}</span></div>
     <div class="check-item-row"><span>RRMSE</span><span style="font-weight:600;color:var(--green);">${c.rrmseVal}</span></div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-success" onclick="pcConfirmContract()">계약이관</button>`;
+    <button class="btn btn-success" onclick="pcConfirmContract()">계약관리로 이관</button>`;
   openModal('commonModal');
 }
 function pcConfirmContract(){
@@ -2404,7 +2404,6 @@ function ctFilteredCustomers(){
   const stage = $('ct-filter-status')?.value || '';
   const cardKind = window.__ctCardFilter || '';
   return ctEligibleCustomers().filter(c=>{
-    const s = ctGetStage(c);
     const biz = (typeof ctComputeBizStatus === 'function') ? ctComputeBizStatus(c) : null;
     const hayParts = [c.name, c.bizno, c.ceo, c.tel, c.recno, c.kepco, c.id, c.addr];
     if(Array.isArray(c.sites)){
@@ -2412,7 +2411,12 @@ function ctFilteredCustomers(){
     }
     const matchQ = !q || hayParts.join(' ').toLowerCase().includes(q);
     const matchType = !type || c.drType===type;
-    const matchStage = !stage || s===stage;
+    // [Fix] 필터는 "사업자 전체 종합 상태"가 아니라 목록 컬럼과 동일하게
+    // "사업장 중 하나라도 해당 상태를 가지는가"로 판단한다.
+    // (기존 s===stage는 계약해지·계약만료처럼 전체 사업장이 같은 상태여야만
+    //  참이 되는 종합상태 기준이라, 일부 사업장만 계약해지인 사업자가
+    //  계약해지 필터에서 누락되는 버그가 있었음)
+    const matchStage = !stage || ((biz?.counts?.[stage] || 0) > 0);
     // KPI 카드 필터
     let matchCard = true;
     if(cardKind === 'pending')       matchCard = biz?.status === '계약대기';
@@ -2787,6 +2791,7 @@ function ctRenderDetailPage(c){
 }
 
 /* [Phase 17-AO] 계약관리 메모 — 사전검증과 동일 store.memos[c.recno] 공유 (운영자가 양쪽에서 같은 메모 확인) */
+let ctMemoEditingIdx = null;  // [Fix] 메모 수정 — 현재 편집 중인 메모의 배열 인덱스
 function ctRenderMemoHistory(c){
   const el = document.getElementById('ct-d-memo-history');
   if(!el) return;
@@ -2795,13 +2800,58 @@ function ctRenderMemoHistory(c){
     el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-hint);font-size:12px;">작성된 메모가 없습니다.</div>`;
     return;
   }
-  el.innerHTML = memos.map(m => `<div style="padding:10px 18px;border-bottom:1px solid var(--border);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <span style="font-size:11px;font-weight:600;color:var(--navy);">${m.user || '운영자'}</span>
-      <span style="font-size:10px;color:var(--text-hint);">${m.at || ''}</span>
-    </div>
-    <div style="font-size:12px;color:var(--text-sub);line-height:1.5;white-space:pre-wrap;">${(m.text||'').replace(/</g,'&lt;')}</div>
-  </div>`).join('');
+  el.innerHTML = memos.map((m, idx) => {
+    if(ctMemoEditingIdx === idx){
+      return `<div style="padding:10px 18px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:11px;font-weight:600;color:var(--navy);">${m.user || '운영자'}</span>
+          <span style="font-size:10px;color:var(--text-hint);">${m.at || ''}</span>
+        </div>
+        <textarea id="ct-d-memo-edit-${idx}" style="width:100%;height:50px;border:1px solid var(--blue);border-radius:var(--radius);padding:6px 8px;font-size:12px;font-family:inherit;resize:none;outline:none;line-height:1.5;box-sizing:border-box;">${(m.text||'').replace(/</g,'&lt;')}</textarea>
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px;">
+          <button class="btn btn-secondary btn-sm" onclick="ctCancelMemoEdit()">취소</button>
+          <button class="btn btn-primary btn-sm" onclick="ctSaveMemoEdit('${c.id}', ${idx})">저장</button>
+        </div>
+      </div>`;
+    }
+    return `<div style="padding:10px 18px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:600;color:var(--navy);">${m.user || '운영자'}</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:10px;color:var(--text-hint);">${m.at || ''}${m.editedAt ? ' (수정됨 ' + m.editedAt + ')' : ''}</span>
+          <button style="font-size:10px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;" onclick="ctOpenMemoEdit(${idx})">수정</button>
+        </span>
+      </div>
+      <div style="font-size:12px;color:var(--text-sub);line-height:1.5;white-space:pre-wrap;">${(m.text||'').replace(/</g,'&lt;')}</div>
+    </div>`;
+  }).join('');
+}
+
+/* [Fix] 메모 수정 — 편집 진입/취소/저장 */
+function ctOpenMemoEdit(idx){
+  ctMemoEditingIdx = idx;
+  const c = store.customers.find(x => x.id === ctCurrentId); if(!c) return;
+  ctRenderMemoHistory(c);
+}
+function ctCancelMemoEdit(){
+  ctMemoEditingIdx = null;
+  const c = store.customers.find(x => x.id === ctCurrentId); if(!c) return;
+  ctRenderMemoHistory(c);
+}
+function ctSaveMemoEdit(bizId, idx){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  const input = document.getElementById(`ct-d-memo-edit-${idx}`);
+  const text = input?.value?.trim();
+  if(!text){ if(typeof showToast === 'function') showToast('메모 내용을 입력하세요.'); return; }
+  const memos = store.memos && store.memos[c.recno];
+  if(!memos || !memos[idx]) return;
+  memos[idx].text = text;
+  memos[idx].editedAt = (typeof nowStr==='function'?nowStr():new Date().toISOString().slice(0,16).replace('T',' '));
+  logAudit?.({objectType:'memo', objectId:c.recno, action:'memo_edited',
+    title:`운영자 메모 수정 — ${c.name}`, desc:text.slice(0,40), actor:'운영자', tone:'info'});
+  ctMemoEditingIdx = null;
+  if(typeof showToast === 'function') showToast('메모가 수정되었습니다.');
+  ctRenderMemoHistory(c);
 }
 
 function ctAddMemo(){
@@ -2809,6 +2859,7 @@ function ctAddMemo(){
   const input = document.getElementById('ct-d-memo-input');
   const text = input?.value?.trim();
   if(!text){ if(typeof showToast === 'function') showToast('메모 내용을 입력하세요.'); return; }
+  ctMemoEditingIdx = null;
   if(!store.memos) store.memos = {};
   if(!store.memos[c.recno]) store.memos[c.recno] = [];
   store.memos[c.recno].unshift({ user:'현진영', at: (typeof nowStr==='function'?nowStr():new Date().toISOString().slice(0,16).replace('T',' ')), text });
@@ -3007,11 +3058,13 @@ function ctRenderSitesTable(c, sites){
         </table>
       </div>`;
     // [Phase 17-CG] 편집 모드일 땐 [저장][취소]로 토글
+    // [Fix] 계약대기·계약완료 상태(=운영 중인 계약)는 삭제 버튼 비활성화 (2026-07-15 정책 확정)
+    const canDelete = ctIsSiteDeletable(s);
     const actionButtons = isEditingSite
       ? `<button class="btn btn-secondary btn-sm" onclick="ctCancelSiteEdit('${c.id}','${s.id}')">취소</button>
          <button class="btn btn-primary btn-sm" onclick="ctSaveSiteEdit('${c.id}','${s.id}')">저장</button>`
       : `<button class="btn btn-secondary btn-sm" onclick="ctOpenSiteEdit('${c.id}','${s.id}')">수정</button>
-         <button class="btn btn-danger btn-sm" onclick="ctDeleteSite('${c.id}','${s.id}')">삭제</button>`;
+         <button class="btn btn-danger btn-sm" ${canDelete ? '' : 'disabled title="계약대기·계약완료 상태의 사업장은 삭제할 수 없습니다(계약만료·계약해지 상태만 삭제 가능)"'} onclick="ctDeleteSite('${c.id}','${s.id}')">삭제</button>`;
     const expandRow = `<tr style="background:var(--blue-light, #eff6ff);">
       <td colspan="9" style="padding:18px 28px 22px;">
         <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:24px 28px;">
@@ -3067,6 +3120,29 @@ function ctSetSiteStatus(bizId, siteId, newStatus){
   const s = (c.sites||[]).find(x => x.id === siteId); if(!s) return;
   const old = s.siteStatus || '계약대기';
   if(old === newStatus) return;
+  // [Fix] 계약해지 선택 시 2단계 확인 팝업 (정책서 3-6 해지 정책: 확인 팝업 → 재계약 의향 팝업)
+  if(newStatus === '계약해지'){
+    if(!confirm(`'${s.siteName}' 사업장의 계약을 해지할까요?\n해지 시 자원 배정이 해제되고 이후 이벤트 참여가 불가합니다.`)){
+      ctRenderDetailPage(c);  // 드롭다운 선택을 원래 값으로 되돌리기 위해 재렌더
+      return;
+    }
+    const wantsRenewal = confirm(`해지 처리를 진행합니다.\n\n재계약 의향이 있습니까?\n(확인: 리드 재등록 화면으로 이동 / 취소: 해지 완료 처리)`);
+    s.siteStatus = newStatus;
+    logAudit?.({objectType:'site', objectId:s.id, action:'site_status_changed',
+      title:`사업장 계약상태 변경 — ${s.siteName}`,
+      desc:`${old} → ${newStatus} (${c.name}) · 재계약 의향 ${wantsRenewal ? '있음' : '없음'}`,
+      actor:'운영자', tone:'warn'});
+    ctRenderDetailPage(c);
+    if(typeof ctRenderTable === 'function')   ctRenderTable();
+    if(typeof ctRenderSummary === 'function') ctRenderSummary();
+    if(wantsRenewal){
+      if(typeof showToast === 'function') showToast('해지 처리되었습니다. 리드 재등록을 위해 접수·사전검증 화면으로 이동합니다.');
+      if(typeof navigate === 'function') navigate('precheck');
+    } else {
+      if(typeof showToast === 'function') showToast('해지 완료 처리되었습니다.');
+    }
+    return;
+  }
   s.siteStatus = newStatus;
   logAudit?.({objectType:'site', objectId:s.id, action:'site_status_changed',
     title:`사업장 계약상태 변경 — ${s.siteName}`,
@@ -3077,6 +3153,16 @@ function ctSetSiteStatus(bizId, siteId, newStatus){
   ctRenderDetailPage(c);
   if(typeof ctRenderTable === 'function')   ctRenderTable();
   if(typeof ctRenderSummary === 'function') ctRenderSummary();
+}
+
+/* [Fix] 사업장 삭제 가능 여부 판정 (2026-07-15 정책 확정)
+   - 계약기간(시작일·종료일)이 아예 입력되지 않은 사업장은 자유롭게 삭제 가능(신규 추가 직후 등)
+   - 계약기간이 입력된 사업장은 저장된 계약상태가 "계약만료" 또는 "계약해지"인 경우에만 삭제 가능
+   - 계약대기·계약완료 상태는 계약기간 입력 여부와 무관하게 삭제 불가(운영 중인 계약을 실수로 지우는 것 방지) */
+function ctIsSiteDeletable(s){
+  const ct = s.contract || {};
+  if(!ct.startDate || !ct.endDate) return true;
+  return s.siteStatus === '계약만료' || s.siteStatus === '계약해지';
 }
 
 /* 사업장 추가 — 비어있는 사업장 신규 생성 */
@@ -3109,6 +3195,10 @@ function ctDeleteSite(bizId, siteId){
   const c = store.customers.find(x => x.id === bizId); if(!c) return;
   if(!Array.isArray(c.sites)) return;
   const s = c.sites.find(x => x.id === siteId); if(!s) return;
+  if(!ctIsSiteDeletable(s)){
+    if(typeof showToast === 'function') showToast('계약대기·계약완료 상태의 사업장은 삭제할 수 없습니다(계약만료·계약해지 상태만 삭제 가능).');
+    return;
+  }
   if(!confirm(`'${s.siteName}' 사업장을 삭제할까요? 계약 정보·서류도 함께 삭제됩니다.`)) return;
   c.sites = c.sites.filter(x => x.id !== siteId);
   ctExpandedSiteId = null;
@@ -3151,9 +3241,18 @@ function ctBulkDeleteSites(bizId){
     if(typeof showToast === 'function') showToast('삭제할 사업장을 선택하세요.');
     return;
   }
-  const targetIds = checked.map(cb => cb.dataset.siteId);
-  const targetNames = targetIds.map(id => c.sites.find(s => s.id === id)?.siteName).filter(Boolean);
-  if(!confirm(`선택된 ${targetIds.length}개 사업장을 삭제할까요?\n\n${targetNames.join(', ')}\n\n계약 정보·서류도 함께 삭제됩니다.`)) return;
+  const checkedIds = checked.map(cb => cb.dataset.siteId);
+  const checkedSites = checkedIds.map(id => c.sites.find(s => s.id === id)).filter(Boolean);
+  const blocked = checkedSites.filter(s => !ctIsSiteDeletable(s));
+  const targets = checkedSites.filter(s => ctIsSiteDeletable(s));
+  if(targets.length === 0){
+    if(typeof showToast === 'function') showToast('선택된 사업장은 모두 계약대기·계약완료 상태라 삭제할 수 없습니다(계약만료·계약해지 상태만 삭제 가능).');
+    return;
+  }
+  const targetIds = targets.map(s => s.id);
+  const targetNames = targets.map(s => s.siteName);
+  const blockedNote = blocked.length > 0 ? `\n\n(계약대기·계약완료 상태라 제외됨: ${blocked.map(s=>s.siteName).join(', ')})` : '';
+  if(!confirm(`선택된 ${targetIds.length}개 사업장을 삭제할까요?\n\n${targetNames.join(', ')}\n\n계약 정보·서류도 함께 삭제됩니다.${blockedNote}`)) return;
   c.sites = c.sites.filter(s => !targetIds.includes(s.id));
   ctExpandedSiteId = null;
   ctSiteEditingId = null;
