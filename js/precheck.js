@@ -441,11 +441,15 @@ function pcRenderSitesTab(c){
   const sites = pcGetSites(c);
   if(sites.length===0) return;
   $('pc-sites-count').textContent = `총 ${sites.length}사업장`;
+  // [Phase 17-DV] 자원 유형별 매트릭스에 정의된 단계 기준으로 진행률 카운트
+  const stepsForType = pcStepsForCustomer(c);
+  const total = stepsForType.length;
   sites.forEach((s, idx) => {
-    // [Phase 17-L] 단계 수 동적 — 정규화 후 4단계 기준
     const stepsArr = pcNormalizeSteps(s.steps);
-    const total = pcStepDefs.length;
-    const done = stepsArr.filter(x=>x===2).length;
+    const done = stepsForType.filter(def => {
+      const i = pcStepDefs.findIndex(d => d.key === def.key);
+      return stepsArr[i] === 2;
+    }).length;
     const isDone = done===total;
     const item = document.createElement('div');
     item.className = 'site-list-item';
@@ -478,9 +482,14 @@ function pcSelectSite(bizId, siteId){
   // 우측 상세 렌더 — 사업장 기본정보 + 검증 절차 + 산정 결과 + 외부데이터 검증 결과
   // [Phase 17-L] 4단계 정규화 + 동적 카운트
   const steps = pcNormalizeSteps(s.steps);
-  s.steps = steps;  // 정규화 결과를 사이트에 영속 저장 (다음 갱신이 4 길이 기준으로 동작하도록)
-  const total = pcStepDefs.length;
-  const done = steps.filter(x=>x===2).length;
+  s.steps = steps;  // 정규화 결과를 사이트에 영속 저장
+  // [Phase 17-DV] 자원 유형별 매트릭스에 정의된 단계 기준으로 진행률 카운트
+  const _stepsForType = pcStepsForCustomer(c);
+  const total = _stepsForType.length;
+  const done = _stepsForType.filter(def => {
+    const idx = pcStepDefs.findIndex(d => d.key === def.key);
+    return steps[idx] === 2;
+  }).length;
   // 사업장 단위 산정 결과: 사업장에 값이 있으면 우선, 없으면 사업자 customer 값 fallback
   const cblType   = s.cblType   ?? c.cblType   ?? '-';
   const cblAvg    = s.cblAvg    ?? c.cblAvg    ?? '-';
@@ -489,11 +498,14 @@ function pcSelectSite(bizId, siteId){
   const extS      = s.extS      ?? c.extS      ?? '-';
   const reduction = s.reduction ?? c.reduction ?? null;
 
-  // 검증 단계 6개 박스 — 상태별 운영자 액션 노출 (Phase 17-C)
+  // [Phase 17-DV] 자원 유형별 사전검증 단계 매트릭스 적용
   // ① 외부데이터 조회: 항상 [재조회] (실패 시엔 [재시도]+[수동 업로드])
-  // ⑥ CBL 분석: [유형 변경] (운영자 의사결정 포인트)
-  // 그 외: 완료/실패 시 [재실행]·[재시도] / 대기 시 [실행]
-  const stepsHtml = pcStepDefs.map((def, i) => {
+  // ② RRMSE: 자동 실행 / 재실행 / 재시도 (자원 유형이 필요한 경우만 노출)
+  // ③ CBL 분석: [유형 변경] (운영자 의사결정 포인트)
+  const stepsForType = pcStepsForCustomer(c);
+  const stepsHtml = stepsForType.map((def, displayIdx) => {
+    // pcStepDefs 원 인덱스 = c.steps 배열 접근용
+    const i = pcStepDefs.findIndex(d => d.key === def.key);
     const st = steps[i];
     const stateText = st===2 ? '완료' : st===3 ? '진행중' : st===0 ? '실패' : '대기';
     const stateCls  = st===2 ? 'badge-done' : st===3 ? 'badge-progress' : st===0 ? 'badge-reject' : 'badge-gray';
@@ -521,7 +533,7 @@ function pcSelectSite(bizId, siteId){
     return `
       <div class="step-row" style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 26px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;background:#fff;">
         <div style="display:flex;align-items:center;gap:18px;min-width:0;flex:1;">
-          <div style="width:40px;height:40px;border-radius:50%;background:${st===2?'var(--green-light)':st===3?'var(--blue-light)':st===0?'var(--red-light,#fef2f2)':'var(--g-100)'};color:${st===2?'var(--green)':st===3?'var(--blue)':st===0?'var(--red)':'var(--text-sub)'};font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</div>
+          <div style="width:40px;height:40px;border-radius:50%;background:${st===2?'var(--green-light)':st===3?'var(--blue-light)':st===0?'var(--red-light,#fef2f2)':'var(--g-100)'};color:${st===2?'var(--green)':st===3?'var(--blue)':st===0?'var(--red)':'var(--text-sub)'};font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${displayIdx+1}</div>
           <div style="min-width:0;">
             <div style="font-weight:700;font-size:18px;color:var(--navy);letter-spacing:-0.01em;">${def.name}</div>
             <div style="font-size:14px;color:var(--g-600);margin-top:8px;line-height:1.6;">${def.desc}</div>
@@ -553,6 +565,8 @@ function pcSelectSite(bizId, siteId){
             ['한전 계약전력', s.power ? s.power + ' kW' : '—', false],
             ['등록일', s.date||'—', false],
             ['데이터 수집', s.dataStatus||'—', false],
+            // [Phase 17-DV] 사업장에도 예상 자원 유형 표기 (사업자 c.drType 상속)
+            ['예상 자원 유형', c.drType ? `<span class="badge badge-gray" style="font-size:11px;font-weight:500;padding:3px 10px;">${c.drType}</span>` : '<span style="color:var(--text-hint);">미지정</span>', false, 'html'],
           ].map((row, idx) => {
             const [label, val, fullWidth, family] = row;
             const fontFamily = family === 'monospace' ? 'font-family:monospace;' : '';
