@@ -132,6 +132,8 @@ const store = {
     {id:'C105',name:'㈜대한물류네트웍스',ceo:'이영희',tel:'031-234-5678',addr:'경기 수원시',  recno:'DR-2026-0016',date:'2026-04-17',power:800, kepco:'23456789',drType:'표준DR',   status:'검증대기',dataStatus:'수집완료',inflow:'영업',steps:[1,1,1,1,1,1],extS:'미실행',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'-'},
     {id:'C106',name:'(주)스마트팩토리', ceo:'한소희',tel:'053-567-8901',addr:'대구 달서구',  recno:'DR-2026-0017',date:'2026-04-18',power:650, kepco:'67890123',drType:'중소형DR',status:'검증대기',dataStatus:'미수집',inflow:'사이트',steps:[1,1,1,1,1,1],extS:'미실행',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'-'},
     {id:'C107',name:'(주)그린파워텍',   ceo:'오민석',tel:'042-789-1234',addr:'대전 유성구',  recno:'DR-2026-0018',date:'2026-04-18',power:420, kepco:'78901234',drType:'국민DR',  status:'검증대기',dataStatus:'수집완료',inflow:'사이트',steps:[1,1,1,1,1,1],extS:'미실행',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'-'},
+    // 중소형DR-EV 편입 특례 케이스 (제도 개선 중, RRMSE 스킵 / CBL 자원 단위 Mid(4/6))
+    {id:'C130',name:'(주)EV차저플러스',  ceo:'김전차',tel:'02-999-1234',addr:'서울 강서구',  recno:'DR-2026-0030',date:'2026-06-15',power:1000,kepco:'91130001',drType:'중소형DR-EV',status:'검증대기',dataStatus:'미수집',inflow:'영업',steps:[1,1,1,1,1,1],extS:'미실행',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'-'},
     // 반려
     // C108: 외부데이터 조회 실패 → steps[0]=0 (extS:실패와 일치)
     {id:'C108',name:'(주)현대제조공업', ceo:'정우성',tel:'032-456-7890',addr:'인천 남동구',  recno:'DR-2026-0019',date:'2026-04-19',power:1200,kepco:'56789012',drType:'표준DR',   status:'반려',    dataStatus:'미수집',inflow:'영업',steps:[0,1,1,1,1,1],extS:'실패',rrmseS:'미실행',cblS:'미실행',cblType:'-',cblAvg:'-',reduction:null,rrmseVal:'-',infraS:'-'},

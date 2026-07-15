@@ -48,11 +48,7 @@ function pcNormalizeSteps(raw){
 }
 
 // [Phase 17-DB] KPX 별표28 §1.0 기준 자원 유형별 CBL 산정방식 매핑
-//   Max(4/5) / Mid(6/10)    → 표준DR·중소형DR·제주DR
-//   Mid(4/6)                → 플러스DR·국민DR
-//   Mid(8/10)               → 국민DR
-//   Past(10min)             → 주파수DR
-//   H-Mid(4/6)              → 플러스DR (공휴일·토요일 부하증대)
+// [Phase 17-DT] 중소형DR-EV 편입 특례 추가 (제도 개선 중, resource-types.md §2-6 참조)
 const CBL_MATRIX = {
   '표준DR':   [
     {k:'Max(4/5)',    desc:'최근 평일 5일 중 사용량 상위 4일 평균'},
@@ -61,6 +57,9 @@ const CBL_MATRIX = {
   '중소형DR': [
     {k:'Max(4/5)',    desc:'최근 평일 5일 중 사용량 상위 4일 평균'},
     {k:'Mid(6/10)',   desc:'최근 평일 10일 중 상·하위 2일 제외한 6일 평균'},
+  ],
+  '중소형DR-EV': [
+    {k:'Mid(4/6)',    desc:'최근 평일 6일 중 상·하위 1일 제외한 4일 평균 (자원 단위 통합 산정)'},
   ],
   '제주DR':   [
     {k:'Max(4/5)',    desc:'최근 평일 5일 중 사용량 상위 4일 평균'},
@@ -78,6 +77,26 @@ const CBL_MATRIX = {
     {k:'Past(10min)', desc:'감축 시작 10분 전 1분 단위 사용량 × 6 (실시간)'},
   ],
 };
+
+// [Phase 17-DT] 자원 유형별 사전검증 단계 매트릭스 (pre-verification.md §2-3-A)
+//   대부분 3단계 (ext → rrmse → cbl)
+//   중소형DR-EV: 2단계 (ext → cbl) — RRMSE 스킵
+const PC_STEP_MATRIX = {
+  '표준DR':       ['ext','rrmse','cbl'],
+  '중소형DR':     ['ext','rrmse','cbl'],
+  '중소형DR-EV':  ['ext','cbl'],
+  '제주DR':       ['ext','rrmse','cbl'],
+  '국민DR':       ['ext','rrmse','cbl'],
+  '주파수DR':     ['ext','rrmse','cbl'],
+  '플러스DR':     ['ext','rrmse','cbl'],
+};
+
+/* 사업자의 drType에 따라 필요한 사전검증 단계만 반환 */
+function pcStepsForCustomer(c){
+  const drType = c?.drType || '표준DR';
+  const keys = PC_STEP_MATRIX[drType] || ['ext','rrmse','cbl'];
+  return keys.map(k => pcStepDefs.find(d => d.key === k)).filter(Boolean);
+}
 
 /* 자원 유형 드롭다운 변경 시 CBL 방식 옵션 재생성 */
 function pcCblSyncOptions(){
@@ -979,14 +998,21 @@ function pcRerunSiteStep(bizId, siteId, stepIdx){
 function pcRenderSteps(c){
   const list = $('pc-steps-list'); list.innerHTML='';
   let done = 0;
-  // [Phase 17-CZ] 사업자 c.steps도 3단계로 정규화 (옛 4/6 길이 시드 호환)
+  // [Phase 17-DT] 자원 유형별 사전검증 단계 매트릭스 적용 (§ pre-verification.md §2-3-A)
+  const stepsForType = pcStepsForCustomer(c);
+  // c.steps는 pcStepDefs 전체 인덱스 기반이지만, 렌더 시 자원 유형별 필요 단계만 노출
   const cSteps = pcNormalizeSteps(c.steps);
   c.steps = cSteps;  // 영구 저장
-  pcStepDefs.forEach((s,i)=>{
-    const st = cSteps[i];
-    // 잠금조건: 순차 실행 (rrmse: ext 완료 / cbl: rrmse 완료)
-    const isLocked = (i===1 && cSteps[0]!==2)
-                 || (i===2 && cSteps[1]!==2);
+  stepsForType.forEach((s,i)=>{
+    // pcStepDefs에서의 원 인덱스 찾기 (c.steps 접근용)
+    const origIdx = pcStepDefs.findIndex(d => d.key === s.key);
+    const st = cSteps[origIdx];
+    // 잠금조건: 순차 실행 (이전 단계 완료 시에만 활성)
+    const isLocked = i > 0 && (() => {
+      const prev = stepsForType[i-1];
+      const prevOrig = pcStepDefs.findIndex(d => d.key === prev.key);
+      return cSteps[prevOrig] !== 2;
+    })();
     let nc='step-num', bc='wait', bt='대기';
     if(st===2){nc+=' done'; bc='done'; bt='완료'; done++;}
     else if(st===3){nc+=' active-step'; bc='active-step'; bt=s.auto?'자동 실행중':'진행중';}
@@ -1001,20 +1027,25 @@ function pcRenderSteps(c){
       <div class="step-info"><div class="step-name">${s.name}${autoTag}</div><div class="step-desc">${s.desc}</div></div>
       <span class="step-badge ${bc}">${bt}</span>`;
     if(!isLocked && st!==2 && st!==0){
-      d.onclick = ()=> pcOpenStep(i);
+      d.onclick = ()=> pcOpenStep(origIdx);
     } else if(st===2){
-      d.onclick = ()=> pcOpenStep(i); // 완료도 조회 가능
+      d.onclick = ()=> pcOpenStep(origIdx);
     } else if(st===0){
-      d.onclick = ()=> pcOpenStep(i); // 실패도 조회
+      d.onclick = ()=> pcOpenStep(origIdx);
     }
     list.appendChild(d);
   });
-  $('pc-step-count').textContent = `${done} / ${pcStepDefs.length}`;
+  $('pc-step-count').textContent = `${done} / ${stepsForType.length}`;
 }
 
 function pcUpdateContractBtn(c){
   const btn = $('pc-contract-btn');
-  const allDone = c.steps.every(s=>s===2);
+  // [Phase 17-DT] 자원 유형별 필요 단계만 완료 판정
+  const stepsForType = pcStepsForCustomer(c);
+  const allDone = stepsForType.every(s => {
+    const idx = pcStepDefs.findIndex(d => d.key === s.key);
+    return c.steps[idx] === 2;
+  });
   const contracted = c.status==='계약완료';
   const rejected = c.status==='반려';
   const handedOff = ['계약대기','검토중'].includes(c.contractStage);
@@ -1769,8 +1800,8 @@ function pcCreateLead(){
   const biztype= $('rg-biztype')?.value?.trim() || '';
   const ceo    = $('rg-ceo')?.value?.trim() || '';
   const tel    = $('rg-tel')?.value?.trim() || '';
-  // [Phase 17-AA] 희망 DR 유형 필드 제거 — 사전검증 단계에서는 미수집
-  const drType = '';
+  // [Phase 17-DT] 예상 자원 유형 재도입 — 사전검증 단계 매트릭스 분기용
+  const drType = $('rg-drtype')?.value || '표준DR';
   const inflow = $('rg-inflow')?.value || '사이트';
   // 2단계 선택
   const siteName = $('rg-site-name')?.value?.trim() || '';

@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260709-2009. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260709-2009">
+<!-- css/js 모두 ?v=260715-1414. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260715-1414">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260709-2009</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260715-1414</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -377,9 +377,10 @@
 
     <div class="filter-area">
       <input class="search-input" type="text" placeholder=" 사업자명 · 사업장명 · 한전 고객 번호" id="pc-search" onkeydown="if(event.key==='Enter') pcRenderTable()">
+      <!-- [Phase 17-DT] '중소형DR-EV' 추가 (EV 편입 특례) -->
       <select class="filter-select" id="pc-filter-type">
         <option value="">예상 DR 유형 전체</option>
-        <option>표준DR</option><option>중소형DR</option><option>국민DR</option>
+        <option>표준DR</option><option>중소형DR</option><option>중소형DR-EV</option><option>국민DR</option>
         <option>제주DR</option><option>주파수DR</option><option>플러스DR</option>
       </select>
       <button class="btn btn-primary btn-sm" onclick="pcRenderTable()">조회</button>
@@ -1717,9 +1718,25 @@
         <div class="form-row"><label class="form-label">담당자 이름 <span class="req">*</span></label><input class="form-input" id="rg-ceo" placeholder="홍길동"></div>
         <div class="form-row"><label class="form-label">담당자 연락처 <span class="req">*</span></label><input class="form-input" id="rg-tel" placeholder="010-0000-0000"></div>
       </div>
-      <!-- [Phase 17-AA] 희망 DR 유형 제거 — 사전검증 단계에서는 사업자·담당자 기본 정보만 -->
-      <div class="form-row"><label class="form-label">유입경로</label>
-        <select class="form-select" id="rg-inflow"><option>사이트</option><option>영업</option></select>
+      <!-- [Phase 17-DT] 예상 자원 유형 다시 추가 — 자원 유형에 따라 사전검증 단계 매트릭스 다름 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="form-row"><label class="form-label">예상 자원 유형 <span class="req">*</span></label>
+          <select class="form-select" id="rg-drtype">
+            <option value="표준DR">표준DR</option>
+            <option value="중소형DR">중소형DR</option>
+            <option value="중소형DR-EV">중소형DR-EV (편입 특례)</option>
+            <option value="제주DR">제주DR</option>
+            <option value="국민DR">국민DR</option>
+            <option value="주파수DR">주파수DR</option>
+            <option value="플러스DR">플러스DR</option>
+          </select>
+        </div>
+        <div class="form-row"><label class="form-label">유입경로</label>
+          <select class="form-select" id="rg-inflow"><option>사이트</option><option>영업</option></select>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text-hint);margin-top:-6px;line-height:1.5;">
+        예상 자원 유형에 따라 사전검증 단계가 다르게 배치됩니다. (예: 중소형DR-EV는 RRMSE 스킵, 2단계)
       </div>
     </div>
 
@@ -2146,20 +2163,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260709-2009"></script>
-<script src="data/tips.js?v=260709-2009"></script>
-<script src="js/core.js?v=260709-2009"></script>
-<script src="js/dashboard.js?v=260709-2009"></script>
-<script src="js/precheck.js?v=260709-2009"></script>
-<script src="js/resource.js?v=260709-2009"></script>
-<script src="js/monitoring.js?v=260709-2009"></script>
-<script src="js/report.js?v=260709-2009"></script>
-<script src="js/settlement.js?v=260709-2009"></script>
-<script src="js/datacollect.js?v=260709-2009"></script>
-<script src="js/rtu.js?v=260709-2009"></script>
-<script src="js/communication.js?v=260709-2009"></script>
-<script src="js/bidding.js?v=260709-2009"></script>
-<script src="js/account.js?v=260709-2009"></script>
-<script src="js/system.js?v=260709-2009"></script>
+<script src="data/store.js?v=260715-1414"></script>
+<script src="data/tips.js?v=260715-1414"></script>
+<script src="js/core.js?v=260715-1414"></script>
+<script src="js/dashboard.js?v=260715-1414"></script>
+<script src="js/precheck.js?v=260715-1414"></script>
+<script src="js/resource.js?v=260715-1414"></script>
+<script src="js/monitoring.js?v=260715-1414"></script>
+<script src="js/report.js?v=260715-1414"></script>
+<script src="js/settlement.js?v=260715-1414"></script>
+<script src="js/datacollect.js?v=260715-1414"></script>
+<script src="js/rtu.js?v=260715-1414"></script>
+<script src="js/communication.js?v=260715-1414"></script>
+<script src="js/bidding.js?v=260715-1414"></script>
+<script src="js/account.js?v=260715-1414"></script>
+<script src="js/system.js?v=260715-1414"></script>
 
 </body></html>
