@@ -2986,22 +2986,15 @@ function ctRenderSitesTable(c, sites){
     const addrText = s.addr ? `${s.addr}${s.addrDetail?` ${s.addrDetail}`:''}` : '—';
     // 사업장 정보 — 한 줄씩 (라벨 좌 회색 중앙정렬 / 값 우)
     const curStatus = s.siteStatus || '계약대기';
-    // [Phase 17-CG] 계약상태: 편집 모드일 때만 드롭다운 활성, 그 외엔 뱃지 표시
+    // [Phase 17-DX] 계약상태 편집 드롭다운 제거 — 상태는 시스템이 자동 관리
+    //   (계약이관 → 계약대기 / 계약기간·수수료 저장 → 계약완료 / 만료 → 계약만료 / 해지 액션 → 계약해지)
+    //   운영자가 직접 상태값 편집하는 케이스 없음. 편집 모드에서도 뱃지만 노출.
     const isEditingSite = ctSiteEditingId === s.id;
-    const statusSelect = ['계약대기','계약완료','계약만료','계약해지'].map(opt =>
-      `<option value="${opt}"${opt===curStatus?' selected':''}>${opt}</option>`
-    ).join('');
-    let statusDropdown;
-    if(isEditingSite){
-      statusDropdown = `<select onchange="ctSetSiteStatus('${c.id}','${s.id}', this.value)" style="padding:8px 12px;border:1px solid var(--blue);border-radius:6px;font-size:13px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;box-shadow:0 0 0 2px rgba(27,95,193,0.1);">${statusSelect}</select>
-        <span style="margin-left:10px;font-size:11px;color:var(--blue);font-weight:500;">편집 중</span>`;
-    } else {
-      const stBadge = curStatus === '계약완료' ? 'badge-done'
-                    : curStatus === '계약대기' ? 'badge-pending'
-                    : curStatus === '계약만료' ? 'badge-gray'
-                    : 'badge-fail';
-      statusDropdown = `<span class="badge ${stBadge}" style="font-size:12px;padding:5px 12px;">${curStatus}</span>`;
-    }
+    const stBadge = curStatus === '계약완료' ? 'badge-done'
+                  : curStatus === '계약대기' ? 'badge-pending'
+                  : curStatus === '계약만료' ? 'badge-gray'
+                  : 'badge-fail';
+    const statusDropdown = `<span class="badge ${stBadge}" style="font-size:12px;padding:5px 12px;">${curStatus}</span>`;
     const siteFields = [
       ['사업장명', s.siteName],
       ['담당자', s.manager],
@@ -3114,46 +3107,9 @@ function ctToggleSiteExpand(bizId, siteId){
   ctRenderDetailPage(c);
 }
 
-/* [Phase 17-AS] 사업장 계약상태 manual override — 즉시 저장 + 감사로그 */
-function ctSetSiteStatus(bizId, siteId, newStatus){
-  const c = store.customers.find(x => x.id === bizId); if(!c) return;
-  const s = (c.sites||[]).find(x => x.id === siteId); if(!s) return;
-  const old = s.siteStatus || '계약대기';
-  if(old === newStatus) return;
-  // [Fix] 계약해지 선택 시 2단계 확인 팝업 (정책서 3-6 해지 정책: 확인 팝업 → 재계약 의향 팝업)
-  if(newStatus === '계약해지'){
-    if(!confirm(`'${s.siteName}' 사업장의 계약을 해지할까요?\n해지 시 자원 배정이 해제되고 이후 이벤트 참여가 불가합니다.`)){
-      ctRenderDetailPage(c);  // 드롭다운 선택을 원래 값으로 되돌리기 위해 재렌더
-      return;
-    }
-    const wantsRenewal = confirm(`해지 처리를 진행합니다.\n\n재계약 의향이 있습니까?\n(확인: 리드 재등록 화면으로 이동 / 취소: 해지 완료 처리)`);
-    s.siteStatus = newStatus;
-    logAudit?.({objectType:'site', objectId:s.id, action:'site_status_changed',
-      title:`사업장 계약상태 변경 — ${s.siteName}`,
-      desc:`${old} → ${newStatus} (${c.name}) · 재계약 의향 ${wantsRenewal ? '있음' : '없음'}`,
-      actor:'운영자', tone:'warn'});
-    ctRenderDetailPage(c);
-    if(typeof ctRenderTable === 'function')   ctRenderTable();
-    if(typeof ctRenderSummary === 'function') ctRenderSummary();
-    if(wantsRenewal){
-      if(typeof showToast === 'function') showToast('해지 처리되었습니다. 리드 재등록을 위해 접수·사전검증 화면으로 이동합니다.');
-      if(typeof navigate === 'function') navigate('precheck');
-    } else {
-      if(typeof showToast === 'function') showToast('해지 완료 처리되었습니다.');
-    }
-    return;
-  }
-  s.siteStatus = newStatus;
-  logAudit?.({objectType:'site', objectId:s.id, action:'site_status_changed',
-    title:`사업장 계약상태 변경 — ${s.siteName}`,
-    desc:`${old} → ${newStatus} (${c.name})`,
-    actor:'운영자', tone:'info'});
-  if(typeof showToast === 'function') showToast(`사업장 계약상태가 '${newStatus}'(으)로 변경되었습니다.`);
-  // 사업자 종합 상태·KPI·목록 갱신
-  ctRenderDetailPage(c);
-  if(typeof ctRenderTable === 'function')   ctRenderTable();
-  if(typeof ctRenderSummary === 'function') ctRenderSummary();
-}
+/* [Phase 17-DX] ctSetSiteStatus 제거 — 계약상태 수동 변경 드롭다운 삭제됨.
+   계약상태는 시스템이 자동 산정: 계약이관 → 계약대기 / 계약기간·수수료 저장 → 계약완료
+   계약만료(만료일 경과) / 계약해지(별도 액션)는 향후 필요 시 별도 UI로 처리. */
 
 /* [Fix] 사업장 삭제 가능 여부 판정 (2026-07-15 정책 확정)
    - 계약기간(시작일·종료일)이 아예 입력되지 않은 사업장은 자유롭게 삭제 가능(신규 추가 직후 등)
@@ -3222,7 +3178,7 @@ function ctCancelSiteEdit(bizId, siteId){
   ctRenderDetailPage(c);
 }
 function ctSaveSiteEdit(bizId, siteId){
-  // 드롭다운은 onchange로 즉시 저장됨 (ctSetSiteStatus). 명시적 [저장]은 편집 모드 종료만.
+  // [Phase 17-DX] 계약상태는 시스템 자동 산정 대상이라 편집 모드에서도 뱃지만 노출. 저장은 편집 모드 종료.
   ctSiteEditingId = null;
   if(typeof showToast === 'function') showToast('사업장 정보 저장 완료');
   const c = store.customers.find(x => x.id === bizId); if(!c) return;
