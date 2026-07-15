@@ -3,75 +3,83 @@
    원본 index.html의 해당 prefix 함수/상수를 모음
 ════════════════════════════════════════════════════════════ */
 
-/* [Phase 17-DK] 대시보드 정산 현황 카드 집계 (§ dashboard.md §10 참조)
-   상태 매핑:
-   - 정산 대기: 기본→ status∈{invoiced,in_progress} / 실적→ confirmedAt 존재 AND status≠completed
-   - 정산 완료: status = completed
-   집계월: 오늘 기준 정산월 (YYYY-MM). 향후 필터 확장 가능. */
+/* [Phase 17-DW] 대시보드 정산 현황 카드 집계 (§ dashboard.md §10 v1.2)
+   섹션 2개 × 3분류 = 6개 카드
+   ── 정산 대기 (누적, 월 필터 없음)
+     기본:  status ∈ {invoiced, in_progress}
+     실적:  settlement.confirmedAt 존재 AND status ≠ completed
+   ── 정산 완료 (현재 정산월만)
+     기본:  status = completed AND r.month = 현재월
+     실적:  settlement.status = completed AND ev.date의 월 = 현재월 */
 function dashRenderSettlement(){
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const monthLabelKor = `${now.getMonth()+1}월`;
 
-  // 만원 단위 포매팅 (₩ 42,800만)
   const won10k = (v) => `₩ ${Math.round((v||0)/10000).toLocaleString()}만`;
   const setText = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
 
   // ── 기본 정산금 (stmBasicSeed)
-  let basicPend = 0, basicDone = 0, basicAmount = 0;
+  let basicPendCnt = 0, basicPendAmt = 0;
+  let basicDoneCnt = 0, basicDoneAmt = 0;
   if(typeof stmBasicSeed !== 'undefined' && Array.isArray(stmBasicSeed)){
-    stmBasicSeed.filter(r => r.month === monthKey).forEach(r => {
-      // 대기: 금액 확정 이후 (invoiced / in_progress)
-      if(r.status === 'invoiced' || r.status === 'in_progress'){ basicPend++; basicAmount += (r.kpxTotal || 0); }
-      else if(r.status === 'completed'){ basicDone++; basicAmount += (r.kpxTotal || 0); }
-      // pending(금액 미입력)은 카드에서 제외
+    stmBasicSeed.forEach(r => {
+      // 대기: 월 필터 없음 (누적)
+      if(r.status === 'invoiced' || r.status === 'in_progress'){
+        basicPendCnt++;
+        basicPendAmt += (r.kpxTotal || 0);
+      }
+      // 완료: 현재 정산월만
+      else if(r.status === 'completed' && r.month === monthKey){
+        basicDoneCnt++;
+        basicDoneAmt += (r.kpxTotal || 0);
+      }
     });
   }
 
-  // ── 실적 정산금 (store.events.reduction[].settlement) — 의무/자발 분리
-  let mandPend = 0, mandDone = 0, mandAmount = 0;
-  let volPend  = 0, volDone  = 0, volAmount  = 0;
+  // ── 실적 정산금 (store.events.reduction[].settlement)
+  let mandPendCnt = 0, mandPendAmt = 0, mandDoneCnt = 0, mandDoneAmt = 0;
+  let volPendCnt  = 0, volPendAmt  = 0, volDoneCnt  = 0, volDoneAmt  = 0;
   const evs = (typeof store !== 'undefined' && store.events?.reduction) ? store.events.reduction : [];
   evs.forEach(ev => {
     const s = ev.settlement;
-    if(!s || !s.confirmedAt) return;                       // 확정 데이터 미수신 → 카드에서 제외
-    const evDate = (ev.date || '').substring(0,7);
-    if(evDate !== monthKey) return;
+    if(!s || !s.confirmedAt) return;                        // 확정 데이터 미수신 → 제외
     const amount = s.finalAmount || s.grossAmount || 0;
     const isVol = ev.type === 'voluntary' || ev.kind === 'voluntary' || ev.category === 'voluntary';
+    const evMonth = (ev.date || '').substring(0,7);
+
     if(s.status === 'completed'){
-      if(isVol){ volDone++;  volAmount  += amount; } else { mandDone++; mandAmount += amount; }
+      // 완료: 현재 정산월만
+      if(evMonth !== monthKey) return;
+      if(isVol){ volDoneCnt++;  volDoneAmt  += amount; }
+      else     { mandDoneCnt++; mandDoneAmt += amount; }
     } else {
-      if(isVol){ volPend++;  volAmount  += amount; } else { mandPend++; mandAmount += amount; }
+      // 대기: 월 필터 없음 (누적)
+      if(isVol){ volPendCnt++;  volPendAmt  += amount; }
+      else     { mandPendCnt++; mandPendAmt += amount; }
     }
   });
-
-  const totalAmount = basicAmount + mandAmount + volAmount;
-  const totalDone   = basicDone + mandDone + volDone;
-  const totalPend   = basicPend + mandPend + volPend;
 
   // 헤더 정산월 라벨
   const monthHeaderEl = document.getElementById('dashSettleMonth');
   if(monthHeaderEl) monthHeaderEl.textContent = `— ${monthLabelKor}`;
+  setText('dashStlDoneMonthLabel', `${monthLabelKor}`);
 
-  // 요약 배너
-  setText('dashStlMonthLabel', `${monthLabelKor} 정산 총액`);
-  setText('dashStlTotal',      won10k(totalAmount));
-  setText('dashStlDoneCnt',    `${totalDone}건`);
-  setText('dashStlPendCnt',    `${totalPend}건`);
+  // 대기 섹션 (3개 카드)
+  setText('dashStlPendAmtBasic', won10k(basicPendAmt));
+  setText('dashStlPendBasic',    `${basicPendCnt}건`);
+  setText('dashStlPendAmtMand',  won10k(mandPendAmt));
+  setText('dashStlPendMand',     `${mandPendCnt}건`);
+  setText('dashStlPendAmtVol',   won10k(volPendAmt));
+  setText('dashStlPendVol',      `${volPendCnt}건`);
 
-  // 세부 3개 카드
-  setText('dashStlAmtBasic',   won10k(basicAmount));
-  setText('dashStlPendBasic',  `${basicPend}건`);
-  setText('dashStlDoneBasic',  `${basicDone}건`);
-
-  setText('dashStlAmtMand',    won10k(mandAmount));
-  setText('dashStlPendMand',   `${mandPend}건`);
-  setText('dashStlDoneMand',   `${mandDone}건`);
-
-  setText('dashStlAmtVol',     won10k(volAmount));
-  setText('dashStlPendVol',    `${volPend}건`);
-  setText('dashStlDoneVol',    `${volDone}건`);
+  // 완료 섹션 (3개 카드)
+  setText('dashStlDoneAmtBasic', won10k(basicDoneAmt));
+  setText('dashStlDoneBasic',    `${basicDoneCnt}건`);
+  setText('dashStlDoneAmtMand',  won10k(mandDoneAmt));
+  setText('dashStlDoneMand',     `${mandDoneCnt}건`);
+  setText('dashStlDoneAmtVol',   won10k(volDoneAmt));
+  setText('dashStlDoneVol',      `${volDoneCnt}건`);
 }
 
 function dashRenderMonitoringStatusCards(){
