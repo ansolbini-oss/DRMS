@@ -621,11 +621,14 @@
 
   <div class="filter-area">
     <input type="text" class="search-input" placeholder=" 자원그룹명 입력" id="rm-search" onkeydown="if(event.key==='Enter') rmRunSearch()">
+    <!-- [Phase 17-EA] v0.2 M-02: 상태값 5개 정식 도입 (옛 waiting=승인대기 매핑 폐지) -->
     <select class="filter-select" id="rm-status-filter">
       <option value="">상태 전체</option>
-      <option value="waiting">승인대기</option>
+      <option value="pending">승인대기</option>
+      <option value="waiting">시험대기</option>
       <option value="active">활성</option>
       <option value="suspended">일시중지</option>
+      <option value="inactive">비활성</option>
     </select>
     <select class="filter-select" id="rm-type-filter">
       <option value="">자원 유형 전체</option>

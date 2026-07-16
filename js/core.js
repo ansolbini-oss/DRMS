@@ -515,23 +515,26 @@ function statusBadgeClass(s){
     case '검증완료': return 'badge-done';
     case '계약완료': return 'badge-purple';
     case '반려':     return 'badge-fail';
-    case 'active':   return 'badge-done';
-    case 'waiting':  return 'badge-pending';
-    case 'suspended':return 'badge-gray';
+    // [Phase 17-EA] 자원관리 v0.2 상태 5개
+    case 'pending':  return 'badge-progress';  // 승인대기 — 자원 초기 · 참여고객 매핑 대상
+    case 'waiting':  return 'badge-pending';   // 시험대기 — 매핑 완료 후 KPX 등록시험 대기
+    case 'active':   return 'badge-done';      // 활성 — 시험 합격 후 감축 대상
+    case 'suspended':return 'badge-gray';      // 일시중지 — 이상·해지 (등록불합격 통합 예정)
+    case 'inactive': return 'badge-gray';      // 비활성 — 조회 제외 (soft delete)
     default: return 'badge-gray';
   }
 }
 function statusLabelRM(s){
-  // [Phase 17-DZ] 자원관리 v0.2 정책 — 라벨 통일 (M-01)
-  //   waiting → 시험대기 (자원 생성됐지만 아직 등록시험 전)
+  // [Phase 17-EA] 자원관리 v0.2 정책 — 상태값 5개 (M-02)
+  //   pending → 승인대기 (자원 생성 직후, 참여고객 매핑 가능한 유일 상태)
+  //   waiting → 시험대기 (참여고객 매핑 완료, KPX 등록시험 대기)
   //   active → 활성 (시험 합격 또는 면제, 실제 감축 대상)
-  //   suspended → 일시중지 (계약해지 or 지속적 이상)
-  //   pending → 승인대기 (v0.2 신규 · Phase 2 반영 예정)
-  //   inactive → 비활성 (v0.2 신규 · Phase 2 반영 예정)
-  if(s==='active')    return '활성';
-  if(s==='waiting')   return '시험대기';
-  if(s==='suspended') return '일시중지';
+  //   suspended → 일시중지 (등록불합격 · 이상 · 해지 통합)
+  //   inactive → 비활성 (soft delete — 조회 제외 · 이력 참조만 유지)
   if(s==='pending')   return '승인대기';
+  if(s==='waiting')   return '시험대기';
+  if(s==='active')    return '활성';
+  if(s==='suspended') return '일시중지';
   if(s==='inactive')  return '비활성';
   return s;
 }

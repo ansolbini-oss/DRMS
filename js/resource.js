@@ -100,13 +100,17 @@ function rmRefreshSummary(){
     const el = document.getElementById(id);
     if(el) el.style[prop] = val;
   };
-  const g = store.groups;
+  // [Phase 17-EA] v0.2 상태값 5개 반영
+  //   'rm-chip-waiting'은 v0.2 기준 '시험대기+승인대기 합' (운영자 조치 필요 자원)
+  //   inactive는 조회 제외라 전체 카운트에서 배제
+  const g = store.groups.filter(x => x.status !== 'inactive');
+  const pendingCnt = g.filter(x=>x.status==='pending').length;
   const waitCnt = g.filter(x=>x.status==='waiting').length;
   const activeCnt = g.filter(x=>x.status==='active').length;
   const suspendCnt = g.filter(x=>x.status==='suspended').length;
   setText('rm-cnt-all', g.length);
   // 상태 칩 카운트 갱신 (Phase 10에서 제거된 element일 수 있음 → guard)
-  setText('rm-chip-waiting', waitCnt);
+  setText('rm-chip-waiting', pendingCnt + waitCnt);  // 승인대기 + 시험대기 (조치 대상)
   setText('rm-chip-active', activeCnt);
   setText('rm-chip-suspended', suspendCnt);
   // 중지 상태 칩은 일시중지된 그룹이 있을 때만 표시
@@ -371,16 +375,18 @@ function rmHandleCreate(){
     status: trialRequired ? 'WAITING' : 'NOT_REQUIRED',
     history: [],
   };
+  // [Phase 17-EA] v0.2 M-02: 신규 자원은 승인대기(pending)로 시작
+  //   pending → (참여고객 매핑 완료) → waiting(시험대기) → active(활성)
   store.groups.push({
     id:newId, name, type:meta.type, typeKey:meta.typeKey,
-    status:'waiting', date:todayStr(), reg, file:null, customerIds:[],
+    status:'pending', date:todayStr(), reg, file:null, customerIds:[],
     trial,
   });
   closeModal('rmCreateModal');
   rmApplyFilter();
   refreshSidebarBadges();
   const trialMsg = trialRequired ? ' · 등록시험 필요' : '';
-  showToast(`${name} 생성 완료 — 승인대기 상태${trialMsg}`);
+  showToast(`${name} 생성 완료 — 승인대기 상태 (참여고객 매핑 대상)${trialMsg}`);
 }
 
 /* 상세 패널 */
@@ -498,14 +504,16 @@ function rmTabInfoHtml(g){
          <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${g.suspendReason.at}</div>
        </div>`
     : '';
-  // [Phase 17-DZ] 자원관리 v0.2 정책 — 라벨 통일 (M-01)
-  //   시험대기 / 활성 / 일시중지 (v0.2에서 승인대기·비활성은 Phase 2 반영 예정)
-  //   등록불합격은 trial.status에서 자동 파생되어 편집 불가 (재시험/이관 별도 흐름)
+  // [Phase 17-EA] 자원관리 v0.2 상태값 5개 (M-02)
+  //   승인대기 → 시험대기 → 활성 → 일시중지 / 비활성
+  //   등록불합격은 trial.status에서 자동 파생 (Phase 4에서 suspended 하위 사유로 통합 예정)
   const isStatusEditing = rmStatusEditingId === g.id;
   const statusOpts = [
+    { key:'pending',   label:'승인대기' },
     { key:'waiting',   label:'시험대기' },
     { key:'active',    label:'활성' },
     { key:'suspended', label:'일시중지' },
+    { key:'inactive',  label:'비활성' },
   ];
   const opMeta = (typeof operationalStatusMeta === 'function') ? operationalStatusMeta(g) : {label:statusLabelRM(g.status), cls:statusBadgeClass(g.status)};
   const statusEditCard = `
@@ -1089,21 +1097,26 @@ function rmTabHistoryHtml(g){
 }
 function rmTabCustomersHtml(g){
   const cust = (g.customerIds||[]).map(id=>custById(id)).filter(Boolean);
-  // 매핑 가능 조건: 일시중지 상태만 제외 (활성 + 승인대기 모두 허용)
-  // 승인대기 상태에서도 등록시험 응시를 위해 참여고객이 필요하므로 매핑 허용
-  const canMap = g.status==='active' || g.status==='waiting';
+  // [v0.2 M-07] 참여고객 편입·삭제는 승인대기(pending) 상태에서만 활성화
+  // 시험대기·활성·일시중지·비활성 상태에서는 매핑 잠금 (구성 확정 이후 변경 불가)
+  const canMap = g.status==='pending';
+  const statusLabel = statusLabelRM(g.status);
   // 상태별 안내 문구
-  const statusHint = g.status==='waiting'
-    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 등록시험 응시를 위해 <b>승인대기 상태에서도 참여고객 매핑</b>이 가능합니다. 시험 합격 후 활성화 단계로 넘어갑니다.</div>'
+  const statusHint = g.status==='pending'
+    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* <b>승인대기 상태</b>에서 참여고객을 편입·삭제할 수 있습니다. 시험대기 단계로 넘어가면 구성이 잠깁니다.</div>'
+    : g.status==='waiting'
+    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 시험대기 상태에서는 참여고객 구성이 잠깁니다. 등록시험 합격 후 활성 단계로 전환됩니다.</div>'
+    : g.status==='active'
+    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 활성 상태에서는 참여고객 구성을 변경할 수 없습니다. 변경이 필요하면 신규 자원그룹으로 재편성하세요.</div>'
     : g.status==='suspended'
-    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 일시중지 상태에서는 참여고객을 변경할 수 없습니다. 운영 재개 후 변경하세요.</div>'
+    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 일시중지 상태에서는 참여고객을 변경할 수 없습니다. 운영 재개 후에도 구성은 잠긴 상태입니다.</div>'
     : '';
 
   if(!cust.length){
     if(canMap){
       return `${statusHint}<div class="empty">매핑된 참여고객이 없습니다.<div style="margin-top:8px;"><button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객 매핑</button></div></div>`;
     }
-    return '<div class="empty">참여고객이 없습니다. (일시중지 상태)</div>';
+    return `${statusHint}<div class="empty">참여고객이 없습니다. (${statusLabel})</div>`;
   }
   return `${statusHint}<div class="cust-mini-head">
     <span>고객명</span><span style="text-align:right;">유형</span><span style="text-align:right;">용량 (kW)</span><span style="text-align:center;">상태</span><span style="text-align:center;">-</span>
@@ -1123,7 +1136,12 @@ function rmTabCustomersHtml(g){
 function rmRenderDetailFooter(g){
   const footer = $('rm-d-footer');
   const btns = [];
-  if(g.status==='waiting'){
+  if(g.status==='pending'){
+    // [v0.2 M-07] 승인대기 상태에서만 참여고객 편입·삭제 가능
+    // TODO M-05 Phase 3: 삭제 버튼을 hard delete → soft delete(status='inactive')로 전환
+    btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteGroup(${g.id})">자원 비활성화</button>`);
+    btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 참여고객 편입</button>`);
+  } else if(g.status==='waiting'){
     const hasFile = !!g.file;
     const trialOk = trialClearedForActivation(g);
     const canActivate = hasFile && trialOk;
@@ -1134,11 +1152,10 @@ function rmRenderDetailFooter(g){
       const tm = trialStatusMeta(g.trial);
       disableReason = `등록시험 합격 필요 — 현재 상태: ${tm.label}`;
     }
-    btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteGroup(${g.id})">삭제</button>`);
+    btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteGroup(${g.id})">자원 비활성화</button>`);
     btns.push(`<button class="btn btn-success btn-sm" onclick="rmActivate(${g.id})" ${canActivate?'':'disabled'} title="${canActivate?'':disableReason}">활성 전환</button>`);
   } else if(g.status==='active'){
     btns.push(`<button class="btn btn-secondary btn-sm" onclick="rmSuspend(${g.id})">일시중지</button>`);
-    btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객추가</button>`);
   } else if(g.status==='suspended'){
     btns.push(`<button class="btn btn-success btn-sm" onclick="rmResume(${g.id})">운영 재개</button>`);
   }
@@ -1313,7 +1330,8 @@ function rmConfirmBulkDelete(){
 /* 고객 매핑 */
 function rmOpenMapping(gid){
   const g = groupById(gid); if(!g) return;
-  if(g.status!=='active'){ showToast('활성 상태의 자원그룹만 고객 매핑이 가능합니다.'); return; }
+  // [v0.2 M-07] 승인대기(pending) 상태에서만 참여고객 편입·삭제 가능
+  if(g.status!=='pending'){ showToast('승인대기 상태의 자원그룹만 참여고객 편입이 가능합니다.'); return; }
   rmState.selectedGroupId = gid;
   rmState.mappingSelected.clear();
   const allowedTypes = store.custTypeMap[g.typeKey] || [];
