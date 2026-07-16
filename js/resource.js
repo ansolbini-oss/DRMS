@@ -1140,7 +1140,7 @@ function rmRenderDetailFooter(g){
     // [v0.2 M-07] 승인대기 상태에서만 참여고객 편입·삭제 가능
     // TODO M-05 Phase 3: 삭제 버튼을 hard delete → soft delete(status='inactive')로 전환
     btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteGroup(${g.id})">자원 비활성화</button>`);
-    btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 참여고객 편입</button>`);
+    btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객추가</button>`);
   } else if(g.status==='waiting'){
     const hasFile = !!g.file;
     const trialOk = trialClearedForActivation(g);
