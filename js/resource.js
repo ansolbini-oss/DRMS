@@ -498,13 +498,14 @@ function rmTabInfoHtml(g){
          <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${g.suspendReason.at}</div>
        </div>`
     : '';
-  // [Phase 17-CY] 자원 상태 관리 — 컴팩트 한 줄 (운영 상태 축: 시험대기/운영중/운영정지)
+  // [Phase 17-DZ] 자원관리 v0.2 정책 — 라벨 통일 (M-01)
+  //   시험대기 / 활성 / 일시중지 (v0.2에서 승인대기·비활성은 Phase 2 반영 예정)
   //   등록불합격은 trial.status에서 자동 파생되어 편집 불가 (재시험/이관 별도 흐름)
   const isStatusEditing = rmStatusEditingId === g.id;
   const statusOpts = [
     { key:'waiting',   label:'시험대기' },
-    { key:'active',    label:'운영중' },
-    { key:'suspended', label:'운영정지' },
+    { key:'active',    label:'활성' },
+    { key:'suspended', label:'일시중지' },
   ];
   const opMeta = (typeof operationalStatusMeta === 'function') ? operationalStatusMeta(g) : {label:statusLabelRM(g.status), cls:statusBadgeClass(g.status)};
   const statusEditCard = `
@@ -516,7 +517,7 @@ function rmTabInfoHtml(g){
              ${statusOpts.map(opt => `<option value="${opt.key}"${opt.key===g.status?' selected':''}>${opt.label}</option>`).join('')}
            </select>`
         : `<span class="badge ${opMeta.cls}" style="font-size:12px;padding:4px 10px;">${opMeta.label}</span>`}
-      <span style="font-size:10px;color:var(--text-hint);">운영중일 때 매월 KPX 기본정산금 대상</span>
+      <span style="font-size:10px;color:var(--text-hint);">활성 시 매월 KPX 기본정산금 대상</span>
     </div>
     ${isStatusEditing
       ? `<div style="display:flex;gap:6px;">
@@ -904,8 +905,8 @@ function rmTabTrialHtml(g){
             <div class="trial-decision-title">재시험 대기 전환</div>
             <div class="trial-decision-desc">차기 등록 신청기간 재시험 응시</div>
           </button>
-          <button class="trial-decision-btn danger" onclick="rmDeleteGroupConfirm(${g.id})" title="이 자원그룹을 시스템에서 완전히 제거합니다. 반복 실패·재구성 불가 등으로 등록을 포기할 때 선택합니다.">
-            <div class="trial-decision-title">자원 삭제</div>
+          <button class="trial-decision-btn danger" onclick="rmDeleteGroupConfirm(${g.id})" title="이 자원그룹을 비활성 상태로 전환합니다. 반복 실패·재구성 불가 등으로 등록을 포기할 때 선택합니다. (실제 데이터 삭제는 아니며 조회에서 제외됨 — v0.2 M-05 반영 예정)">
+            <div class="trial-decision-title">자원 비활성화</div>
             <div class="trial-decision-desc">등록 포기</div>
           </button>
         </div>
@@ -1034,7 +1035,7 @@ function rmConfirmRetry(gid){
 /* 자원 삭제 확인 (FAILED 자원의 등록 포기) — 기존 rmDeleteGroup 플로우 재활용 */
 function rmDeleteGroupConfirm(gid){
   const g = groupById(gid); if(!g) return;
-  $('cm-title').textContent = '자원 삭제 (등록 포기)';
+  $('cm-title').textContent = '자원 비활성화 (등록 포기)';
   $('cm-sub').textContent = `${g.name}`;
   $('cm-body').innerHTML = `<div class="info-box danger">
     <b>자원그룹을 시스템에서 완전히 삭제합니다.</b><br>
@@ -1045,7 +1046,7 @@ function rmDeleteGroupConfirm(gid){
     <textarea class="form-textarea" id="trial-delete-reason" placeholder="예: 반복 시험 실패, 자원 재구성 불가"></textarea>
   </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-danger" onclick="rmConfirmDeleteFromTrial(${gid})">자원 삭제 확정</button>`;
+    <button class="btn btn-danger" onclick="rmConfirmDeleteFromTrial(${gid})">비활성 처리 확정</button>`;
   openModal('commonModal');
 }
 function rmConfirmDeleteFromTrial(gid){
@@ -1283,17 +1284,20 @@ function rmConfirmDelete(gid){
 function rmOpenBulkDelete(){
   if(rmState.bulkSelected.size===0) return;
   const ids = [...rmState.bulkSelected];
-  $('cm-title').textContent = '자원그룹 일괄 삭제';
-  $('cm-sub').textContent = `선택된 ${ids.length}개 자원그룹을 삭제합니다.`;
-  $('cm-body').innerHTML = `<div class="info-box danger">삭제된 자원그룹은 복구할 수 없습니다.</div>
+  $('cm-title').textContent = '자원 일괄 비활성화';
+  $('cm-sub').textContent = `선택된 ${ids.length}개 자원그룹을 비활성 처리합니다.`;
+  // [Phase 17-DZ] v0.2 M-04: 라벨만 '자원 삭제' → '자원 비활성화'로 변경.
+  //   실제 동작(hard delete → status='inactive')은 M-05 Phase 3에서 반영 예정.
+  $('cm-body').innerHTML = `<div class="info-box danger">비활성 처리된 자원은 조회에서 제외되며, 이력 참조 목적으로만 유지됩니다.</div>
     <div style="max-height:140px;overflow-y:auto;font-size:11px;color:var(--text-sub);">
       ${ids.map(id=>{ const g=groupById(id); return `<div>• ${g.name}</div>`; }).join('')}
     </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-danger" onclick="rmConfirmBulkDelete()">삭제</button>`;
+    <button class="btn btn-danger" onclick="rmConfirmBulkDelete()">비활성 처리</button>`;
   openModal('commonModal');
 }
 function rmConfirmBulkDelete(){
+  // TODO(v0.2 M-05 Phase 3): hard delete → status='inactive' 전환으로 교체
   [...rmState.bulkSelected].forEach(id=>{
     const idx = store.groups.findIndex(g=>g.id===id);
     if(idx>-1) store.groups.splice(idx,1);
@@ -1303,7 +1307,7 @@ function rmConfirmBulkDelete(){
   closeModal('commonModal');
   rmApplyFilter();
   refreshSidebarBadges();
-  showToast(`${cnt}개 자원그룹이 삭제되었습니다.`);
+  showToast(`${cnt}개 자원이 비활성 처리되었습니다.`);
 }
 
 /* 고객 매핑 */

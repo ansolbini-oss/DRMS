@@ -522,11 +522,18 @@ function statusBadgeClass(s){
   }
 }
 function statusLabelRM(s){
-  // [Phase 17-CY] 자원 상태 라벨 재정의 — 운영 상태 축으로 통합
-  //   waiting → 시험대기  (자원 생성됐지만 아직 등록시험 전)
-  //   active → 운영중    (시험 합격 또는 면제, 실제 감축 대상)
-  //   suspended → 운영정지 (계약해지 or 지속적 이상)
-  return s==='active'?'운영중':s==='waiting'?'시험대기':s==='suspended'?'운영정지':s;
+  // [Phase 17-DZ] 자원관리 v0.2 정책 — 라벨 통일 (M-01)
+  //   waiting → 시험대기 (자원 생성됐지만 아직 등록시험 전)
+  //   active → 활성 (시험 합격 또는 면제, 실제 감축 대상)
+  //   suspended → 일시중지 (계약해지 or 지속적 이상)
+  //   pending → 승인대기 (v0.2 신규 · Phase 2 반영 예정)
+  //   inactive → 비활성 (v0.2 신규 · Phase 2 반영 예정)
+  if(s==='active')    return '활성';
+  if(s==='waiting')   return '시험대기';
+  if(s==='suspended') return '일시중지';
+  if(s==='pending')   return '승인대기';
+  if(s==='inactive')  return '비활성';
+  return s;
 }
 /* [Phase 17-CY] 자원그룹의 최종 운영 상태 — trial.FAILED 우선, 그 외는 status 매핑 */
 function operationalStatusMeta(g){

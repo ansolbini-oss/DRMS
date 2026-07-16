@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260715-1931. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260715-1931">
+<!-- css/js 모두 ?v=260716-2031. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260716-2031">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260715-1931</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260716-2031</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -590,9 +590,10 @@
     <div class="page-title-row">
       <div class="page-title">자원관리</div>
       <div class="page-actions">
+        <!-- [Phase 17-DZ] v0.2 M-04 — '자원 삭제' → '자원 비활성화' 라벨 통일 (M-05 삭제 동작 개편은 Phase 3에서) -->
         <button class="btn btn-danger btn-sm" id="rm-btn-bulk-delete" disabled="" onclick="rmOpenBulkDelete()">
           <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-          자원 삭제
+          자원 비활성화
         </button>
         <button class="btn btn-primary" onclick="rmOpenCreate()">
           <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -2195,20 +2196,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260715-1931"></script>
-<script src="data/tips.js?v=260715-1931"></script>
-<script src="js/core.js?v=260715-1931"></script>
-<script src="js/dashboard.js?v=260715-1931"></script>
-<script src="js/precheck.js?v=260715-1931"></script>
-<script src="js/resource.js?v=260715-1931"></script>
-<script src="js/monitoring.js?v=260715-1931"></script>
-<script src="js/report.js?v=260715-1931"></script>
-<script src="js/settlement.js?v=260715-1931"></script>
-<script src="js/datacollect.js?v=260715-1931"></script>
-<script src="js/rtu.js?v=260715-1931"></script>
-<script src="js/communication.js?v=260715-1931"></script>
-<script src="js/bidding.js?v=260715-1931"></script>
-<script src="js/account.js?v=260715-1931"></script>
-<script src="js/system.js?v=260715-1931"></script>
+<script src="data/store.js?v=260716-2031"></script>
+<script src="data/tips.js?v=260716-2031"></script>
+<script src="js/core.js?v=260716-2031"></script>
+<script src="js/dashboard.js?v=260716-2031"></script>
+<script src="js/precheck.js?v=260716-2031"></script>
+<script src="js/resource.js?v=260716-2031"></script>
+<script src="js/monitoring.js?v=260716-2031"></script>
+<script src="js/report.js?v=260716-2031"></script>
+<script src="js/settlement.js?v=260716-2031"></script>
+<script src="js/datacollect.js?v=260716-2031"></script>
+<script src="js/rtu.js?v=260716-2031"></script>
+<script src="js/communication.js?v=260716-2031"></script>
+<script src="js/bidding.js?v=260716-2031"></script>
+<script src="js/account.js?v=260716-2031"></script>
+<script src="js/system.js?v=260716-2031"></script>
 
 </body></html>
