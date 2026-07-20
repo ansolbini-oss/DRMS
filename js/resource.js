@@ -1363,18 +1363,18 @@ function rmSuspend(gid){
   const g = groupById(gid); if(!g) return;
   $('cm-title').textContent = '운영 일시중지';
   $('cm-sub').textContent = `${g.name} 운영을 일시중지합니다.`;
-  $('cm-body').innerHTML = `<div class="info-box warning">일시중지된 자원은 감축지시 대상에서 제외됩니다. 단, 계량 데이터 수집은 계속됩니다.</div>
+  // [v0.2 M-08] 정책서 §3-2 하위 사유 4종으로 통일 (등록시험 불합격 · 감축시험 불합격 · 관리자 임시 정지 · 기타)
+  $('cm-body').innerHTML = `<div class="info-box warning">일시중지된 자원은 감축지시 대상에서 제외됩니다. 단, 계량 데이터 수집은 계속됩니다. 재시험·재개 대기 상태로 관리됩니다.</div>
     <div class="form-row"><label class="form-label">중지 사유 <span class="req">*</span></label>
       <select class="form-select" id="sus-reason">
         <option value="">사유 선택</option>
-        <option value="계량 장애">계량 장애</option>
-        <option value="참여고객 대량 이탈">참여고객 대량 이탈</option>
-        <option value="정기 점검">정기 점검</option>
-        <option value="재심사">재심사</option>
+        <option value="관리자 임시 정지">관리자 임시 정지</option>
+        <option value="등록시험 불합격">등록시험 불합격</option>
+        <option value="감축시험 불합격">감축시험 불합격</option>
         <option value="기타">기타</option>
       </select>
     </div>
-    <div class="form-row"><label class="form-label">상세 사유</label><textarea class="form-textarea" id="sus-detail" placeholder="상세 사유를 입력하세요"></textarea></div>`;
+    <div class="form-row"><label class="form-label">상세 사유 (선택, '기타'는 필수)</label><textarea class="form-textarea" id="sus-detail" placeholder="상세 사유를 입력하세요"></textarea></div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
     <button class="btn btn-primary" onclick="rmConfirmSuspend(${gid})">일시중지</button>`;
   openModal('commonModal');
@@ -1383,13 +1383,17 @@ function rmConfirmSuspend(gid){
   const reason = $('sus-reason').value;
   if(!reason){ showToast('중지 사유를 선택하세요.'); return; }
   const detail = $('sus-detail').value.trim();
+  if(reason==='기타' && !detail){ showToast("'기타' 사유는 상세 사유 입력이 필수입니다."); return; }
   const g = groupById(gid);
+  const prev = g.status;
   g.status = 'suspended';
   g.suspendReason = {type:reason, detail, at:nowStr()};
+  g.audit = g.audit || [];
+  g.audit.push({type:'SUSPEND', at: g.suspendReason.at, from: prev, reason, detail});
   closeModal('commonModal');
   rmApplyFilter();
   rmOpenDetail(gid);
-  showToast(`${g.name} 일시중지 처리`);
+  showToast(`${g.name} 일시중지 (${reason})`);
 }
 function rmResume(gid){
   const g = groupById(gid);

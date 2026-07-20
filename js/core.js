@@ -538,11 +538,10 @@ function statusLabelRM(s){
   if(s==='inactive')  return '비활성';
   return s;
 }
-/* [Phase 17-CY] 자원그룹의 최종 운영 상태 — trial.FAILED 우선, 그 외는 status 매핑 */
+/* [v0.2 M-08] 자원그룹의 운영 상태 뱃지
+   - 등록불합격 별도 뱃지 폐지 (§3-2 5-status 준수)
+   - suspended 상태의 하위 사유(§3-2 4종)는 상세 화면의 사유 박스로 표기 (badge는 '일시중지' 통일) */
 function operationalStatusMeta(g){
-  if(g && g.trial && g.trial.status === 'FAILED'){
-    return {label:'등록불합격', cls:'badge-fail'};
-  }
   return {label: statusLabelRM(g?.status), cls: statusBadgeClass(g?.status)};
 }
 function dataBadgeClass(d){ return d==='수집완료'?'badge-done':d==='수집중'?'badge-collecting':'badge-fail'; }

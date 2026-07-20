@@ -176,7 +176,9 @@ const store = {
       file:{name:'수요반응자원_등록신청서_표준DR_경기A.pdf', size:486521, uploadedAt:'2026-04-15 10:00'},
       customerIds:['C051','C052','C053'],
       trial:{required:true, status:'WAITING', history:[], currentTestEventId:'EVT20260428-01', autoOptedInAt:'2026-04-25 14:03:12'}},
-    { id:4, name:'중소형DR 충남B', type:'중소형DR', typeKey:'standard', status:'waiting', date:'2026-03-28',
+    // [v0.2 M-08] 등록불합격은 별도 상태가 아닌 suspended + suspendReason.type='등록시험 불합격'으로 통합
+    { id:4, name:'중소형DR 충남B', type:'중소형DR', typeKey:'standard', status:'suspended', date:'2026-03-28',
+      suspendReason:{type:'등록시험 불합격', detail:'이행률 42% (필요 80%) — 참여 제한 대상 (제12.3.1.4조 제2항). 재시험 또는 자원 재구성 필요', at:'2026-04-05 16:40'},
       reg:{region:'비수도권', mandatoryCapacity:420},
       file:{name:'수요반응자원_등록신청서_중소형DR_충남B.pdf', size:465120, uploadedAt:'2026-03-28 11:30'},
       customerIds:['C041','C042'],
