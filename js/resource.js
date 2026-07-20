@@ -1248,12 +1248,42 @@ function rmRemoveExtraDoc(gid, docId){
   showToast(`${doc.label} 삭제 완료`);
   rmRenderDetailBody(g);
 }
-// [v0.2 M-06 stub] 승인대기 → 시험대기/활성 전환 사전 조건 체크
-//   정책서 §3-3: 참여고객 ≥ 10명 · 참여용량 ≥ 의무감축용량 · KPX 자원 등록 완료
-//   본 스텁은 반환 형태만 정의. 실제 조건 자동 체크는 M-06에서 반영.
+// [v0.2 M-06] 승인대기 → 시험대기/활성 전환 사전 조건 체크 (§3-3 Hard Gate 3조건)
+//   1) 참여고객 수 ≥ 10명
+//   2) 참여용량 ≥ 의무감축용량 (해당 유형만; 국민DR 등 용량 필드 없는 유형은 스킵)
+//   3) KPX 자원 등록 완료 (g.kpxRegistered 명시 필드가 있으면 그 값; 없으면 status!=='pending'이면 완료로 간주)
+const RM_MIN_CUSTOMERS = 10;
+function rmKpxRegistered(g){
+  if(g && typeof g.kpxRegistered === 'boolean') return g.kpxRegistered;
+  return !!(g && g.status && g.status !== 'pending');
+}
+function rmParticipationCapacity(g){
+  return (g?.customerIds||[]).reduce((s,cid)=>{
+    const c = custById(cid);
+    return s + (c?.reduction || 0);
+  }, 0);
+}
+function rmTargetCapacity(g){
+  return g?.reg?.mandatoryCapacity || g?.reg?.estimatedCapacity || g?.reg?.increaseCapacity || 0;
+}
 function rmActivationPrecheck(g){
   if(!g) return {ok:false, reason:'자원그룹 없음'};
-  return {ok:true, reason:''};
+  const issues = [];
+  const custCnt = (g.customerIds||[]).length;
+  if(custCnt < RM_MIN_CUSTOMERS){
+    issues.push(`참여고객 부족 (현재 ${custCnt}명 / 필요 ${RM_MIN_CUSTOMERS}명)`);
+  }
+  const target = rmTargetCapacity(g);
+  if(target > 0){
+    const total = rmParticipationCapacity(g);
+    if(total < target){
+      issues.push(`참여용량 부족 (현재 ${total.toLocaleString()} kW / 목표 ${target.toLocaleString()} kW)`);
+    }
+  }
+  if(!rmKpxRegistered(g)){
+    issues.push('KPX 등록 미완료');
+  }
+  return {ok: issues.length === 0, reason: issues.join(' · ')};
 }
 
 // [v0.2 M-09] 승인대기 → 시험대기 전환 (시험 대상 유형만)
