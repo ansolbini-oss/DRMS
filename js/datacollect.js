@@ -67,7 +67,8 @@ function dcInit(){
       store.groups.filter(g=>g.status==='active').map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
     gSel.value = current;
   }
-  $('dc-range').value = dcState.range;
+  // [v0.7 필터 슬림] 조회기간·데이터상태 UI 제거 — dcState 기본값(range='7d', status='all') 그대로 사용
+  if($('dc-range')) $('dc-range').value = dcState.range;
   dcApplyRange(false);
   dcRender();
   // [Phase 17-J] 사전검증 [수동 업로드]에서 진입한 경우 자동으로 업로드 모달 오픈
@@ -265,7 +266,8 @@ function dcDoUpload(){
 }
 
 function dcApplyRange(doRender){
-  const v = $('dc-range').value;
+  // [v0.7 필터 슬림] 조회기간 UI 제거 — dcState.range 기본값 '7d' 고정 사용
+  const v = ($('dc-range') && $('dc-range').value) || dcState.range || '7d';
   dcState.range = v;
   const fromEl = $('dc-from'), toEl = $('dc-to');
   const today = new Date();
@@ -276,7 +278,7 @@ function dcApplyRange(doRender){
   else if(v==='yesterday'){ const y = new Date(today); y.setDate(y.getDate()-1); from = to = y; }
   else if(v==='7d'){ to = new Date(today); from = new Date(today); from.setDate(from.getDate()-6); }
   else if(v==='30d'){ to = new Date(today); from = new Date(today); from.setDate(from.getDate()-29); }
-  else { // custom
+  else if(fromEl && toEl){ // custom (UI가 있을 때만)
     fromEl.style.display = 'inline-block';
     toEl.style.display = 'inline-block';
     if(!fromEl.value){ const d = new Date(today); d.setDate(d.getDate()-6); fromEl.value = ymd(d); }
@@ -284,9 +286,11 @@ function dcApplyRange(doRender){
     dcState.from = fromEl.value; dcState.to = toEl.value;
     if(doRender!==false) dcRender();
     return;
+  } else {
+    to = new Date(today); from = new Date(today); from.setDate(from.getDate()-6);
   }
-  fromEl.style.display = 'none';
-  toEl.style.display = 'none';
+  if(fromEl) fromEl.style.display = 'none';
+  if(toEl)   toEl.style.display   = 'none';
   dcState.from = ymd(from);
   dcState.to   = ymd(to);
   if(doRender!==false) dcRender();
@@ -316,8 +320,11 @@ function dcAggregateGroup(g){
 function dcFilteredGroups(){
   const q = ($('dc-q')?.value||'').trim().toLowerCase();
   dcState.q = q;
-  dcState.groupId = $('dc-group').value;
-  dcState.status = $('dc-status').value;
+  // [v0.7 필터 슬림] dc-group·dc-status UI 제거 — 존재 시에만 값 반영, 기본값 유지
+  const gSel = $('dc-group');
+  if(gSel) dcState.groupId = gSel.value;
+  const sSel = $('dc-status');
+  if(sSel) dcState.status = sSel.value;
   const activeGroups = store.groups.filter(g=>g.status==='active');
   let targets = activeGroups;
   if(dcState.groupId !== 'all') targets = targets.filter(g=>String(g.id)===String(dcState.groupId));
@@ -333,17 +340,21 @@ function dcFilteredGroups(){
   return targets.map(dcAggregateGroup);
 }
 
-/* "수집 이상 자원" KPI 카드 클릭 → 이상 필터 적용 */
+/* "이상 자원" KPI 카드 클릭 → 이상 필터 적용 */
 function dcFilterByRisk(){
+  dcState.status = 'risk';
   if($('dc-status')) $('dc-status').value = 'risk';
   dcRender();
 }
 
-/* 필터 초기화 */
+/* 필터 초기화 (v0.7 슬림 — 검색어 리셋 + 조회기간 기본 7일 + 상태 all) */
 function dcResetFilters(){
-  if($('dc-range')) $('dc-range').value = '7d';
+  dcState.range = '7d';
+  dcState.status = 'all';
+  dcState.q = '';
+  if($('dc-range'))  $('dc-range').value = '7d';
   if($('dc-status')) $('dc-status').value = 'all';
-  if($('dc-q')) $('dc-q').value = '';
+  if($('dc-q'))      $('dc-q').value = '';
   dcApplyRange(false);
   dcRender();
 }

@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260720-2016. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260720-2016">
+<!-- css/js 모두 ?v=260720-2022. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260720-2022">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260720-2016</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260720-2022</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -980,27 +980,9 @@
       </div>
     </div>
 
-    <!-- 필터 바 -->
+    <!-- 필터 바 (v0.7 개편) — 자원그룹명·참여고객명 검색 + 조회/초기화만 유지 -->
     <div class="rp-filter-bar">
-      <label>조회 기간</label>
-      <select class="filter-select" id="dc-range" onchange="dcApplyRange()">
-        <option value="today">오늘</option>
-        <option value="yesterday">어제</option>
-        <option value="7d" selected>최근 7일</option>
-        <option value="30d">최근 30일</option>
-        <option value="custom">직접 지정</option>
-      </select>
-      <input type="date" class="filter-select" id="dc-from" style="display:none;" onchange="dcRender()">
-      <input type="date" class="filter-select" id="dc-to" style="display:none;" onchange="dcRender()">
-
-      <label style="margin-left:10px;">데이터 상태</label>
-      <select class="filter-select" id="dc-status" onchange="dcRender()">
-        <option value="all">전체</option>
-        <option value="ok">정상 (미수신 0건)</option>
-        <option value="risk">이상 (미수신 1건 이상)</option>
-      </select>
-
-      <input class="filter-select" id="dc-q" placeholder="자원그룹명 · 참여고객명 검색" oninput="dcRender()" style="min-width:200px;">
+      <input class="filter-select" id="dc-q" placeholder="자원그룹명 · 참여고객명 검색" oninput="dcRender()" style="min-width:280px;">
       <!-- 기존 dc-group 필터는 상세 페이지로 이동했으므로 hidden 유지 -->
       <select id="dc-group" style="display:none;"><option value="all">전체</option></select>
       <button class="btn btn-sm btn-primary" onclick="dcRender()">조회</button>
@@ -2222,20 +2204,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260720-2016"></script>
-<script src="data/tips.js?v=260720-2016"></script>
-<script src="js/core.js?v=260720-2016"></script>
-<script src="js/dashboard.js?v=260720-2016"></script>
-<script src="js/precheck.js?v=260720-2016"></script>
-<script src="js/resource.js?v=260720-2016"></script>
-<script src="js/monitoring.js?v=260720-2016"></script>
-<script src="js/report.js?v=260720-2016"></script>
-<script src="js/settlement.js?v=260720-2016"></script>
-<script src="js/datacollect.js?v=260720-2016"></script>
-<script src="js/rtu.js?v=260720-2016"></script>
-<script src="js/communication.js?v=260720-2016"></script>
-<script src="js/bidding.js?v=260720-2016"></script>
-<script src="js/account.js?v=260720-2016"></script>
-<script src="js/system.js?v=260720-2016"></script>
+<script src="data/store.js?v=260720-2022"></script>
+<script src="data/tips.js?v=260720-2022"></script>
+<script src="js/core.js?v=260720-2022"></script>
+<script src="js/dashboard.js?v=260720-2022"></script>
+<script src="js/precheck.js?v=260720-2022"></script>
+<script src="js/resource.js?v=260720-2022"></script>
+<script src="js/monitoring.js?v=260720-2022"></script>
+<script src="js/report.js?v=260720-2022"></script>
+<script src="js/settlement.js?v=260720-2022"></script>
+<script src="js/datacollect.js?v=260720-2022"></script>
+<script src="js/rtu.js?v=260720-2022"></script>
+<script src="js/communication.js?v=260720-2022"></script>
+<script src="js/bidding.js?v=260720-2022"></script>
+<script src="js/account.js?v=260720-2022"></script>
+<script src="js/system.js?v=260720-2022"></script>
 
 </body></html>
