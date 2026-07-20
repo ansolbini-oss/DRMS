@@ -6,6 +6,20 @@
 function trialRequiredForType(typeKey){
   return typeKey==='standard' || typeKey==='jeju';
 }
+
+// [v0.2 M-03] 자원 유형 13종 코드 매핑. 라벨(g.type)로부터 코드 유추 (seed backfill용)
+const RM_TYPE_LABEL_TO_CODE = {
+  '표준DR':'standard', 'H-표준DR':'h_standard',
+  '중소형DR':'small', '중소형DR-충전EV':'small_ev',
+  'H-중소형DR':'h_small', 'H-중소형DR(EV)':'h_small_ev',
+  '국민DR':'national',
+  '제주DR':'jeju', 'H-제주DR':'h_jeju',
+  '제주DR(EV)':'jeju_ev', 'H-제주DR(EV)':'h_jeju_ev',
+  '주파수DR':'freq', '플러스DR':'plus',
+};
+function rmTypeCode(g){
+  return g.typeCode || RM_TYPE_LABEL_TO_CODE[g.type] || g.typeKey || '';
+}
 /* 시험 상태 → 라벨/뱃지
    dashboardLabel: 대시보드 표시용 업무 용어 (운영자 관점)
    label: 자원관리 상세 표시용 내부 상태어 */
@@ -177,7 +191,8 @@ function rmApplyFilter(){
     list = list.filter(g=>g.trial && g.trial.required && g.trial.status!=='PASSED');
   }
   if(sF) list = list.filter(g=>g.status===sF);
-  if(tF) list = list.filter(g=>g.typeKey===tF);
+  // [v0.2 M-03] 자원 유형 필터: 세분화 코드(typeCode) 기준. 코드가 없는 seed는 label→code 유추
+  if(tF) list = list.filter(g => rmTypeCode(g) === tF);
   if(q)  list = list.filter(g=>g.name.toLowerCase().includes(q));
   rmRenderGroupList(list);
   $('rm-group-count').textContent = `총 ${list.length}개 자원그룹`;
@@ -326,7 +341,7 @@ function rmHandleCreate(){
     'standard':      {type:'표준DR',          typeKey:'standard'},
     'h_standard':    {type:'H-표준DR',        typeKey:'standard'},
     'small':         {type:'중소형DR',        typeKey:'standard'},
-    'small_ev':      {type:'중소형DR(EV)',    typeKey:'standard'},
+    'small_ev':      {type:'중소형DR-충전EV',    typeKey:'standard'},
     'h_small':       {type:'H-중소형DR',      typeKey:'standard'},
     'h_small_ev':    {type:'H-중소형DR(EV)',  typeKey:'standard'},
     'national':      {type:'국민DR',          typeKey:'national'},
@@ -382,7 +397,7 @@ function rmHandleCreate(){
   // [Phase 17-EA] v0.2 M-02: 신규 자원은 승인대기(pending)로 시작
   //   pending → (참여고객 매핑 완료) → waiting(시험대기) → active(활성)
   store.groups.push({
-    id:newId, name, type:meta.type, typeKey:meta.typeKey,
+    id:newId, name, type:meta.type, typeKey:meta.typeKey, typeCode:typeVal,
     status:'pending', date:todayStr(), reg, file:null, customerIds:[],
     trial,
   });
