@@ -164,6 +164,10 @@ function rmApplyFilter(){
   const tF = rmState.filter.type||'';
   const card = rmState.filter.card;
   let list = [...store.groups];
+  // [v0.2 M-05] 비활성 자원은 기본 리스트에서 제외. '비활성' 상태 필터를 명시 선택한 경우에만 노출
+  if(sF !== 'inactive'){
+    list = list.filter(g => g.status !== 'inactive');
+  }
   // 운영이상 카드
   if(card==='risk'){
     list = list.filter(g=>rmHealth(g)!=='normal');
@@ -1046,11 +1050,10 @@ function rmDeleteGroupConfirm(gid){
   $('cm-title').textContent = '자원 비활성화 (등록 포기)';
   $('cm-sub').textContent = `${g.name}`;
   $('cm-body').innerHTML = `<div class="info-box danger">
-    <b>자원그룹을 시스템에서 완전히 삭제합니다.</b><br>
-    이 자원은 상용 감축지시 대상에서 제외되며, 시험 이력을 포함한 관련 데이터가 함께 제거됩니다.
-    되돌릴 수 없으므로 신중히 결정하세요.
+    이 자원은 <b>비활성 처리</b>됩니다. 상용 감축지시 대상에서 제외되며,
+    시험 이력·참여고객 히스토리는 유지됩니다. 재계약 시 다시 활성화할 수 있습니다.
   </div>
-  <div class="form-row"><label class="form-label">삭제 사유</label>
+  <div class="form-row"><label class="form-label">등록 포기 사유 <span style="color:var(--red)">*</span></label>
     <textarea class="form-textarea" id="trial-delete-reason" placeholder="예: 반복 시험 실패, 자원 재구성 불가"></textarea>
   </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
@@ -1059,16 +1062,21 @@ function rmDeleteGroupConfirm(gid){
 }
 function rmConfirmDeleteFromTrial(gid){
   const g = groupById(gid); if(!g) return;
-  const reason = $('trial-delete-reason').value.trim() || '사유 미기재';
-  // 삭제 전에 사유를 toast에 반영할 수 있도록 기록
-  const name = g.name;
-  const idx = store.groups.findIndex(x=>x.id===gid);
-  if(idx>=0) store.groups.splice(idx, 1);
+  const noteInput = $('trial-delete-reason')?.value.trim() || '';
+  if(!noteInput){ showToast('등록 포기 사유를 입력하세요.'); return; }
+  // [v0.2 M-05] Soft delete: status='inactive'로 전환 + 감사 로그
+  const prev = g.status;
+  g.status = 'inactive';
+  g.deactivatedAt = nowStr();
+  g.deactivateReason = '등록 포기';
+  g.deactivateNote = noteInput;
+  g.audit = g.audit || [];
+  g.audit.push({type:'DEACTIVATE', at: g.deactivatedAt, from: prev, reason:'등록 포기', note: noteInput});
   closeModal('commonModal');
   rmCloseDetail();
   rmApplyFilter();
   refreshSidebarBadges();
-  showToast(`${name} 자원그룹이 삭제되었습니다. (사유: ${reason})`);
+  showToast(`${g.name} 비활성 처리 완료 (등록 포기: ${noteInput})`);
 }
 
 
@@ -1110,6 +1118,8 @@ function rmTabCustomersHtml(g){
     ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 활성 상태에서는 참여고객 구성을 변경할 수 없습니다. 변경이 필요하면 신규 자원그룹으로 재편성하세요.</div>'
     : g.status==='suspended'
     ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 일시중지 상태에서는 참여고객을 변경할 수 없습니다. 운영 재개 후에도 구성은 잠긴 상태입니다.</div>'
+    : g.status==='inactive'
+    ? `<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* <b>비활성 자원</b> (조회 전용) — 사유: ${g.deactivateReason||'-'}${g.deactivateNote?` / ${g.deactivateNote}`:''}${g.deactivatedAt?` · ${g.deactivatedAt}`:''}. 참여고객 히스토리는 유지됩니다.</div>`
     : '';
 
   if(!cust.length){
@@ -1281,50 +1291,96 @@ function rmResume(gid){
   showToast(`${g.name} 운영 재개`);
 }
 function rmDeleteGroup(gid){
-  const g = groupById(gid);
-  $('cm-title').textContent = '자원그룹 삭제';
+  const g = groupById(gid); if(!g) return;
+  // [v0.2 M-05] Hard delete 금지. 사유 입력 필수 + 상태를 'inactive'로 전환 (soft delete)
+  $('cm-title').textContent = '자원 비활성화';
   $('cm-sub').textContent = `${g.name}`;
-  $('cm-body').innerHTML = `<div class="info-box danger">자원그룹을 삭제하면 참여고객 매핑 정보 및 신청서 파일이 모두 제거됩니다. 복구할 수 없습니다.</div>`;
+  $('cm-body').innerHTML = `<div class="info-box danger">
+    이 자원은 <b>비활성 처리</b>됩니다. 참여고객 히스토리·감축이력·시험이력은 모두 유지되며, 재계약 시 다시 활성화할 수 있습니다.
+  </div>
+  <div class="form-row"><label class="form-label">비활성화 사유 <span style="color:var(--red)">*</span></label>
+    <select class="form-select" id="rm-deactivate-reason">
+      <option value="">사유 선택</option>
+      <option value="계약 해지">계약 해지</option>
+      <option value="계약 만료">계약 만료</option>
+      <option value="자원 재구성">자원 재구성 (참여고객 변경 필요)</option>
+      <option value="등록 포기">등록 포기 (반복 시험 실패 등)</option>
+      <option value="기타">기타 (아래 상세 사유 필수)</option>
+    </select>
+  </div>
+  <div class="form-row"><label class="form-label">상세 사유 (선택, '기타'는 필수)</label>
+    <textarea class="form-textarea" id="rm-deactivate-note" placeholder="필요 시 상세 사유"></textarea>
+  </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-danger" onclick="rmConfirmDelete(${gid})">삭제</button>`;
+    <button class="btn btn-danger" onclick="rmConfirmDelete(${gid})">비활성 처리 확정</button>`;
   openModal('commonModal');
 }
 function rmConfirmDelete(gid){
-  const idx = store.groups.findIndex(g=>g.id===gid);
-  if(idx>-1) store.groups.splice(idx,1);
+  const g = groupById(gid); if(!g) return;
+  const reason = $('rm-deactivate-reason')?.value || '';
+  const note = ($('rm-deactivate-note')?.value || '').trim();
+  if(!reason){ showToast('비활성화 사유를 선택하세요.'); return; }
+  if(reason==='기타' && !note){ showToast("'기타' 사유는 상세 사유 입력이 필수입니다."); return; }
+  // Soft delete: status='inactive'로 전환. 사유·감사 로그 필드 기록.
+  const prev = g.status;
+  g.status = 'inactive';
+  g.deactivatedAt = nowStr();
+  g.deactivateReason = reason;
+  g.deactivateNote = note;
+  g.audit = g.audit || [];
+  g.audit.push({type:'DEACTIVATE', at: g.deactivatedAt, from: prev, reason, note});
   closeModal('commonModal');
   rmCloseDetail();
   rmApplyFilter();
   refreshSidebarBadges();
-  showToast('자원그룹이 삭제되었습니다.');
+  showToast(`${g.name} 비활성 처리 완료 (사유: ${reason})`);
 }
 function rmOpenBulkDelete(){
   if(rmState.bulkSelected.size===0) return;
   const ids = [...rmState.bulkSelected];
   $('cm-title').textContent = '자원 일괄 비활성화';
   $('cm-sub').textContent = `선택된 ${ids.length}개 자원그룹을 비활성 처리합니다.`;
-  // [Phase 17-DZ] v0.2 M-04: 라벨만 '자원 삭제' → '자원 비활성화'로 변경.
-  //   실제 동작(hard delete → status='inactive')은 M-05 Phase 3에서 반영 예정.
-  $('cm-body').innerHTML = `<div class="info-box danger">비활성 처리된 자원은 조회에서 제외되며, 이력 참조 목적으로만 유지됩니다.</div>
-    <div style="max-height:140px;overflow-y:auto;font-size:11px;color:var(--text-sub);">
-      ${ids.map(id=>{ const g=groupById(id); return `<div>• ${g.name}</div>`; }).join('')}
-    </div>`;
+  // [v0.2 M-05] Soft delete + 사유 입력 필수 (일괄)
+  $('cm-body').innerHTML = `<div class="info-box danger">
+    비활성 처리된 자원은 조회에서 제외되며, 참여고객·감축·시험 이력은 모두 유지됩니다. 재계약 시 다시 활성화할 수 있습니다.
+  </div>
+  <div style="max-height:140px;overflow-y:auto;font-size:11px;color:var(--text-sub);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin:10px 0;">
+    ${ids.map(id=>{ const g=groupById(id); return `<div>• ${g.name}</div>`; }).join('')}
+  </div>
+  <div class="form-row"><label class="form-label">비활성화 사유 <span style="color:var(--red)">*</span> (선택 자원 공통 적용)</label>
+    <select class="form-select" id="rm-bulk-deactivate-reason">
+      <option value="">사유 선택</option>
+      <option value="계약 해지">계약 해지</option>
+      <option value="계약 만료">계약 만료</option>
+      <option value="자원 재구성">자원 재구성 (참여고객 변경 필요)</option>
+      <option value="등록 포기">등록 포기 (반복 시험 실패 등)</option>
+      <option value="기타">기타</option>
+    </select>
+  </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-danger" onclick="rmConfirmBulkDelete()">비활성 처리</button>`;
+    <button class="btn btn-danger" onclick="rmConfirmBulkDelete()">비활성 처리 확정</button>`;
   openModal('commonModal');
 }
 function rmConfirmBulkDelete(){
-  // TODO(v0.2 M-05 Phase 3): hard delete → status='inactive' 전환으로 교체
+  const reason = $('rm-bulk-deactivate-reason')?.value || '';
+  if(!reason){ showToast('비활성화 사유를 선택하세요.'); return; }
+  // [v0.2 M-05] Soft delete: 선택 자원 status='inactive' 일괄 전환
+  const ts = nowStr();
   [...rmState.bulkSelected].forEach(id=>{
-    const idx = store.groups.findIndex(g=>g.id===id);
-    if(idx>-1) store.groups.splice(idx,1);
+    const g = groupById(id); if(!g) return;
+    const prev = g.status;
+    g.status = 'inactive';
+    g.deactivatedAt = ts;
+    g.deactivateReason = reason;
+    g.audit = g.audit || [];
+    g.audit.push({type:'DEACTIVATE', at: ts, from: prev, reason, note:'(일괄 처리)'});
   });
   const cnt = rmState.bulkSelected.size;
   rmState.bulkSelected.clear();
   closeModal('commonModal');
   rmApplyFilter();
   refreshSidebarBadges();
-  showToast(`${cnt}개 자원이 비활성 처리되었습니다.`);
+  showToast(`${cnt}개 자원 비활성 처리 완료 (사유: ${reason})`);
 }
 
 /* 고객 매핑 */
