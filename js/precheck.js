@@ -2038,7 +2038,10 @@ function pcDmQuery(){
 /* 결정론적 시드 기반 시뮬레이션 데이터 생성
    - 고객 id와 날짜를 시드로 써서 재현 가능한 15분 단위 데이터 생성
    - 실제 시스템에서는 AMI/한전 API에서 받은 데이터로 대체됨 */
-function pcDmGenerateData(c, fromDate, toDate){
+// opts.stepMin: 5(RTU/감시기기) 또는 15(한전AMI/전력량계, 기본).
+//   전자수집채널탭[신설, v0.7]에서 채널별 슬롯 밀도를 재사용
+function pcDmGenerateData(c, fromDate, toDate, opts){
+  const stepMin = (opts && opts.stepMin) ? opts.stepMin : 15;
   const out = [];
   // 고객별 기준 부하 수준 결정 (contract power의 85%를 평시 피크로 가정)
   const basePeak = (c.power||400) * 0.85;
@@ -2055,7 +2058,7 @@ function pcDmGenerateData(c, fromDate, toDate){
     const slots = [];
     let missCnt = 0;
     for(let h=0; h<24; h++){
-      for(let m=0; m<60; m+=15){
+      for(let m=0; m<60; m+=stepMin){
         // 시간대별 부하 팩터 (업무시간 9~18 피크, 야간 저부하)
         const hourFactor = isWeekend
           ? (0.35 + 0.10*Math.sin((h-10)*Math.PI/14))

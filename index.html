@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260720-1759. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260720-1759">
+<!-- css/js 모두 ?v=260720-2003. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260720-2003">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260720-1759</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260720-2003</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -943,10 +943,16 @@
       <div class="page-title-row">
         <div class="page-title">전력데이터 수집현황 <span style="font-size:11px;color:var(--text-hint);font-weight:400;margin-left:6px;">DATA-01</span></div>
         <div class="page-actions" style="display:flex;gap:6px;align-items:center;">
-          <button class="btn btn-sm btn-secondary" onclick="dcExportCsv()" title="현재 조회 범위의 15분 슬롯 원자료 CSV 다운로드">CSV 내보내기</button>
-          <button class="btn btn-sm btn-secondary" onclick="dcOpenUploadModal()" title="한전 AMI 통신 실패 시 운영자가 직접 엑셀 파일로 업로드">엑셀 업로드</button>
+          <button class="btn btn-sm btn-secondary" onclick="dcExportCsv()" title="현재 조회 범위의 슬롯 원자료 CSV 다운로드">CSV 내보내기</button>
+          <button class="btn btn-sm btn-secondary" id="dc-btn-upload" onclick="dcOpenUploadModal()" title="한전 AMI 통신 실패 시 운영자가 직접 엑셀 파일로 업로드">엑셀 업로드</button>
           <button class="btn btn-sm btn-primary" onclick="dcRerun()" title="조회 기간 슬롯 재수집 요청 (통신 장애 복구 후)">재수집 요청</button>
         </div>
+      </div>
+      <!-- [v0.7] 계량 채널 탭 — 정책서 2343436292 §1-2 -->
+      <div class="event-tab-group" style="margin-top:8px;">
+        <button class="event-tab active" id="dc-ch-ami" onclick="dcSwitchChannel('ami')">한전AMI(15분)</button>
+        <button class="event-tab" id="dc-ch-rtu" onclick="dcSwitchChannel('rtu')">RTU(5분)</button>
+        <div id="dc-ch-caveat" style="margin-left:12px;font-size:11px;color:var(--text-hint);align-self:center;">정산 투입 원천 데이터 · 15분 슬롯</div>
       </div>
     </div>
 
@@ -958,11 +964,11 @@
         <div class="summary-val-sub" id="dc-kpi-groups-sub">—</div>
       </div>
     <div class="summary-card static">
-      <div class="summary-label">전체 수신률 <span style="font-size:9px;color:var(--text-hint);">(보정 포함)</span></div>
+      <div class="summary-label">전체 수신률</div>
       <div class="summary-val green" id="dc-kpi-rx">—</div>
-      <div class="summary-val-sub">정산 투입 가능 비율</div>
+      <div class="summary-val-sub" id="dc-kpi-rx-sub">정산 투입 가능 비율</div>
     </div>
-    <div class="summary-card static">
+    <div class="summary-card" onclick="dcFilterByRisk()" style="cursor:pointer;">
       <div class="summary-label">수집 이상 자원</div>
       <div class="summary-val red" id="dc-kpi-risk">—</div>
       <div class="summary-val-sub">상세 확인 필요</div>
@@ -985,15 +991,15 @@
       <label style="margin-left:10px;">데이터 상태</label>
       <select class="filter-select" id="dc-status" onchange="dcRender()">
         <option value="all">전체</option>
-        <option value="ok">정상 수신 (≥99%)</option>
-        <option value="imp">보정 다수 (보정≥5%)</option>
-        <option value="warn">일부 결측 (미수신 1~3개)</option>
-        <option value="risk">이상 (미수신 ≥4개)</option>
+        <option value="ok">정상 (미수신 0건)</option>
+        <option value="risk">이상 (미수신 1건 이상)</option>
       </select>
 
-      <input class="filter-select" id="dc-q" placeholder="자원그룹명 검색" oninput="dcRender()" style="min-width:200px;">
+      <input class="filter-select" id="dc-q" placeholder="자원그룹명 · 참여고객명 검색" oninput="dcRender()" style="min-width:200px;">
       <!-- 기존 dc-group 필터는 상세 페이지로 이동했으므로 hidden 유지 -->
       <select id="dc-group" style="display:none;"><option value="all">전체</option></select>
+      <button class="btn btn-sm btn-primary" onclick="dcRender()">조회</button>
+      <button class="btn btn-sm btn-secondary" onclick="dcResetFilters()">초기화</button>
 
       <div style="margin-left:auto;font-size:11px;color:var(--text-hint);" id="dc-range-info"></div>
     </div>
@@ -2211,20 +2217,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260720-1759"></script>
-<script src="data/tips.js?v=260720-1759"></script>
-<script src="js/core.js?v=260720-1759"></script>
-<script src="js/dashboard.js?v=260720-1759"></script>
-<script src="js/precheck.js?v=260720-1759"></script>
-<script src="js/resource.js?v=260720-1759"></script>
-<script src="js/monitoring.js?v=260720-1759"></script>
-<script src="js/report.js?v=260720-1759"></script>
-<script src="js/settlement.js?v=260720-1759"></script>
-<script src="js/datacollect.js?v=260720-1759"></script>
-<script src="js/rtu.js?v=260720-1759"></script>
-<script src="js/communication.js?v=260720-1759"></script>
-<script src="js/bidding.js?v=260720-1759"></script>
-<script src="js/account.js?v=260720-1759"></script>
-<script src="js/system.js?v=260720-1759"></script>
+<script src="data/store.js?v=260720-2003"></script>
+<script src="data/tips.js?v=260720-2003"></script>
+<script src="js/core.js?v=260720-2003"></script>
+<script src="js/dashboard.js?v=260720-2003"></script>
+<script src="js/precheck.js?v=260720-2003"></script>
+<script src="js/resource.js?v=260720-2003"></script>
+<script src="js/monitoring.js?v=260720-2003"></script>
+<script src="js/report.js?v=260720-2003"></script>
+<script src="js/settlement.js?v=260720-2003"></script>
+<script src="js/datacollect.js?v=260720-2003"></script>
+<script src="js/rtu.js?v=260720-2003"></script>
+<script src="js/communication.js?v=260720-2003"></script>
+<script src="js/bidding.js?v=260720-2003"></script>
+<script src="js/account.js?v=260720-2003"></script>
+<script src="js/system.js?v=260720-2003"></script>
 
 </body></html>
