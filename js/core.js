@@ -152,29 +152,29 @@ function showFullAuditLogs(objectType, objectId){
   // 과거 완료된 운영 이벤트 추가 (지난 3개월 분포)
   const past = [
     // 2026-04 (이번 달 ~ 전월) — 입금 진행 단계 시연용
-    {id:'EVM20260410-01', dt:'MANDATORY_REDUCTION', date:'2026-04-10', tr:'15:00~16:00', resources:[
+    {id:'EVM-20260410-01', dt:'MANDATORY_REDUCTION', date:'2026-04-10', tr:'15:00~16:00', resources:[
       {groupId:1, ordered:2500, actual:2375, status:'NORMAL'},
       {groupId:2, ordered:1050, actual:1020, status:'NORMAL'},
       {groupId:5, ordered:900,  actual:820,  status:'NORMAL'},
     ]},
     // 2026-03 (전월)
-    {id:'EVM20260318-01', dt:'MANDATORY_REDUCTION', date:'2026-03-18', tr:'14:00~15:00', resources:[
+    {id:'EVM-20260318-01', dt:'MANDATORY_REDUCTION', date:'2026-03-18', tr:'14:00~15:00', resources:[
       {groupId:1, ordered:2400, actual:2280, status:'NORMAL'},
       {groupId:2, ordered:850,  actual:790,  status:'NORMAL'},
       {groupId:5, ordered:1000, actual:960,  status:'NORMAL'},
     ]},
-    {id:'EVV20260312-01', dt:'VOLUNTARY_REDUCTION', date:'2026-03-12', tr:'13:00~14:00', resources:[
+    {id:'EVV-20260312-01', dt:'VOLUNTARY_REDUCTION', date:'2026-03-12', tr:'13:00~14:00', resources:[
       {groupId:1, ordered:1500, actual:1425, status:'NORMAL'},
       {groupId:5, ordered:800,  actual:760,  status:'NORMAL'},
     ]},
     // 2026-02 (지지난달)
-    {id:'EVM20260222-01', dt:'MANDATORY_REDUCTION', date:'2026-02-22', tr:'15:00~16:00', resources:[
+    {id:'EVM-20260222-01', dt:'MANDATORY_REDUCTION', date:'2026-02-22', tr:'15:00~16:00', resources:[
       {groupId:1, ordered:2500, actual:2350, status:'NORMAL'},
       {groupId:2, ordered:900,  actual:850,  status:'NORMAL'},
       {groupId:5, ordered:1050, actual:995,  status:'NORMAL'},
       {groupId:8, ordered:400,  actual:310,  status:'NORMAL'},
     ]},
-    {id:'EVM20260208-01', dt:'MANDATORY_REDUCTION', date:'2026-02-08', tr:'14:00~15:00', resources:[
+    {id:'EVM-20260208-01', dt:'MANDATORY_REDUCTION', date:'2026-02-08', tr:'14:00~15:00', resources:[
       {groupId:1, ordered:2300, actual:2185, status:'NORMAL'},
       {groupId:2, ordered:880,  actual:850,  status:'NORMAL'},
     ]},
@@ -216,12 +216,12 @@ function showFullAuditLogs(objectType, objectId){
     Object.assign(ev.settlement, patch);
   };
 
-  // EVM20260208-01: 가장 오래된 이벤트 — 아직 in_progress (KPX 수금 완료, 고객 배분 진행 중)
+  // EVM-20260208-01: 가장 오래된 이벤트 — 아직 in_progress (KPX 수금 완료, 고객 배분 진행 중)
   // 금액 스케일: 실적(kW) × 120원/kWh × 1h 기준 (실적정산금 단일, 기본정산금은 MVP 단순화)
-  setStl('EVM20260208-01', {
+  setStl('EVM-20260208-01', {
     status:'in_progress',
     kpxData: {
-      receivedAt:'2026-04-20', kpxReductionKw: 3012, kpxPerformanceRate: 0.95,
+      receivedAt:'2026-04-20', kpxReductionKw: 3012,
       kpxAmount: 361440, ourReductionKw: 3020, discrepancyKw: -8, discrepancyPct: -0.26,
       objection:{raised:false, reason:'', finalAmount: 361440}
     },
@@ -237,11 +237,11 @@ function showFullAuditLogs(objectType, objectId){
     ]
   });
 
-  // EVM20260222-01: received (KPX 데이터 접수, 검증 중)
-  setStl('EVM20260222-01', {
+  // EVM-20260222-01: received (KPX 데이터 접수, 검증 중)
+  setStl('EVM-20260222-01', {
     status:'received',
     kpxData:{
-      receivedAt:'2026-04-25', kpxReductionKw: 4405, kpxPerformanceRate: 0.94,
+      receivedAt:'2026-04-25', kpxReductionKw: 4405,
       kpxAmount: 528600, ourReductionKw: 4445, discrepancyKw: -40, discrepancyPct: -0.90,
       objection:{raised:false, reason:'', finalAmount: 528600}
     },
@@ -254,11 +254,11 @@ function showFullAuditLogs(objectType, objectId){
     ]
   });
 
-  // EVV20260312-01: received (KPX 데이터 접수, 이의 제기 상태)
-  setStl('EVV20260312-01', {
+  // EVV-20260312-01: received (KPX 데이터 접수, 이의 제기 상태)
+  setStl('EVV-20260312-01', {
     status:'received',
     kpxData:{
-      receivedAt:'2026-04-28', kpxReductionKw: 2085, kpxPerformanceRate: 0.88,
+      receivedAt:'2026-04-28', kpxReductionKw: 2085,
       kpxAmount: 250200, ourReductionKw: 2185, discrepancyKw: -100, discrepancyPct: -4.58,
       objection:{raised:true, reason:'C001 고객 15분 구간 4개에서 KPX 측 CBL 산정 오류 추정 — 추가 검토 요청', finalAmount: null}
     },
@@ -270,15 +270,15 @@ function showFullAuditLogs(objectType, objectId){
       {at:'2026-04-29 10:30', user:'박정산', fromStatus:'received', toStatus:'received', note:'대사 결과 -4.6% 차이 — 허용 초과, 이의 제기 진행'},
     ]
   });
-  // EVM20260318-01 / EVM20260410-01 는 기본 awaiting 유지 (KPX 데이터 미수신)
+  // EVM-20260318-01 / EVM-20260410-01 는 기본 awaiting 유지 (KPX 데이터 미수신)
 
   // Phase 11-C: 정산관리 4단계 lifecycle 시연용 시드
   // (받침: received → invoiced → in_progress → completed 흐름을 운영자가 시각적으로 확인)
-  setStl('EVM20260318-01', {
+  setStl('EVM-20260318-01', {
     // ② 세금계산서 발행 (invoiced) — KPX 데이터 등록 + 참여고객 정산금 확정 + 세금계산서 발행 완료
     status:'invoiced',
     kpxData:{
-      receivedAt:'2026-05-08', kpxReductionKw: 4140, kpxPerformanceRate: 0.96,
+      receivedAt:'2026-05-08', kpxReductionKw: 4140,
       kpxAmount: 496800, ourReductionKw: 4150, discrepancyKw: -10, discrepancyPct: -0.24,
       objection:{raised:false, reason:'', finalAmount: 496800}
     },
@@ -292,11 +292,11 @@ function showFullAuditLogs(objectType, objectId){
       {at:'2026-05-20 10:00', user:'박정산', fromStatus:'received', toStatus:'invoiced', note:'세금계산서 발행 (2026-0318-01) — 496,800 KRW'},
     ]
   });
-  setStl('EVM20260410-01', {
+  setStl('EVM-20260410-01', {
     // ③ 입금 진행 (in_progress) — 세금계산서 발행 후 통장 입금 진행 중
     status:'in_progress',
     kpxData:{
-      receivedAt:'2026-05-22', kpxReductionKw: 4215, kpxPerformanceRate: 0.95,
+      receivedAt:'2026-05-22', kpxReductionKw: 4215,
       kpxAmount: 505800, ourReductionKw: 4215, discrepancyKw: 0, discrepancyPct: 0,
       objection:{raised:false, reason:'', finalAmount: 505800}
     },
@@ -315,13 +315,13 @@ function showFullAuditLogs(objectType, objectId){
 })();
 
 /* 정산관리 — 이벤트 단위 정산 시드
-   - 정산 ID = STL-{eventId} (예: STL-EVM20260208-01)
+   - 정산 ID = STL-{eventId} (예: STL-EVM-20260208-01)
    - 정산은 이벤트 단위로 독립 처리 (월별 배치 폐기)
    - 상태: awaiting → received(정합성 확정) → in_progress(입금·배분) → completed */
 (function seedSettlementExtra(){
   // 과거 paid 배치용 시드 이벤트 추가 (2025-11 감축 2건)
   store.events.reduction.push(
-    {id:'EVM20251115-01', dispatch_type:'MANDATORY_REDUCTION', category:'operation',
+    {id:'EVM-20251115-01', dispatch_type:'MANDATORY_REDUCTION', category:'operation',
      date:'2025-11-15', timeRange:'14:00~15:00',
      label:'2025-11-15 14:00~15:00 · 의무감축',
      source:'KPX', live:false,
@@ -330,7 +330,7 @@ function showFullAuditLogs(objectType, objectId){
        {groupId:2, ordered:850,  actual:810,  status:'NORMAL'},
        {groupId:5, ordered:1000, actual:960,  status:'NORMAL'},
      ]},
-    {id:'EVV20251128-01', dispatch_type:'VOLUNTARY_REDUCTION', category:'operation',
+    {id:'EVV-20251128-01', dispatch_type:'VOLUNTARY_REDUCTION', category:'operation',
      date:'2025-11-28', timeRange:'13:00~14:00',
      label:'2025-11-28 13:00~14:00 · 자발적감축',
      source:'KPX', live:false,
@@ -340,7 +340,7 @@ function showFullAuditLogs(objectType, objectId){
      ]},
   );
   // 과거 완료 이벤트 — 이미 completed (전 참여고객 배분 완료)
-  ['EVM20251115-01','EVV20251128-01'].forEach(id=>{
+  ['EVM-20251115-01','EVV-20251128-01'].forEach(id=>{
     const ev = store.events.reduction.find(e=>e.id===id);
     const totalA = ev.resources.reduce((s,r)=>s+(r.actual||0),0);
     const ourAmount = Math.round(totalA*120);
@@ -368,7 +368,7 @@ function showFullAuditLogs(objectType, objectId){
       status:'completed',
       ourAmount: ourAmount,
       kpxData:{
-        receivedAt:'2026-01-20', kpxReductionKw: Math.round(totalA*0.99), kpxPerformanceRate: 0.94,
+        receivedAt:'2026-01-20', kpxReductionKw: Math.round(totalA*0.99),
         kpxAmount: kpxAmount, ourReductionKw: totalA, discrepancyKw: Math.round(totalA*-0.01), discrepancyPct: -1.7,
         objection:{raised:false, reason:'', finalAmount: kpxAmount}
       },
@@ -832,10 +832,10 @@ function renderDashboard(){
     (g.customerIds||[]).forEach((cid,ci)=>{
       const pushResult = (gid===8 && ci<2) ? 'FAIL' : 'OK';
       const pushAck = (gid===8 && ci<2) ? false : (pushResult==='OK' && (ci+gi)%7!==6);
-      pushLog({evt:'EVM20260420-01', cust:cid, tpl:'EVENT_ISSUED', ch:'PUSH',
+      pushLog({evt:'EVM-20260420-01', cust:cid, tpl:'EVENT_ISSUED', ch:'PUSH',
         result:pushResult, ack:pushAck, at:`2026-04-20 13:30:${String(10+ci*3).padStart(2,'0')}`});
       if(!pushAck){
-        pushLog({evt:'EVM20260420-01', cust:cid, tpl:'EVENT_ISSUED', ch:'SMS',
+        pushLog({evt:'EVM-20260420-01', cust:cid, tpl:'EVENT_ISSUED', ch:'SMS',
           result:'OK', ack:(gid===8 && ci<2) ? false : true,
           at:`2026-04-20 13:45:${String(10+ci*3).padStart(2,'0')}`});
       }
@@ -844,7 +844,7 @@ function renderDashboard(){
   [1,2,5].forEach((gid,gi)=>{
     const g = store.groups.find(x=>x.id===gid); if(!g) return;
     (g.customerIds||[]).slice(0,2).forEach((cid,ci)=>{
-      pushLog({evt:'EVM20260410-01', cust:cid, tpl:'EVENT_END', ch:'KKO',
+      pushLog({evt:'EVM-20260410-01', cust:cid, tpl:'EVENT_END', ch:'KKO',
         result:'OK', ack:true, at:`2026-04-10 16:15:${String(5+ci*4).padStart(2,'0')}`});
     });
   });
@@ -857,7 +857,7 @@ function renderDashboard(){
   const g4 = store.groups.find(x=>x.id===4);
   if(g4){
     (g4.customerIds||[]).forEach((cid,ci)=>{
-      pushLog({evt:'EVT20260405-01', cust:cid, tpl:'UNDER_PERFORM_WARN', ch:'SMS',
+      pushLog({evt:'EVT-20260405-01', cust:cid, tpl:'UNDER_PERFORM_WARN', ch:'SMS',
         result:'OK', ack:true, at:`2026-04-06 10:${String(10+ci*2).padStart(2,'0')}:00`});
     });
   }
@@ -870,7 +870,7 @@ function renderDashboard(){
   };
   store.commMemos = [
     {id:'MEM-001', customerId:'C011', at:'2026-04-15 14:30', by:'박영업', kind:'통화',
-     summary:'EVM20260420 지시 수신 확인 방법 재안내. 앱 푸시 수신 설정 점검.'},
+     summary:'EVM-20260420 지시 수신 확인 방법 재안내. 앱 푸시 수신 설정 점검.'},
     {id:'MEM-002', customerId:'C013', at:'2026-04-10 11:00', by:'박영업', kind:'방문',
      summary:'월간 리포트 피드백 청취. 감축 가능 시간대 17~19시 확장 검토 요청.'},
     {id:'MEM-003', customerId:'C041', at:'2026-04-07 10:15', by:'현진영', kind:'통화',
@@ -906,7 +906,7 @@ const CATEGORY_META = {
   store.events.reduction.push(
     // 과거 낙찰·완료된 자발적감축 (2026-04-12)
     {
-      id:'EVV20260412-01',
+      id:'EVV-20260412-01',
       dispatch_type:'VOLUNTARY_REDUCTION',
       category:'operation',
       date:'2026-04-12', timeRange:'14:00~15:00',
@@ -924,7 +924,7 @@ const CATEGORY_META = {
     },
     // 유찰된 자발적감축 (2026-04-14)
     {
-      id:'EVV20260414-01',
+      id:'EVV-20260414-01',
       dispatch_type:'VOLUNTARY_REDUCTION',
       category:'operation',
       date:'2026-04-14', timeRange:'14:00~15:00',
@@ -943,7 +943,7 @@ const CATEGORY_META = {
     },
     // 유찰된 자발적감축 (2026-04-17, 중소형DR)
     {
-      id:'EVV20260417-01',
+      id:'EVV-20260417-01',
       dispatch_type:'VOLUNTARY_REDUCTION',
       category:'operation',
       date:'2026-04-17', timeRange:'14:00~15:00',
@@ -980,7 +980,7 @@ const CATEGORY_META = {
     },
     // 추가 접수중 자발적감축 (2026-04-22, 별도 이벤트 - 제주DR 자원)
     {
-      id:'EVV20260422-02',
+      id:'EVV-20260422-02',
       dispatch_type:'VOLUNTARY_REDUCTION',
       category:'operation',
       date:'2026-04-22', timeRange:'13:00~14:00',
@@ -1020,10 +1020,10 @@ const BID_STATUS_META = {
   store.auditLog = [
     {at:'2026-04-21 13:45:22', user:'현진영', role:'SUPER_ADMIN', action:'공통코드 수정', target:'CD-01 · STD', ip:'10.0.12.44', result:'성공'},
     {at:'2026-04-21 11:30:15', user:'박정산', role:'OPS_MANAGER', action:'정산 배치 생성', target:'STL-2026-Q2', ip:'10.0.12.51', result:'성공'},
-    {at:'2026-04-21 10:25:08', user:'박정산', role:'OPS_MANAGER', action:'이의제기 등록',  target:'EVV20260312-01', ip:'10.0.12.51', result:'성공'},
-    {at:'2026-04-20 13:30:00', user:'시스템', role:'—',            action:'지시 알림 자동발송', target:'EVM20260420-01 (47건)', ip:'—', result:'성공'},
-    {at:'2026-04-20 13:29:58', user:'시스템', role:'—',            action:'KPX 이벤트 수신', target:'EVM20260420-01', ip:'—', result:'성공'},
-    {at:'2026-04-20 08:32:11', user:'김감축', role:'OPS_MANAGER', action:'입찰 등록',       target:'EVV20260420-01', ip:'10.0.12.63', result:'성공'},
+    {at:'2026-04-21 10:25:08', user:'박정산', role:'OPS_MANAGER', action:'이의제기 등록',  target:'EVV-20260312-01', ip:'10.0.12.51', result:'성공'},
+    {at:'2026-04-20 13:30:00', user:'시스템', role:'—',            action:'지시 알림 자동발송', target:'EVM-20260420-01 (47건)', ip:'—', result:'성공'},
+    {at:'2026-04-20 13:29:58', user:'시스템', role:'—',            action:'KPX 이벤트 수신', target:'EVM-20260420-01', ip:'—', result:'성공'},
+    {at:'2026-04-20 08:32:11', user:'김감축', role:'OPS_MANAGER', action:'입찰 등록',       target:'EVV-20260420-01', ip:'10.0.12.63', result:'성공'},
     {at:'2026-04-19 17:18:55', user:'박영업', role:'SALES',       action:'사전검증 반려',   target:'C109 서진물류센터', ip:'10.0.12.72', result:'성공'},
     {at:'2026-04-19 09:02:30', user:'외부감사', role:'AUDITOR',  action:'감사로그 조회',    target:'2026-03 전체',   ip:'203.xx.xx.xx', result:'성공'},
     {at:'2026-04-18 16:45:10', user:'현진영', role:'SUPER_ADMIN', action:'계정 생성',       target:'이모니터 (OPS_WORKER)', ip:'10.0.12.44', result:'성공'},

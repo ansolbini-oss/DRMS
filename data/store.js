@@ -161,21 +161,21 @@ const store = {
       file:{name:'수요반응자원_등록신청서_표준DR_제조A.pdf', size:523412, uploadedAt:'2024-07-22 14:30'},
       customerIds:['C011','C012','C013','C015'],
       trial:{required:true, status:'PASSED',
-        history:[{testDate:'2024-07-20', attemptNo:1, result:'PASS', performanceRate:0.89, testEventId:'EVT20240720-01', note:'이행률 80% 이상 97% 미만 — 평균 감축이행률로 의무감축용량 조정 후 등록 (제12.3.1.4조 제1항)', decidedAt:'2024-07-20 16:30', decidedBy:'KPX'}]}},
+        history:[{testDate:'2024-07-20', attemptNo:1, result:'PASS', performanceRate:0.89, testEventId:'EVT-20240720-01', note:'이행률 80% 이상 97% 미만 — 평균 감축이행률로 의무감축용량 조정 후 등록 (제12.3.1.4조 제1항)', decidedAt:'2024-07-20 16:30', decidedBy:'KPX'}]}},
     { id:2, name:'중소형DR 상업A', type:'중소형DR', typeKey:'standard', status:'active', date:'2024-10-01',
       reg:{region:'비수도권', mandatoryCapacity:900},
       file:{name:'수요반응자원_등록신청서_중소형DR_상업A.pdf', size:486521, uploadedAt:'2024-10-01 09:15'},
       customerIds:['C016','C017'],
       trial:{required:true, status:'PASSED',
         history:[
-          {testDate:'2024-09-25', attemptNo:1, result:'FAIL', performanceRate:0.58, testEventId:'EVT20240925-01', note:'이행률 80% 미만 — 참여 제한 대상 (제12.3.1.4조 제2항). 수요반응참여고객 재구성 후 차기 등록 신청기간 재신청', decidedAt:'2024-09-25 17:10', decidedBy:'KPX'},
-          {testDate:'2024-09-30', attemptNo:2, result:'PASS', performanceRate:0.82, testEventId:'EVT20240930-01', note:'이행률 80% 이상 97% 미만 — 평균 감축이행률로 의무감축용량 조정 후 등록', decidedAt:'2024-09-30 16:45', decidedBy:'KPX'},
+          {testDate:'2024-09-25', attemptNo:1, result:'FAIL', performanceRate:0.58, testEventId:'EVT-20240925-01', note:'이행률 80% 미만 — 참여 제한 대상 (제12.3.1.4조 제2항). 수요반응참여고객 재구성 후 차기 등록 신청기간 재신청', decidedAt:'2024-09-25 17:10', decidedBy:'KPX'},
+          {testDate:'2024-09-30', attemptNo:2, result:'PASS', performanceRate:0.82, testEventId:'EVT-20240930-01', note:'이행률 80% 이상 97% 미만 — 평균 감축이행률로 의무감축용량 조정 후 등록', decidedAt:'2024-09-30 16:45', decidedBy:'KPX'},
         ]}},
     { id:3, name:'표준DR 경기A', type:'표준DR', typeKey:'standard', status:'waiting', date:'2026-04-15',
       reg:{region:'수도권', mandatoryCapacity:1200},
       file:{name:'수요반응자원_등록신청서_표준DR_경기A.pdf', size:486521, uploadedAt:'2026-04-15 10:00'},
       customerIds:['C051','C052','C053'],
-      trial:{required:true, status:'WAITING', history:[], currentTestEventId:'EVT20260428-01', autoOptedInAt:'2026-04-25 14:03:12'}},
+      trial:{required:true, status:'WAITING', history:[], currentTestEventId:'EVT-20260428-01', autoOptedInAt:'2026-04-25 14:03:12'}},
     // [v0.2 M-08] 등록불합격은 별도 상태가 아닌 suspended + suspendReason.type='등록시험 불합격'으로 통합
     { id:4, name:'중소형DR 충남B', type:'중소형DR', typeKey:'standard', status:'suspended', date:'2026-03-28',
       suspendReason:{type:'등록시험 불합격', detail:'이행률 42% (필요 80%) — 참여 제한 대상 (제12.3.1.4조 제2항). 재시험 또는 자원 재구성 필요', at:'2026-04-05 16:40'},
@@ -183,7 +183,7 @@ const store = {
       file:{name:'수요반응자원_등록신청서_중소형DR_충남B.pdf', size:465120, uploadedAt:'2026-03-28 11:30'},
       customerIds:['C041','C042'],
       trial:{required:true, status:'FAILED',
-        history:[{testDate:'2026-04-05', attemptNo:1, result:'FAIL', performanceRate:0.42, testEventId:'EVT20260405-01', note:'이행률 80% 미만 — 참여 제한 대상 (제12.3.1.4조 제2항). 기본정산금·실적정산금 미지급. 운영자 판단 필요', decidedAt:'2026-04-05 16:40', decidedBy:'KPX'}]}},
+        history:[{testDate:'2026-04-05', attemptNo:1, result:'FAIL', performanceRate:0.42, testEventId:'EVT-20260405-01', note:'이행률 80% 미만 — 참여 제한 대상 (제12.3.1.4조 제2항). 기본정산금·실적정산금 미지급. 운영자 판단 필요', decidedAt:'2026-04-05 16:40', decidedBy:'KPX'}]}},
     { id:6, name:'표준DR 부산A', type:'표준DR', typeKey:'standard', status:'waiting', date:'2026-04-18',
       reg:{region:'비수도권', mandatoryCapacity:1500},
       file:{name:'수요반응자원_등록신청서_표준DR_부산A.pdf', size:512840, uploadedAt:'2026-04-18 09:20'},
@@ -199,7 +199,7 @@ const store = {
       file:{name:'수요반응자원_등록신청서_제주DR_A.pdf', size:412850, uploadedAt:'2024-06-15 11:20'},
       customerIds:['C019','C020'],
       trial:{required:true, status:'PASSED',
-        history:[{testDate:'2024-06-13', attemptNo:1, result:'PASS', performanceRate:0.98, testEventId:'EVT20240613-01', note:'이행률 97% 이상 — 등록신청용량 그대로 정상 등록 (제12.3.1.4조)', decidedAt:'2024-06-13 18:00', decidedBy:'KPX'}]}},
+        history:[{testDate:'2024-06-13', attemptNo:1, result:'PASS', performanceRate:0.98, testEventId:'EVT-20240613-01', note:'이행률 97% 이상 — 등록신청용량 그대로 정상 등록 (제12.3.1.4조)', decidedAt:'2024-06-13 18:00', decidedBy:'KPX'}]}},
     { id:10, name:'주파수DR A', type:'주파수DR', typeKey:'freq', status:'active', date:'2024-11-05',
       reg:{region:'육지권', freqStep1:'1단계', freqStep2:'4단계', meterType:'개별부하', estimatedCapacity:800},
       file:{name:'수요반응자원_등록신청서_주파수DR_A.pdf', size:587213, uploadedAt:'2024-11-05 16:20'},
@@ -223,7 +223,7 @@ const store = {
     reduction: [
       // 현재 진행중인 의무감축 (LIVE)
       {
-        id:'EVM20260420-01',
+        id:'EVM-20260420-01',
         dispatch_type:'MANDATORY_REDUCTION',
         category:'operation',
         date:'2026-04-20', timeRange:'14:00~15:00',
@@ -238,13 +238,13 @@ const store = {
       },
       // 같은 시간대 병행 자발적DR (KPX 공식 확인 - 설계서 §8.1)
       {
-        id:'EVV20260420-01',
+        id:'EVV-20260420-01',
         dispatch_type:'VOLUNTARY_REDUCTION',
         category:'operation',
         date:'2026-04-20', timeRange:'14:00~15:00',
         label:'2026-04-20 14:00~15:00 · 자발적감축',
         source:'KPX', live:true, remainingMinutes:38,
-        parallelWith:'EVM20260420-01',
+        parallelWith:'EVM-20260420-01',
         bid:{
           submittedAt:'2026-04-20 08:30', submittedBy:'현진영',
           bidVolume:800,                 // 500 + 300 합계
@@ -260,7 +260,7 @@ const store = {
       },
       // 완료된 의무감축
       {
-        id:'EVM20260410-01',
+        id:'EVM-20260410-01',
         dispatch_type:'MANDATORY_REDUCTION',
         category:'operation',
         date:'2026-04-10', timeRange:'15:00~16:00',
@@ -274,7 +274,7 @@ const store = {
       },
       // 예정된 자발적감축
       {
-        id:'EVV20260422-01',
+        id:'EVV-20260422-01',
         dispatch_type:'VOLUNTARY_REDUCTION',
         category:'operation',
         date:'2026-04-22', timeRange:'13:00~14:00',
@@ -296,7 +296,7 @@ const store = {
       },
       // 등록시험 이력 — 완료된 시험 (중소형DR 상업A 2차 재시험 통과)
       {
-        id:'EVT20240930-01',
+        id:'EVT-20240930-01',
         dispatch_type:'REGISTRATION_TEST',
         category:'test',
         date:'2024-09-30', timeRange:'14:00~15:00',
@@ -309,7 +309,7 @@ const store = {
       },
       // 등록시험 이력 — 실패
       {
-        id:'EVT20240925-01',
+        id:'EVT-20240925-01',
         dispatch_type:'REGISTRATION_TEST',
         category:'test',
         date:'2024-09-25', timeRange:'14:00~15:00',
@@ -322,7 +322,7 @@ const store = {
       },
       // 최근 실패 시험 — 중소형DR 충남B (운영자 판단 대기)
       {
-        id:'EVT20260405-01',
+        id:'EVT-20260405-01',
         dispatch_type:'REGISTRATION_TEST',
         category:'test',
         date:'2026-04-05', timeRange:'14:00~15:00',
@@ -335,7 +335,7 @@ const store = {
       },
       // 예정된 시험 — 표준DR 경기A (자동 optIn 완료, SCHEDULED 상태)
       {
-        id:'EVT20260428-01',
+        id:'EVT-20260428-01',
         dispatch_type:'REGISTRATION_TEST',
         category:'test',
         date:'2026-04-28', timeRange:'14:00~15:00',

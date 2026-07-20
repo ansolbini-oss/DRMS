@@ -61,9 +61,8 @@ function rpEventAgg(ev){
   let ordered=0, actual=0;
   (ev.resources||[]).forEach(r=>{ ordered+=r.ordered||0; actual+=r.actual||0; });
   const rate = ordered>0 ? actual/ordered : 0;
-  // 성능률 = Min(120%, rate) — 정산해설서 감축인정량 상한선 120%
-  const perfRate = Math.min(1.2, rate);
-  return { ordered, actual, rate, perfRate, resCount:(ev.resources||[]).length };
+  // [v0.7] 성능률 지표 완전 제거 — 이행률 단일 지표로만 관리
+  return { ordered, actual, rate, resCount:(ev.resources||[]).length };
 }
 
 /* 정산 상태 배지 HTML — MVP 4단계 모델 */
@@ -323,11 +322,10 @@ function rpOpenEvent(eventId){
   rpState.selectedEventId = eventId;
   const a = rpEventAgg(ev);
   const dispLabel = ev.dispatch_type==='MANDATORY_REDUCTION' ? '의무감축' : '자발적감축';
-  // 자원별 이행 테이블
+  // [v0.7] 자원별 이행 테이블 — 성능률 컬럼 제거 (이행률 단일 지표)
   const resRows = (ev.resources||[]).map(r=>{
     const g = groupById(r.groupId);
     const rate = r.ordered>0 ? r.actual/r.ordered : 0;
-    const perf = Math.min(1.2, rate);
     const rateCls = rate>=0.97 ? 'rate-green' : rate>=0.8 ? 'rate-amber' : 'rate-red';
     return `<tr>
       <td><strong>${g?.name || r.groupId}</strong></td>
@@ -335,7 +333,6 @@ function rpOpenEvent(eventId){
       <td class="num">${r.ordered.toLocaleString()}</td>
       <td class="num">${(r.actual||0).toLocaleString()}</td>
       <td class="num"><span class="rate-pill ${rateCls}">${Math.round(rate*100)}%</span></td>
-      <td class="num">${Math.round(perf*100)}%</td>
       <td><button class="link" onclick="rpViewCustomers('${ev.id}', ${r.groupId})">참여고객 상세</button></td>
     </tr>`;
   }).join('');
@@ -369,7 +366,7 @@ function rpOpenEvent(eventId){
         <tr><th style="width:140px;text-align:left;background:#f8fafc;">발령원</th><td>${ev.source||'KPX'}</td>
             <th style="width:140px;text-align:left;background:#f8fafc;">발령유형</th><td>${dispLabel}</td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">일시</th><td>${ev.date} ${ev.timeRange}</td>
-            <th style="text-align:left;background:#f8fafc;">성능률</th><td>${Math.round(a.perfRate*100)}% <span style="color:var(--text-hint);font-size:10px;">(Min(120%, 이행률))</span></td></tr>
+            <th style="text-align:left;background:#f8fafc;">이벤트ID</th><td>${ev.id}</td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">지시 감축용량</th><td style="font-weight:600;">${totalOrdered.toLocaleString()} kW</td>
             <th style="text-align:left;background:#f8fafc;">실 감축량 / 이행률</th><td><b>${totalActual.toLocaleString()} kW</b> <span style="color:var(--text-hint);font-size:10px;">· ${totalRate}%</span></td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">확정 상태</th><td colspan="3"><span class="stl-badge ${confirmStateCls}">${confirmStateLabel}</span></td></tr>
@@ -527,21 +524,21 @@ function rpExportCustomerCsv(eventId, groupId){
   }).filter(Boolean);
   const rawSum = raw.reduce((s,x)=>s+x.ordered*x.rawV,0);
   const scale = rawSum>0 ? r.actual/rawSum : 1;
+  // [v0.7] 성능률 컬럼 완전 제거 — 이행률 단일 지표
   const rows = [[
     '이벤트ID','감축일자','시간대','발령유형','자원그룹','DR유형',
     '고객ID','사업자명','대표자','전화','접수번호','한전고객번호',
-    '지시용량(kW)','실적(kW)','이행률(%)','성능률(%)','판정(80%이상)','CBL유형','CBL평균(kW)'
+    '지시용량(kW)','실적(kW)','이행률(%)','판정(80%이상)','CBL유형','CBL평균(kW)'
   ]];
   raw.forEach(({c,ordered,rawV})=>{
     const actual = Math.round(ordered*rawV*scale);
     const rate = ordered>0 ? actual/ordered : 0;
-    const perf = Math.min(1.2, rate);
     rows.push([
       ev.id, ev.date, ev.timeRange,
       ev.dispatch_type==='MANDATORY_REDUCTION'?'의무감축':'자발적감축',
       g.name, g.type,
       c.id, c.name, c.ceo||'', c.tel||'', c.recno||'', c.kepco||'',
-      ordered, actual, Math.round(rate*100), Math.round(perf*100),
+      ordered, actual, Math.round(rate*100),
       rate>=0.8?'Y':'N', c.cblType||'-', c.cblAvg||'-'
     ]);
   });
@@ -554,21 +551,21 @@ function rpExportCustomerCsv(eventId, groupId){
 function rpExportResourceCsv(groupId, evs){
   const g = groupById(groupId);
   if(!g) return;
+  // [v0.7] 성능률 컬럼 완전 제거 — 이행률 단일 지표
   const rows = [[
     '자원그룹','DR유형','이벤트ID','감축일자','시간대','발령유형',
-    '지시용량(kW)','실적(kW)','이행률(%)','성능률(%)',
+    '지시용량(kW)','실적(kW)','이행률(%)',
     '정산상태','정산ID','예상정산금(우리)','최종확정(KPX)','수금액','수금일','이의제기','비고'
   ]];
   evs.forEach(ev=>{
     const r = ev.resources.find(x=>x.groupId===groupId); if(!r) return;
     const rate = r.ordered>0 ? r.actual/r.ordered : 0;
-    const perf = Math.min(1.2, rate);
     const s = ev.settlement;
     const stlId = ['received','in_progress','completed'].includes(s.status) ? `STL-${ev.id}` : '';
     rows.push([
       g.name, g.type, ev.id, ev.date, ev.timeRange,
       ev.dispatch_type==='MANDATORY_REDUCTION'?'의무감축':'자발적감축',
-      r.ordered, r.actual||0, Math.round(rate*100), Math.round(perf*100),
+      r.ordered, r.actual||0, Math.round(rate*100),
       rpStlLabel(s.status), stlId,
       s.ourAmount||'', s.finalAmount||'',
       s.receivedFromKpx?.amount||'', s.receivedFromKpx?.receivedAt||'',
@@ -628,10 +625,10 @@ function rpOpenSettlement(eventId){
   // ── 단계 1 body: KPX 데이터 대사 ──
   const ev_ordered = a.ordered, ev_actual = a.actual;
   if(!s.kpxData){
+    // [v0.7] 성능률 입력 필드 제거 — 이행률 단일 지표
     $('stl-stg1-body').innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div><label class="form-label">KPX 감축인정량 (kW)</label><input class="form-input" id="stl-k-kw" type="number" placeholder="${ev_actual}"></div>
-        <div><label class="form-label">KPX 성능률 (%)</label><input class="form-input" id="stl-k-perf" type="number" step="0.1" placeholder="${Math.round(a.rate*100)}"></div>
         <div><label class="form-label">KPX 산정 정산금 (KRW)</label><input class="form-input" id="stl-k-amt" type="number" placeholder="${s.ourAmount||0}"></div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="rpRegisterKpxData()">확정 데이터 저장 → 정합성 검토</button>
@@ -647,7 +644,7 @@ function rpOpenSettlement(eventId){
           <div><div class="k">예상 정산금</div><div class="v">${(s.ourAmount||0).toLocaleString()} KRW</div></div>
         </div>
         <div class="stg-meta" style="grid-template-columns:1fr;">
-          <div><div class="k">KPX 제공 (수신 ${k.receivedAt})</div><div class="v">${(k.kpxReductionKw||0).toLocaleString()} kW · 성능률 ${Math.round((k.kpxPerformanceRate||0)*100)}%</div></div>
+          <div><div class="k">KPX 제공 (수신 ${k.receivedAt})</div><div class="v">${(k.kpxReductionKw||0).toLocaleString()} kW</div></div>
           <div><div class="k">KPX 산정 정산금</div><div class="v">${(k.kpxAmount||0).toLocaleString()} KRW</div></div>
         </div>
         <div class="stg-meta" style="grid-template-columns:1fr;">
@@ -768,16 +765,16 @@ function rpRegisterKpxData(){
   const ev = store.events.reduction.find(e=>e.id===rpState.selectedEventId);
   if(!ev||!ev.settlement) return;
   const kwV = Number($('stl-k-kw').value || 0);
-  const perfV = Number($('stl-k-perf').value || 0)/100;
   const amtV = Number($('stl-k-amt').value || 0);
   if(!kwV || !amtV){ showToast('KPX 감축인정량과 정산금을 입력하세요.'); return; }
   const a = rpEventAgg(ev);
   const ourKw = a.actual;
   const dKw = ourKw - kwV;
   const dPct = kwV>0 ? (dKw/kwV*100) : 0;
+  // [v0.7] 성능률 저장 필드 제거 — 이행률 단일 지표
   ev.settlement.kpxData = {
     receivedAt: todayStr(),
-    kpxReductionKw: kwV, kpxPerformanceRate: perfV,
+    kpxReductionKw: kwV,
     kpxAmount: amtV,
     ourReductionKw: ourKw, discrepancyKw: dKw, discrepancyPct: Number(dPct.toFixed(2)),
     objection:{raised: Math.abs(dPct)>3, reason:'', finalAmount: Math.abs(dPct)>3 ? null : amtV}

@@ -3,7 +3,7 @@
    원본 index.html의 해당 prefix 함수/상수를 모음
 ════════════════════════════════════════════════════════════ */
 
-const monState = { eventType:'reduction', category:'all', status:'all', currentEventId:null, selectedGroupId:null, viewMode:'5min', sort:'rate-asc' };
+const monState = { eventType:'reduction', category:'all', status:'all', keyword:'', currentEventId:null, selectedGroupId:null, viewMode:'5min', sort:'rate-asc' };
 var monDmState = { groupId:null, eventId:null, customerId:null, queryDate:null, view:'summary' };
 
 function monAllowedCategories(type){
@@ -32,10 +32,22 @@ function monEventTypeKey(ev){
 function monFilteredEvents(){
   const evs = store.events[monState.eventType] || [];
   const statusRank = {live:0, scheduled:1, completed:2};
+  // [v0.7 M-04] 검색 키워드 매칭: 이벤트명·이벤트ID·자원명 OR (부분일치, 대소문자 무시)
+  const kw = (monState.keyword||'').trim().toLowerCase();
+  const matchKeyword = (ev)=>{
+    if(!kw) return true;
+    const name = (typeof eventDisplayName==='function' ? eventDisplayName(ev) : '').toLowerCase();
+    if(name.includes(kw)) return true;
+    if((ev.id||'').toLowerCase().includes(kw)) return true;
+    return (ev.resources||[]).some(r=>{
+      const g = groupById(r.groupId);
+      return (g?.name||'').toLowerCase().includes(kw);
+    });
+  };
   return evs.filter(ev=>{
     const statusOk = monState.status==='all' || monEventStatusKey(ev)===monState.status;
     const typeOk = monState.category==='all' || monEventTypeKey(ev)===monState.category;
-    return statusOk && typeOk;
+    return statusOk && typeOk && matchKeyword(ev);
   }).sort((a,b)=>{
     const sa = statusRank[monEventStatusKey(a)] ?? 9;
     const sb = statusRank[monEventStatusKey(b)] ?? 9;
@@ -43,6 +55,13 @@ function monFilteredEvents(){
     const da = `${b.date||''} ${b.timeRange||''}`.localeCompare(`${a.date||''} ${a.timeRange||''}`);
     return da;
   });
+}
+// [v0.7 M-04] 이벤트 검색 입력 핸들러
+function monRunSearch(){
+  monState.keyword = ($('mon-search')?.value || '').trim();
+  monState.currentEventId = null;
+  monState.selectedGroupId = null;
+  monRender();
 }
 function monSyncFilterButtons(){
   $$('#page-monitoring .event-tab').forEach((el,i)=>{
@@ -576,7 +595,7 @@ function monRenderRightPane(ev){
 
       <div class="mon-section">
         <div class="mon-section-head">
-          <div><div class="mon-section-title">참여고객별 이행 추이</div><div class="mon-section-sub">시간대별 이행률 히트맵 (5분 단위)</div></div>
+          <div><div class="mon-section-title">참여고객별 데이터 수신 현황</div><div class="mon-section-sub">5분 슬롯별 계량 데이터 수신 여부 (이행률 미표시)</div></div>
         </div>
         ${monRenderHeatmap(r, g)}
       </div>
@@ -639,7 +658,7 @@ function monRenderRightPane(ev){
 
     <div class="mon-section">
       <div class="mon-section-head">
-        <div><div class="mon-section-title">참여고객별 이행 추이</div><div class="mon-section-sub">시간대별 이행률 히트맵 (5분 단위)</div></div>
+        <div><div class="mon-section-title">참여고객별 데이터 수신 현황</div><div class="mon-section-sub">5분 슬롯별 계량 데이터 수신 여부 (이행률 미표시)</div></div>
       </div>
       ${monRenderHeatmap(r, g)}
     </div>
@@ -699,20 +718,18 @@ function monRenderChart(r, ev){
   </svg>`;
 }
 
+// [v0.7 M-01] 참여고객별 데이터 수신 현황 — 이행률 5단계 → 수신 여부 2색
+//   각 셀 = 5분 슬롯별 계량 데이터 수신 여부 (이행률 미표시)
+//   색상: 정상 수신 = 초록 / 미수신·측정 불가 = 회색
+//   이유: 미수신을 이행률 0%(빨강)로 표기하면 실제 미이행과 구분 불가 → 별도 회색 처리
 function monRenderHeatmap(r, g){
   const custIds = (g?.customerIds||[]).slice(0, 6);
   if(!custIds.length) return '<div class="empty" style="padding:20px;">참여고객 정보가 없습니다.</div>';
   const blocks = 12;
-  const baseRate = r.actual/r.ordered;
   const seed = r.groupId*137;
   const rand = (i,j)=>{ const s=Math.sin(seed+i*31+j*7)*10000; return s-Math.floor(s); };
-  const colorFor = v => {
-    if(v>=0.95) return '#1a7a4a';
-    if(v>=0.85) return '#4ca878';
-    if(v>=0.7) return '#f59e0b';
-    if(v>=0.5) return '#ea8a0a';
-    return '#b91c1c';
-  };
+  const COLOR_RECEIVED = '#1a7a4a';
+  const COLOR_MISSING  = '#94a3b8';
   return `<div class="heatmap-wrap">
     <div style="display:grid;grid-template-columns:80px 1fr;gap:6px;padding:2px 0 6px;font-size:9px;color:var(--text-hint);">
       <span></span>
@@ -727,24 +744,19 @@ function monRenderHeatmap(r, g){
         <span class="heatmap-label">${name.substring(0,6)}</span>
         <div class="heatmap-cells">
           ${Array.from({length:blocks}, (_,j)=>{
-            const variance = (rand(i,j)-0.5)*0.25;
-            const v = Math.max(0.3, Math.min(1.0, baseRate + variance));
-            return `<div class="heatmap-cell" style="background:${colorFor(v)};" title="${name} · ${Math.round(v*100)}%"></div>`;
+            // 90% 슬롯 정상 수신, 나머지는 미수신으로 시뮬레이션 (자원별 결정론적)
+            const received = rand(i,j) > 0.10;
+            const bg = received ? COLOR_RECEIVED : COLOR_MISSING;
+            const tip = received ? '정상 수신' : '미수신 (측정 불가)';
+            return `<div class="heatmap-cell" style="background:${bg};" title="${name} · ${tip}"></div>`;
           }).join('')}
         </div>
       </div>`;
     }).join('')}
     <div class="heatmap-legend">
-      <span>이행률:</span>
-      <span>낮음</span>
-      <div class="heatmap-scale">
-        <span style="background:#b91c1c;"></span>
-        <span style="background:#ea8a0a;"></span>
-        <span style="background:#f59e0b;"></span>
-        <span style="background:#4ca878;"></span>
-        <span style="background:#1a7a4a;"></span>
-      </div>
-      <span>높음</span>
+      <span>데이터 수신:</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:10px;border-radius:2px;background:${COLOR_RECEIVED};"></span>정상 수신</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:10px;border-radius:2px;background:${COLOR_MISSING};"></span>미수신</span>
     </div>
   </div>`;
 }
