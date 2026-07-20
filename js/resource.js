@@ -1163,9 +1163,20 @@ function rmRenderDetailFooter(g){
   const btns = [];
   if(g.status==='pending'){
     // [v0.2 M-07] 승인대기 상태에서만 참여고객 편입·삭제 가능
-    // TODO M-05 Phase 3: 삭제 버튼을 hard delete → soft delete(status='inactive')로 전환
     btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteGroup(${g.id})">자원 비활성화</button>`);
     btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객추가</button>`);
+    // [v0.2 M-09] 상태 전환 버튼 시험 대상 여부에 따라 분기
+    //  - 시험 대상(표준·중소형·제주 및 H- 파생 10종): 시험대기 전환
+    //  - 시험 미대상(국민DR·주파수DR·플러스DR): 활성 전환 직행 (§3-3 단계 A')
+    const isTrialTarget = !!(g.trial && g.trial.required);
+    const gate = rmActivationPrecheck(g);
+    const dis = gate.ok ? '' : 'disabled';
+    const tip = gate.ok ? '' : gate.reason;
+    if(isTrialTarget){
+      btns.push(`<button class="btn btn-success btn-sm" onclick="rmMoveToWaiting(${g.id})" ${dis} title="${tip}">시험대기 전환</button>`);
+    } else {
+      btns.push(`<button class="btn btn-success btn-sm" onclick="rmActivateDirect(${g.id})" ${dis} title="${tip}">활성 전환</button>`);
+    }
   } else if(g.status==='waiting'){
     const hasFile = !!g.file;
     const trialOk = trialClearedForActivation(g);
@@ -1237,6 +1248,59 @@ function rmRemoveExtraDoc(gid, docId){
   showToast(`${doc.label} 삭제 완료`);
   rmRenderDetailBody(g);
 }
+// [v0.2 M-06 stub] 승인대기 → 시험대기/활성 전환 사전 조건 체크
+//   정책서 §3-3: 참여고객 ≥ 10명 · 참여용량 ≥ 의무감축용량 · KPX 자원 등록 완료
+//   본 스텁은 반환 형태만 정의. 실제 조건 자동 체크는 M-06에서 반영.
+function rmActivationPrecheck(g){
+  if(!g) return {ok:false, reason:'자원그룹 없음'};
+  return {ok:true, reason:''};
+}
+
+// [v0.2 M-09] 승인대기 → 시험대기 전환 (시험 대상 유형만)
+function rmMoveToWaiting(gid){
+  const g = groupById(gid); if(!g) return;
+  if(g.status!=='pending'){ showToast('승인대기 상태에서만 시험대기로 전환할 수 있습니다.'); return; }
+  if(!(g.trial && g.trial.required)){ showToast('시험 미대상 유형은 시험대기 단계를 거치지 않습니다.'); return; }
+  const gate = rmActivationPrecheck(g);
+  if(!gate.ok){ showToast(gate.reason || '전환 조건 미충족'); return; }
+  const prev = g.status;
+  g.status = 'waiting';
+  if(!g.trial.status || g.trial.status==='NOT_REQUIRED') g.trial.status = 'WAITING';
+  g.audit = g.audit || [];
+  g.audit.push({type:'STATE_CHANGE', at: nowStr(), from: prev, to: 'waiting'});
+  rmApplyFilter();
+  rmOpenDetail(gid);
+  refreshSidebarBadges();
+  showToast(`${g.name} 시험대기 전환 완료`);
+}
+
+// [v0.2 M-09] 승인대기 → 활성 직행 (시험 미대상 유형 국민·주파수·플러스)
+function rmActivateDirect(gid){
+  const g = groupById(gid); if(!g) return;
+  if(g.status!=='pending'){ showToast('승인대기 상태에서만 활성 직행 전환이 가능합니다.'); return; }
+  if(g.trial && g.trial.required){ showToast('시험 대상 유형은 시험대기 단계를 먼저 거쳐야 합니다.'); return; }
+  const gate = rmActivationPrecheck(g);
+  if(!gate.ok){ showToast(gate.reason || '전환 조건 미충족'); return; }
+  const prev = g.status;
+  g.status = 'active';
+  if(!g.operational){
+    const custDataStatus = {};
+    (g.customerIds||[]).forEach(cid=>{ custDataStatus[cid] = {status:'NORMAL', lastMinutesAgo:2}; });
+    g.operational = {
+      dataCollection:{status:'NORMAL', lastMinutesAgo:2, failedCustomers:0},
+      performance:{recentAvgRate:0, trend:'flat', count:0, lastRate:0},
+      custDataStatus,
+    };
+    g.reductionHistory = [];
+  }
+  g.audit = g.audit || [];
+  g.audit.push({type:'ACTIVATE', at: nowStr(), from: prev, via:'direct'});
+  rmApplyFilter();
+  rmOpenDetail(gid);
+  refreshSidebarBadges();
+  showToast(`${g.name} 활성 전환 완료 (시험 미대상 직행)`);
+}
+
 function rmActivate(gid){
   const g = groupById(gid); if(!g) return;
   if(!g.file){ showToast('등록 신청서를 먼저 업로드해야 합니다.'); return; }
