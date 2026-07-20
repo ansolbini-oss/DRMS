@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260720-2003. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260720-2003">
+<!-- css/js 모두 ?v=260720-2016. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260720-2016">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260720-2003</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260720-2016</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -959,20 +959,25 @@
     <!-- 총괄 지표 카드 (자원 전체 요약) -->
     <div class="summary-bar">
       <div class="summary-card static">
-        <div class="summary-label">활성 자원그룹</div>
-        <div class="summary-val blue" id="dc-kpi-groups">—</div>
-        <div class="summary-val-sub" id="dc-kpi-groups-sub">—</div>
+        <div class="summary-label">총 자원</div>
+        <div class="summary-val" id="dc-kpi-total">—</div>
+        <div class="summary-val-sub">활성 + 비활성 합계</div>
       </div>
-    <div class="summary-card static">
-      <div class="summary-label">전체 수신률</div>
-      <div class="summary-val green" id="dc-kpi-rx">—</div>
-      <div class="summary-val-sub" id="dc-kpi-rx-sub">정산 투입 가능 비율</div>
-    </div>
-    <div class="summary-card" onclick="dcFilterByRisk()" style="cursor:pointer;">
-      <div class="summary-label">수집 이상 자원</div>
-      <div class="summary-val red" id="dc-kpi-risk">—</div>
-      <div class="summary-val-sub">상세 확인 필요</div>
-    </div>
+      <div class="summary-card static">
+        <div class="summary-label">활성 자원</div>
+        <div class="summary-val blue" id="dc-kpi-active">—</div>
+        <div class="summary-val-sub">데이터 수집 대상</div>
+      </div>
+      <div class="summary-card static">
+        <div class="summary-label">비활성 자원</div>
+        <div class="summary-val" id="dc-kpi-inactive" style="color:var(--text-hint);">—</div>
+        <div class="summary-val-sub">이력 조회 전용 · 계약만료/해지</div>
+      </div>
+      <div class="summary-card" onclick="dcFilterByRisk()" style="cursor:pointer;">
+        <div class="summary-label">이상 자원</div>
+        <div class="summary-val red" id="dc-kpi-risk">—</div>
+        <div class="summary-val-sub">상세 확인 필요</div>
+      </div>
     </div>
 
     <!-- 필터 바 -->
@@ -2217,20 +2222,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260720-2003"></script>
-<script src="data/tips.js?v=260720-2003"></script>
-<script src="js/core.js?v=260720-2003"></script>
-<script src="js/dashboard.js?v=260720-2003"></script>
-<script src="js/precheck.js?v=260720-2003"></script>
-<script src="js/resource.js?v=260720-2003"></script>
-<script src="js/monitoring.js?v=260720-2003"></script>
-<script src="js/report.js?v=260720-2003"></script>
-<script src="js/settlement.js?v=260720-2003"></script>
-<script src="js/datacollect.js?v=260720-2003"></script>
-<script src="js/rtu.js?v=260720-2003"></script>
-<script src="js/communication.js?v=260720-2003"></script>
-<script src="js/bidding.js?v=260720-2003"></script>
-<script src="js/account.js?v=260720-2003"></script>
-<script src="js/system.js?v=260720-2003"></script>
+<script src="data/store.js?v=260720-2016"></script>
+<script src="data/tips.js?v=260720-2016"></script>
+<script src="js/core.js?v=260720-2016"></script>
+<script src="js/dashboard.js?v=260720-2016"></script>
+<script src="js/precheck.js?v=260720-2016"></script>
+<script src="js/resource.js?v=260720-2016"></script>
+<script src="js/monitoring.js?v=260720-2016"></script>
+<script src="js/report.js?v=260720-2016"></script>
+<script src="js/settlement.js?v=260720-2016"></script>
+<script src="js/datacollect.js?v=260720-2016"></script>
+<script src="js/rtu.js?v=260720-2016"></script>
+<script src="js/communication.js?v=260720-2016"></script>
+<script src="js/bidding.js?v=260720-2016"></script>
+<script src="js/account.js?v=260720-2016"></script>
+<script src="js/system.js?v=260720-2016"></script>
 
 </body></html>

@@ -367,37 +367,17 @@ function dcRender(){
   const aggs = dcFilteredGroups();
   $('dc-range-info').textContent = `${dcState.from} ~ ${dcState.to} · ${aggs.length}개 그룹 · ${meta.label}`;
 
-  // KPI 합산 (자원 전체 지표)
-  const sum = aggs.reduce((a,g)=>{
-    a.total += g.totalSlots; a.miss += g.missTotal; a.risk += g.riskCnt;
-    return a;
-  }, {total:0, miss:0, risk:0});
+  // [v0.7 카드 4장 개편] 총자원 · 활성 · 비활성 · 이상자원
+  //   - 총/활성/비활성은 store.groups 기준 (조회기간·검색 필터와 무관하게 자원 전체 통계)
+  //   - 이상자원은 조회 결과(aggs) 기준 미수신 발생 자원그룹 수
+  const activeCnt   = store.groups.filter(g=>g.status==='active').length;
+  const inactiveCnt = store.groups.filter(g=>g.status==='inactive').length;
+  const totalCnt    = activeCnt + inactiveCnt;
+  const riskGroups  = aggs.filter(a=>a.missTotal>0).length;
 
-  // 총괄 KPI 카드 갱신
-  const rxPct = sum.total ? Math.round((sum.total-sum.miss)/sum.total*1000)/10 : 0;
-  const rxColor = rxPct>=99?'var(--green)':rxPct>=95?'var(--amber)':'var(--red)';
-  const riskGroups = aggs.filter(a=>a.missTotal>0).length;
-  const allActive = store.groups.filter(g=>g.status==='active').length;
-
-  if($('dc-kpi-groups')) $('dc-kpi-groups').textContent = aggs.length;
-  if($('dc-kpi-groups-sub')) $('dc-kpi-groups-sub').textContent = `전체 ${allActive}개 중 조회`;
-  if($('dc-kpi-rx')){
-    $('dc-kpi-rx').textContent = sum.total ? rxPct+'%' : '—';
-    $('dc-kpi-rx').style.color = rxColor;
-  }
-  // [v0.7] 채널별 수신률 카드 서브 문구
-  //   ami: 정산 투입 컷오프 미확정 임시 표시 (97% — 규정 근거 없음, 경고만)
-  //   rtu: 정산 근거 아님, 상시 품질 추적 목적
-  const rxSub = $('dc-kpi-rx-sub');
-  if(rxSub){
-    rxSub.textContent = dcState.channel==='rtu'
-      ? '상시 수신 품질 (참고)'
-      : '정산 투입 가능 비율 (임시 97%, 규정 미확정)';
-  }
-  if($('dc-kpi-miss')){
-    $('dc-kpi-miss').textContent = sum.miss.toLocaleString();
-    $('dc-kpi-miss').style.color = sum.miss>0 ? 'var(--red)' : 'var(--text)';
-  }
+  if($('dc-kpi-total'))    $('dc-kpi-total').textContent    = totalCnt;
+  if($('dc-kpi-active'))   $('dc-kpi-active').textContent   = activeCnt;
+  if($('dc-kpi-inactive')) $('dc-kpi-inactive').textContent = inactiveCnt;
   if($('dc-kpi-risk')){
     $('dc-kpi-risk').textContent = riskGroups + '개';
     $('dc-kpi-risk').style.color = riskGroups>0 ? 'var(--red)' : 'var(--text)';
