@@ -483,7 +483,7 @@ table.dc-summary-table tbody tr.dc-expand-row:hover td{background:#fbfcfe !impor
 .dc-expand-inner{padding:14px 16px 16px 42px;}
 .dc-expand-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:11px;color:var(--text-hint);}
 .dc-expand-list{display:flex;flex-direction:column;gap:8px;}
-.dc-customer-jump{width:100%;display:grid;grid-template-columns:18px minmax(0,1.4fr) 90px 70px 70px 84px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);background:#fff;border-radius:12px;text-align:left;}
+.dc-customer-jump{width:100%;display:grid;grid-template-columns:18px minmax(0,1.4fr) 90px 70px 84px 84px;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);background:#fff;border-radius:12px;text-align:left;}
 .dc-customer-jump:hover{border-color:var(--blue-border);background:#f8fbff;}
 .dc-customer-jump-name{font-weight:600;color:var(--navy);}
 .dc-customer-jump-meta{font-size:10px;color:var(--text-hint);margin-top:2px;}
@@ -494,7 +494,7 @@ table.dc-summary-table tbody tr.dc-expand-row:hover td{background:#fbfcfe !impor
 .dc-biz-chevron{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;border-radius:4px;background:var(--bg);color:var(--text-sub);cursor:pointer;font-size:14px;font-weight:600;user-select:none;}
 .dc-biz-chevron:hover{background:var(--blue-light);color:var(--blue);}
 .dc-biz-chevron-empty{display:inline-block;width:18px;}
-.dc-site-jump{width:100%;display:grid;grid-template-columns:18px minmax(0,1.4fr) 90px 70px 70px 84px;gap:10px;align-items:center;padding:8px 12px;border:1px dashed var(--border);background:var(--grey50);border-radius:8px;margin-top:4px;}
+.dc-site-jump{width:100%;display:grid;grid-template-columns:18px minmax(0,1.4fr) 90px 70px 84px 84px;gap:10px;align-items:center;padding:8px 12px;border:1px dashed var(--border);background:var(--grey50);border-radius:8px;margin-top:4px;}
 .dc-site-jump:hover{background:#f0f7ff;border-color:var(--blue-border);}
 .dc-site-indent{display:inline-flex;width:18px;justify-content:center;color:var(--text-hint);font-size:13px;}
 

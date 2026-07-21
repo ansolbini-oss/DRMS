@@ -477,6 +477,11 @@ function dcRenderTabGroups(aggs){
         : '';
 
       // 사업자 행 (메인) — 펼침 가능, 행 본문 클릭 시 사업자 상세 모니터링
+      // [v0.7] 사업자(참여고객) 단위 재수집 버튼 — 소속 사업장 전체 대상
+      const bizCanRerun = p.missCnt > 0;
+      const bizRerunLabel = hasSites ? '전체 재수집' : '재수집';
+      const bizRerunTip = bizCanRerun ? `${p.cust.name} 소속 미수신 슬롯 재수집` : '미수신 슬롯 없음';
+      const bizRerunBtn = `<button class="btn btn-xs ${bizCanRerun?'btn-primary':'btn-secondary'}" ${bizCanRerun?'':'disabled'} title="${bizRerunTip}" onclick="event.stopPropagation();dcRerunSite(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)}, null)">${bizRerunLabel}</button>`;
       const bizRow = `<div class="dc-customer-jump">
         ${accordionIcon}
         <span onclick='dcOpenCustomerDetail(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)})' style="cursor:pointer;">
@@ -486,11 +491,14 @@ function dcRenderTabGroups(aggs){
         <span class="dc-customer-jump-val">${rx}%</span>
         <span class="dc-customer-jump-val" style="color:${p.missCnt>0?'var(--red)':'var(--text-hint)'};">${p.missCnt}</span>
         <span class="dc-customer-jump-state"><span class="badge ${stateMeta.cls}" style="font-size:10px;">${stateMeta.label}</span></span>
+        <span class="dc-customer-jump-action" style="text-align:right;">${bizRerunBtn}</span>
       </div>`;
 
-      // 사업장 sub-행 (펼침 상태일 때만)
+      // 사업장 sub-행 (펼침 상태일 때만) — [v0.7] 사업장별 재수집 버튼 추가
       const sitesRows = (hasSites && bizExpanded) ? sites.map(s=>{
         // 사업장 단위 통신상태는 사업자 전체 평균 적용 (시드 단순화 — 향후 사업장별 다른 값 가능)
+        const canRerun = p.missCnt > 0;
+        const rerunBtn = `<button class="btn btn-xs ${canRerun?'btn-primary':'btn-secondary'}" ${canRerun?'':'disabled'} title="${canRerun?'해당 사업장 미수신 슬롯 재수집':'미수신 슬롯 없음'}" onclick="event.stopPropagation();dcRerunSite(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)}, ${JSON.stringify(s.id)})">재수집</button>`;
         return `<div class="dc-site-jump">
           <span class="dc-site-indent">└</span>
           <span style="cursor:pointer;" onclick='dcOpenCustomerDetail(${JSON.stringify(g.id)}, ${JSON.stringify(p.cust.id)})'>
@@ -500,6 +508,7 @@ function dcRenderTabGroups(aggs){
           <span class="dc-customer-jump-val">${rx}%</span>
           <span class="dc-customer-jump-val" style="color:${p.missCnt>0?'var(--red)':'var(--text-hint)'};">${p.missCnt}</span>
           <span class="dc-customer-jump-state"><span class="badge ${stateMeta.cls}" style="font-size:10px;">${stateMeta.label}</span></span>
+          <span class="dc-customer-jump-action" style="text-align:right;">${rerunBtn}</span>
         </div>`;
       }).join('') : '';
 
@@ -510,7 +519,7 @@ function dcRenderTabGroups(aggs){
         <div class="dc-expand-inner">
           <div class="dc-expand-head">
             <span>소속 참여고객 ${totalCust}명 · 고객을 클릭하면 해당 고객 상세 모니터링으로 바로 이동합니다.</span>
-            <span>컬럼: 수신률 / 미수신</span>
+            <span>컬럼: 수신률 / 미수신 / 상태 / 재수집</span>
           </div>
           <div class="dc-expand-list">${customerRows}</div>
         </div>
@@ -973,6 +982,22 @@ function dcRerun(){
   const missGroups = aggs.filter(a=>a.missTotal>0).length;
   if(!missGroups){ alert('현재 조회 범위에 미수신 슬롯이 있는 자원그룹이 없습니다.'); return; }
   alert(`${dcState.from} ~ ${dcState.to} 범위, 미수신 슬롯이 있는 ${missGroups}개 자원그룹에 재조회 요청을 전송했습니다.\n실제 반영은 한전OPM/RTU 통신 정상화 후 다음 수집 주기에 이뤄집니다. (시뮬레이션)`);
+}
+
+/* [v0.7] 사업장·참여고객 단위 재수집 요청 (시뮬레이션 토스트)
+   siteId 지정 시 해당 사업장, null이면 참여고객 소속 전체 사업장 대상 */
+function dcRerunSite(gid, custId, siteId){
+  const g = groupById(gid);
+  const c = (typeof custById === 'function') ? custById(custId) : null;
+  if(!g || !c){ showToast('대상 자원 또는 참여고객을 찾을 수 없습니다.'); return; }
+  const sites = Array.isArray(c.sites) ? c.sites : [];
+  const site = siteId ? sites.find(s=>s.id===siteId) : null;
+  const channel = dcChannelMeta().label;
+  const scope = site
+    ? `${c.name} · ${site.siteName} (KEPCO ${site.kepco||'-'})`
+    : `${c.name} 소속 전체 사업장 (${sites.length||1}개)`;
+  showToast(`${scope} 재수집 요청 전송 · ${channel} · ${dcState.from}~${dcState.to} (시뮬레이션)`);
+  // TODO 실제 반영: audit 로그 push + 다음 수집 주기 정합 반영. 정책서 §3-4/§3-9 참조.
 }
 
 /* ════════════════════════════════════════════════════════════
