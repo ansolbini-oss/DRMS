@@ -73,6 +73,26 @@ function rtuGenerateMockRtu(site, cust){
   // 인증서 만료일
   const certYear = 2027 - (lastDigit % 3);
   const certMonth = String(((lastDigit * 3) % 12) + 1).padStart(2, '0');
+  // [v0.7 도메인 필드 확장] 인터넷 연결 방식·연결 계량기·하위 설비
+  const connType = (lastDigit % 3 === 0) ? '무선 LTE' : '유선 이더넷(LAN)';
+  const meterKinds = ['본관 메인 계량기', '발전용 계량기', '수용가 총괄 계량기'];
+  const meterName = meterKinds[lastDigit % meterKinds.length];
+  const downstreamPool = [
+    {type:'인버터',   model:'KSTAR KSG1-250K'},
+    {type:'접속함',   model:'DY-5010'},
+    {type:'특고압 계전기', model:'현대 VCB'},
+    {type:'저압 계전기',   model:'LS ACB'},
+    {type:'전력용 콘덴서', model:'YPC-3P-30kVar'},
+  ];
+  // 자원유형별 하위 설비 조합 (결정론적)
+  const dsMap = {
+    standard: [downstreamPool[0], downstreamPool[2], downstreamPool[3]],
+    small:    [downstreamPool[3]],
+    national: [downstreamPool[4]],
+    jeju:     [downstreamPool[0], downstreamPool[1]],
+  };
+  const downstream = dsMap[typeKey] || [downstreamPool[3]];
+
   return {
     id: rtuNum,
     serial: 'SN' + kepcoStr + (lastDigit * 7).toString().padStart(3, '0'),
@@ -81,6 +101,9 @@ function rtuGenerateMockRtu(site, cust){
     firmware: fwVer,
     ip: '10.' + (lastDigit + 1) + '.' + ((lastDigit * 3) % 256) + '.' + ((lastDigit * 7) % 256),
     port: 8443,
+    // [v0.7] 통신 연결 정보 확장
+    connType,                    // 인터넷 연결 방식 (유선 LAN / 무선 LTE)
+    consolePort: 'MicroUSB',     // 현장 점검용 콘솔 포트 (참고)
     hzCommStatus: hzOk ? 'OK' : 'FAIL',
     kpxCommStatus: kpxOk ? 'OK' : 'FAIL',
     lastHzSyncMinutesAgo: hzOk ? (lastDigit * 2 + 1) : (lastDigit * 30 + 60),
@@ -89,6 +112,10 @@ function rtuGenerateMockRtu(site, cust){
     venCertId: 'VEN-CERT-' + kepcoStr.slice(-4),
     installedAt: '2024-' + String(((lastDigit % 12) + 1)).padStart(2, '0') + '-15',
     lastInspectedAt: '2026-' + String(((lastDigit % 6) + 1)).padStart(2, '0') + '-10',
+    // [v0.7] 하위 연결 설비
+    meterName,
+    meterKepco: kepcoStr,
+    downstream,
   };
 }
 
@@ -294,11 +321,30 @@ function rtuOpenDetail(rtuId){
             <tr><td>펌웨어 버전</td><td>${rtu.firmware}</td></tr>
             <tr><td>설치일</td><td>${rtu.installedAt}</td></tr>
             <tr><td>최근 점검일</td><td>${rtu.lastInspectedAt}</td></tr>
-            <tr><td colspan="2" style="padding-top:14px;font-size:10px;color:var(--text-hint);font-weight:600;">통신 설정</td></tr>
-            <tr><td>IP 주소</td><td style="font-family:monospace;">${rtu.ip}</td></tr>
-            <tr><td>포트</td><td style="font-family:monospace;">${rtu.port}</td></tr>
+            <tr><td colspan="2" style="padding-top:14px;font-size:10px;color:var(--text-hint);font-weight:600;">통신 연결 정보</td></tr>
+            <tr><td>장비 IP 주소</td><td style="font-family:monospace;">${rtu.ip}</td></tr>
+            <tr><td>인터넷 연결 방식</td><td>${rtu.connType || '—'}</td></tr>
+            <tr><td>OpenADR TCP 포트</td><td style="font-family:monospace;">${rtu.port}</td></tr>
+            <tr><td>현장 콘솔 포트</td><td>${rtu.consolePort || '—'}</td></tr>
             <tr><td>VEN 인증서 ID</td><td style="font-family:monospace;">${rtu.venCertId}</td></tr>
             <tr><td>VEN 인증서 만료일</td><td>${rtu.venCertExpires}${certBadge}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- [v0.7] 하위 연결 설비 카드 — 연결된 전력량계 + 인버터·접속함·계전기 등 -->
+    <div class="r-card" style="margin-bottom:14px;">
+      <div class="r-card-header"><div class="r-card-title">하위 연결 설비</div></div>
+      <div class="r-card-body">
+        <table class="info-table">
+          <tbody>
+            <tr><td>연결된 전력량계</td><td>${rtu.meterName || '—'}${rtu.meterKepco ? ` <span style="color:var(--text-hint);font-family:monospace;font-size:11px;">(KEPCO ${rtu.meterKepco})</span>` : ''}</td></tr>
+            <tr><td>하위 연동 기기</td><td>${
+              (Array.isArray(rtu.downstream) && rtu.downstream.length)
+                ? rtu.downstream.map(d=>`${d.type} <span style="color:var(--text-hint);font-size:11px;">· ${d.model}</span>`).join('<br>')
+                : '—'
+            }</td></tr>
           </tbody>
         </table>
       </div>
