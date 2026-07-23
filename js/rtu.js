@@ -102,12 +102,12 @@ function rtuOverallStatus(r){
   return 'bad';
 }
 
-/* 필터 적용 */
+/* 필터 적용 (v0.7 슬림 — 검색어 단일 필터) */
 function rtuFilteredRows(){
   const all = rtuCollectRows();
   const q = (rtuState.filter.q || '').trim().toLowerCase();
-  const st = rtuState.filter.status;
-  const tp = rtuState.filter.type;
+  const st = rtuState.filter.status || 'all';
+  const tp = rtuState.filter.type || 'all';
   return all.filter(r => {
     if(q){
       const hit = r.custName.toLowerCase().includes(q)
@@ -116,6 +116,7 @@ function rtuFilteredRows(){
                || (r.kepco || '').includes(q);
       if(!hit) return false;
     }
+    // 통신·유형 필터는 UI 폐지. state 값이 남아있어도 'all'이면 무영향.
     if(st !== 'all' && rtuOverallStatus(r) !== st) return false;
     if(tp !== 'all'){
       const ownerTypeKey = r.ownerGroup?.typeKey || '';
@@ -140,10 +141,12 @@ function rtuRefreshKpis(){
 
 /* 목록 렌더 */
 function rtuRender(){
-  // 필터 값 동기화
+  // [v0.7 필터 슬림] 검색어만 UI 동기화. status·type 셀렉트는 폐지.
   rtuState.filter.q = $('rtu-q')?.value || '';
-  rtuState.filter.status = $('rtu-status-filter')?.value || 'all';
-  rtuState.filter.type = $('rtu-type-filter')?.value || 'all';
+  const stSel = $('rtu-status-filter');
+  if(stSel) rtuState.filter.status = stSel.value;
+  const tpSel = $('rtu-type-filter');
+  if(tpSel) rtuState.filter.type = tpSel.value;
 
   rtuRefreshKpis();
   const rows = rtuFilteredRows();
@@ -182,8 +185,11 @@ function rtuStatusBadge(s){
   return `<span class="badge badge-gray" style="font-size:10px;">● 미확인</span>`;
 }
 
-/* 필터 초기화 */
+/* 필터 초기화 (v0.7 슬림) */
 function rtuResetFilters(){
+  rtuState.filter.q = '';
+  rtuState.filter.status = 'all';
+  rtuState.filter.type = 'all';
   if($('rtu-q')) $('rtu-q').value = '';
   if($('rtu-status-filter')) $('rtu-status-filter').value = 'all';
   if($('rtu-type-filter')) $('rtu-type-filter').value = 'all';

@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260723-1733. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260723-1733">
+<!-- css/js 모두 ?v=260723-1735. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260723-1735">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260723-1733</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260723-1735</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -1337,23 +1337,9 @@
       </div>
     </div>
 
-    <!-- 필터 -->
+    <!-- 필터 (v0.7 슬림) — 검색어 + 조회/초기화만 -->
     <div class="rp-filter-bar">
-      <input type="text" class="filter-select" id="rtu-q" placeholder="사업자/사업장/RTU번호 검색" oninput="rtuRender()" style="min-width:240px;">
-      <select class="filter-select" id="rtu-status-filter" onchange="rtuRender()">
-        <option value="all">통신 전체</option>
-        <option value="ok">정상 (양쪽 OK)</option>
-        <option value="hz-only">60hz만 OK</option>
-        <option value="kpx-only">KPX만 OK</option>
-        <option value="bad">양쪽 이상</option>
-      </select>
-      <select class="filter-select" id="rtu-type-filter" onchange="rtuRender()">
-        <option value="all">자원유형 전체</option>
-        <option value="standard">표준DR</option>
-        <option value="small">중소형DR</option>
-        <option value="national">국민DR</option>
-        <option value="jeju">제주DR</option>
-      </select>
+      <input type="text" class="filter-select" id="rtu-q" placeholder="사업자 · 사업장 · RTU 번호 검색" oninput="rtuRender()" style="min-width:280px;">
       <button class="btn btn-sm btn-primary" onclick="rtuRender()">조회</button>
       <button class="btn btn-sm btn-secondary" onclick="rtuResetFilters()">초기화</button>
       <div style="margin-left:auto;font-size:11px;color:var(--text-hint);" id="rtu-count">—</div>
@@ -2205,20 +2191,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260723-1733"></script>
-<script src="data/tips.js?v=260723-1733"></script>
-<script src="js/core.js?v=260723-1733"></script>
-<script src="js/dashboard.js?v=260723-1733"></script>
-<script src="js/precheck.js?v=260723-1733"></script>
-<script src="js/resource.js?v=260723-1733"></script>
-<script src="js/monitoring.js?v=260723-1733"></script>
-<script src="js/report.js?v=260723-1733"></script>
-<script src="js/settlement.js?v=260723-1733"></script>
-<script src="js/datacollect.js?v=260723-1733"></script>
-<script src="js/rtu.js?v=260723-1733"></script>
-<script src="js/communication.js?v=260723-1733"></script>
-<script src="js/bidding.js?v=260723-1733"></script>
-<script src="js/account.js?v=260723-1733"></script>
-<script src="js/system.js?v=260723-1733"></script>
+<script src="data/store.js?v=260723-1735"></script>
+<script src="data/tips.js?v=260723-1735"></script>
+<script src="js/core.js?v=260723-1735"></script>
+<script src="js/dashboard.js?v=260723-1735"></script>
+<script src="js/precheck.js?v=260723-1735"></script>
+<script src="js/resource.js?v=260723-1735"></script>
+<script src="js/monitoring.js?v=260723-1735"></script>
+<script src="js/report.js?v=260723-1735"></script>
+<script src="js/settlement.js?v=260723-1735"></script>
+<script src="js/datacollect.js?v=260723-1735"></script>
+<script src="js/rtu.js?v=260723-1735"></script>
+<script src="js/communication.js?v=260723-1735"></script>
+<script src="js/bidding.js?v=260723-1735"></script>
+<script src="js/account.js?v=260723-1735"></script>
+<script src="js/system.js?v=260723-1735"></script>
 
 </body></html>
