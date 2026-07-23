@@ -121,21 +121,22 @@ function rtuGenerateMockRtu(site, cust){
   };
 }
 
-/* [v0.7] 사업장 단위 계약 상태 판정
-   우선순위: siteStatus 명시(계약해지) > contract.endDate 만료 > 60일 내 만료 임박 > 계약완료 > (사업자 status 미계약) */
+/* [v0.7] 사업장 단위 계약 상태 판정 — 계약관리 상태값(계약대기·계약완료·계약만료·계약해지) 그대로 사용
+   판정 순서: site.siteStatus 명시값 > contract.endDate 계산 > 사업자 status fallback */
 function rtuContractStatus(cust, site){
-  if(site && site.siteStatus === '계약해지') return {label:'계약해지', cls:'badge-fail'};
-  const end = site?.contract?.endDate;
-  if(end){
-    const today = todayStr();
-    if(end < today) return {label:'계약만료', cls:'badge-gray'};
-    // 60일 내 만료 임박 판정
-    const d1 = new Date(end), d0 = new Date(today);
-    const daysLeft = Math.floor((d1 - d0) / 86400000);
-    if(daysLeft <= 60) return {label:`만료임박 D-${daysLeft}`, cls:'badge-amber'};
+  const badgeCls = s => s==='계약대기'?'badge-pending' : s==='계약완료'?'badge-done' : s==='계약만료'?'badge-gray' : s==='계약해지'?'badge-fail' : 'badge-gray';
+  let label;
+  if(site && site.siteStatus){
+    label = site.siteStatus;
+  } else if(site?.contract?.endDate){
+    const end = site.contract.endDate, today = todayStr();
+    label = (end < today) ? '계약만료' : '계약완료';
+  } else if(cust?.status === '계약완료'){
+    label = '계약완료';
+  } else {
+    label = cust?.status || '계약대기';
   }
-  if(cust?.status === '계약완료') return {label:'계약완료', cls:'badge-done'};
-  return {label: cust?.status || '-', cls:'badge-gray'};
+  return {label, cls: badgeCls(label)};
 }
 
 /* 통신 종합 상태 (필터용) */
