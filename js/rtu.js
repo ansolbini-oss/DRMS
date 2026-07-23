@@ -151,7 +151,7 @@ function rtuRender(){
   if(!tbody) return;
 
   if(rows.length === 0){
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-hint);">조건에 맞는 RTU가 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-hint);">조건에 맞는 RTU가 없습니다.</td></tr>`;
   } else {
     tbody.innerHTML = rows.map(r => {
       const hzBadge = rtuStatusBadge(r.rtu.hzCommStatus);
@@ -160,7 +160,8 @@ function rtuRender(){
       const lastSyncTxt = lastSync < 60 ? `${lastSync}분 전` : `${Math.floor(lastSync/60)}시간 전`;
       return `<tr style="cursor:pointer;" onclick="rtuOpenDetail('${r.rtu.id}')">
         <td>${r.custName}</td>
-        <td>${r.siteName}<div style="font-size:10px;color:var(--text-hint);font-family:monospace;">KEPCO ${r.kepco}</div></td>
+        <td>${r.siteName}</td>
+        <td style="font-family:monospace;font-size:11px;color:var(--text-sub);">${r.kepco || '-'}</td>
         <td style="font-family:monospace;font-size:11px;">${r.rtu.id}</td>
         <td>${r.rtu.model}<div style="font-size:10px;color:var(--text-hint);">FW ${r.rtu.firmware}</div></td>
         <td style="text-align:center;">${hzBadge}</td>
