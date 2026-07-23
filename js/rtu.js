@@ -405,12 +405,23 @@ function rtuOpenEditRtu(rtuId){
       <input id="rtu-e-inspected" type="date" value="${rtu.lastInspectedAt||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">IP 주소</label>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">장비 IP 주소</label>
       <input id="rtu-e-ip" type="text" value="${(rtu.ip||'').replace(/"/g,'&quot;')}" placeholder="예: 10.20.30.40" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
-      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">포트</label>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">인터넷 연결 방식</label>
+      <select id="rtu-e-conn" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#fff;">
+        <option value="유선 이더넷(LAN)" ${rtu.connType==='유선 이더넷(LAN)'?'selected':''}>유선 이더넷(LAN)</option>
+        <option value="무선 LTE" ${rtu.connType==='무선 LTE'?'selected':''}>무선 LTE</option>
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">OpenADR TCP 포트</label>
       <input id="rtu-e-port" type="number" value="${rtu.port||''}" placeholder="예: 8443" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+    </div>
+    <div>
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">현장 콘솔 포트</label>
+      <input id="rtu-e-console" type="text" value="${(rtu.consolePort||'').replace(/"/g,'&quot;')}" placeholder="예: MicroUSB" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
     </div>
     <div>
       <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">VEN 인증서 ID</label>
@@ -419,6 +430,24 @@ function rtuOpenEditRtu(rtuId){
     <div>
       <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">VEN 인증서 만료일</label>
       <input id="rtu-e-cert-exp" type="date" value="${rtu.venCertExpires||''}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+    </div>
+  </div>
+  <!-- [v0.7] 하위 연결 설비 편집 -->
+  <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;">
+    <div style="font-size:12px;color:var(--text-sub);font-weight:700;margin-bottom:10px;">하위 연결 설비</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">연결된 전력량계</label>
+        <input id="rtu-e-meter-name" type="text" value="${(rtu.meterName||'').replace(/"/g,'&quot;')}" placeholder="예: 본관 메인 계량기" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계량기 한전 고객번호</label>
+        <input id="rtu-e-meter-kepco" type="text" value="${(rtu.meterKepco||'').replace(/"/g,'&quot;')}" placeholder="예: 10011001" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="margin-top:10px;">
+      <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">하위 연동 기기 <span style="font-weight:400;color:var(--text-hint);">(한 줄에 하나: "유형 · 모델명")</span></label>
+      <textarea id="rtu-e-downstream" rows="3" placeholder="예)&#10;인버터 · KSTAR KSG1-250K&#10;접속함 · DY-5010" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;font-family:monospace;resize:vertical;">${(Array.isArray(rtu.downstream)?rtu.downstream.map(d=>`${d.type} · ${d.model}`).join('\n'):'').replace(/"/g,'&quot;')}</textarea>
     </div>
   </div>`;
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
@@ -439,9 +468,20 @@ function rtuSubmitEditRtu(rtuId){
   const newInstalled = $('rtu-e-installed')?.value;
   const newInspected = $('rtu-e-inspected')?.value;
   const newIp        = $('rtu-e-ip')?.value?.trim();
+  const newConn      = $('rtu-e-conn')?.value;
   const newPort      = parseInt($('rtu-e-port')?.value, 10);
+  const newConsole   = $('rtu-e-console')?.value?.trim();
   const newCertId    = $('rtu-e-cert-id')?.value?.trim();
   const newCertExp   = $('rtu-e-cert-exp')?.value;
+  // 하위 연결 설비
+  const newMeterName  = $('rtu-e-meter-name')?.value?.trim();
+  const newMeterKepco = $('rtu-e-meter-kepco')?.value?.trim();
+  const newDownstreamRaw = $('rtu-e-downstream')?.value || '';
+  const newDownstream = newDownstreamRaw.split('\n').map(line=>{
+    const [type, model] = line.split('·').map(s=>s.trim()).filter(Boolean);
+    if(!type) return null;
+    return {type, model: model || ''};
+  }).filter(Boolean);
 
   if(!newId){ alert('RTU 번호는 필수 입력입니다.'); return; }
 
@@ -458,9 +498,20 @@ function rtuSubmitEditRtu(rtuId){
   apply('installedAt', rtu.installedAt, newInstalled, '설치일');
   apply('lastInspectedAt', rtu.lastInspectedAt, newInspected, '최근 점검일');
   apply('ip', rtu.ip, newIp, 'IP');
-  if(!isNaN(newPort)) apply('port', rtu.port, newPort, '포트');
+  apply('connType', rtu.connType, newConn, '인터넷 연결 방식');
+  if(!isNaN(newPort)) apply('port', rtu.port, newPort, 'TCP 포트');
+  apply('consolePort', rtu.consolePort, newConsole, '현장 콘솔 포트');
   apply('venCertId', rtu.venCertId, newCertId, 'VEN 인증서 ID');
   apply('venCertExpires', rtu.venCertExpires, newCertExp, 'VEN 인증서 만료일');
+  apply('meterName', rtu.meterName, newMeterName, '연결 계량기');
+  apply('meterKepco', rtu.meterKepco, newMeterKepco, '계량기 한전 고객번호');
+  // 하위 연동 기기 리스트는 문자열 diff로 감지
+  const oldDsStr = Array.isArray(rtu.downstream) ? rtu.downstream.map(d=>`${d.type} · ${d.model||''}`).join(' | ') : '';
+  const newDsStr = newDownstream.map(d=>`${d.type} · ${d.model||''}`).join(' | ');
+  if(oldDsStr !== newDsStr){
+    changes.push(`하위 연동 기기: ${oldDsStr||'(없음)'} → ${newDsStr||'(없음)'}`);
+    rtu.downstream = newDownstream;
+  }
 
   logAudit?.({
     objectType:'rtu', objectId: rtuId, action:'rtu_info_updated',
