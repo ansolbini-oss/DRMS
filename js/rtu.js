@@ -250,14 +250,14 @@ function rtuOpenDetail(rtuId){
     <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="width:8px;height:8px;border-radius:50%;background:${hzColor};"></div>
-        <span style="font-size:12px;color:var(--text-sub);">60hz 서버 ↔ RTU</span>
+        <span style="font-size:12px;color:var(--text-sub);">RTU ↔ 60hz</span>
         <span style="font-size:13px;font-weight:700;color:${hzColor};">${hzText}</span>
         <span style="font-size:11px;color:var(--text-hint);">· ${hzMinTxt}</span>
       </div>
       <div style="width:1px;height:18px;background:var(--border);"></div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div style="width:8px;height:8px;border-radius:50%;background:${kpxColor};"></div>
-        <span style="font-size:12px;color:var(--text-sub);">KPX VEN 채널</span>
+        <span style="font-size:12px;color:var(--text-sub);">60hz ↔ KPX</span>
         <span style="font-size:13px;font-weight:700;color:${kpxColor};">${kpxText}</span>
         <span style="font-size:11px;color:var(--text-hint);">· ${kpxMinTxt}</span>
       </div>
