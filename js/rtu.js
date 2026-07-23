@@ -44,6 +44,7 @@ function rtuCollectRows(){
         kepco: s.kepco,
         ownerGroup,
         rtu: s.rtu,
+        contractStatus: rtuContractStatus(c, s),
       });
     });
   });
@@ -120,6 +121,23 @@ function rtuGenerateMockRtu(site, cust){
   };
 }
 
+/* [v0.7] 사업장 단위 계약 상태 판정
+   우선순위: siteStatus 명시(계약해지) > contract.endDate 만료 > 60일 내 만료 임박 > 계약완료 > (사업자 status 미계약) */
+function rtuContractStatus(cust, site){
+  if(site && site.siteStatus === '계약해지') return {label:'계약해지', cls:'badge-fail'};
+  const end = site?.contract?.endDate;
+  if(end){
+    const today = todayStr();
+    if(end < today) return {label:'계약만료', cls:'badge-gray'};
+    // 60일 내 만료 임박 판정
+    const d1 = new Date(end), d0 = new Date(today);
+    const daysLeft = Math.floor((d1 - d0) / 86400000);
+    if(daysLeft <= 60) return {label:`만료임박 D-${daysLeft}`, cls:'badge-amber'};
+  }
+  if(cust?.status === '계약완료') return {label:'계약완료', cls:'badge-done'};
+  return {label: cust?.status || '-', cls:'badge-gray'};
+}
+
 /* 통신 종합 상태 (필터용) */
 function rtuOverallStatus(r){
   const a = r.rtu.hzCommStatus === 'OK';
@@ -182,16 +200,18 @@ function rtuRender(){
   if(!tbody) return;
 
   if(rows.length === 0){
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-hint);">조건에 맞는 RTU가 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-hint);">조건에 맞는 RTU가 없습니다.</td></tr>`;
   } else {
     tbody.innerHTML = rows.map(r => {
       const hzBadge = rtuStatusBadge(r.rtu.hzCommStatus);
       const kpxBadge = rtuStatusBadge(r.rtu.kpxCommStatus);
       const lastSync = Math.min(r.rtu.lastHzSyncMinutesAgo, r.rtu.lastKpxSyncMinutesAgo);
       const lastSyncTxt = lastSync < 60 ? `${lastSync}분 전` : `${Math.floor(lastSync/60)}시간 전`;
+      const cs = r.contractStatus || {label:'-', cls:'badge-gray'};
       return `<tr style="cursor:pointer;" onclick="rtuOpenDetail('${r.rtu.id}')">
         <td>${r.custName}</td>
         <td>${r.siteName}</td>
+        <td style="text-align:center;"><span class="badge ${cs.cls}" style="font-size:10px;">${cs.label}</span></td>
         <td style="font-family:monospace;font-size:11px;color:var(--text-sub);">${r.kepco || '-'}</td>
         <td style="font-family:monospace;font-size:11px;">${r.rtu.id}</td>
         <td>${r.rtu.model}<div style="font-size:10px;color:var(--text-hint);">FW ${r.rtu.firmware}</div></td>
@@ -291,9 +311,12 @@ function rtuOpenDetail(rtuId){
       </div>
     </div>
 
-    <!-- 사업장 정보 카드 (정보 확인용, 수정 불가) -->
+    <!-- 사업장 정보 카드 (정보 확인용, 수정 불가) — [v0.7] 계약상태 뱃지 병기 -->
     <div class="r-card" style="margin-bottom:14px;">
-      <div class="r-card-header"><div class="r-card-title">사업장 정보</div></div>
+      <div class="r-card-header" style="display:flex;align-items:center;gap:10px;">
+        <div class="r-card-title">사업장 정보</div>
+        ${(() => { const cs = rtuContractStatus(custById(r.custId), (custById(r.custId)?.sites||[]).find(x=>x.id===r.siteId)); return `<span class="badge ${cs.cls}" style="font-size:11px;">${cs.label}</span>`; })()}
+      </div>
       <div class="r-card-body">
         <table class="info-table">
           <tbody>
