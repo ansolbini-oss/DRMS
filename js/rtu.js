@@ -368,6 +368,237 @@ function rtuGetSiteField(r, field){
 }
 
 /* [Phase 17-T] RTU 정보 수정 — 사업장 정보는 read-only, RTU 스펙·통신 설정만 운영자 편집 가능 */
+/* [v0.7] RTU 신규 등록 팝업 — 사업자·사업장 검색 → 자동 채움 → RTU 정보 입력 → 저장 */
+function rtuOpenRegister(){
+  $('cm-title').textContent = 'RTU 정보 등록';
+  $('cm-sub').textContent = '계약완료된 사업장을 검색해서 선택한 뒤 RTU 정보를 입력합니다.';
+  $('cm-body').innerHTML = `
+    <div class="info-box" style="margin-bottom:12px;">
+      계약완료 상태의 참여고객·사업장만 검색됩니다. 등록 시 감사로그가 기록되고 리스트에 즉시 반영됩니다.
+    </div>
+
+    <!-- 사업자 검색·선택 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업자 검색 <span style="color:var(--red)">*</span></label>
+        <input id="rtu-r-cust-q" type="text" placeholder="사업자명 · 사업자번호 · 대표자" oninput="rtuRegisterFilterCustomers()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업자 선택</label>
+        <select id="rtu-r-cust" onchange="rtuRegisterOnPickCustomer()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#fff;">
+          <option value="">— 사업자 검색 후 선택 —</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장 선택 <span style="color:var(--red)">*</span></label>
+        <select id="rtu-r-site" onchange="rtuRegisterOnPickSite()" disabled style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#fff;">
+          <option value="">— 사업자를 먼저 선택 —</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">사업장 KEPCO (자동)</label>
+        <input id="rtu-r-site-kepco" type="text" readonly placeholder="사업장 선택 시 자동" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;background:var(--bg);">
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;">
+      <div style="font-size:12px;color:var(--text-sub);font-weight:700;margin-bottom:10px;">RTU 스펙 · 통신 연결</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">RTU 번호 <span style="color:var(--red)">*</span></label>
+          <input id="rtu-r-id" type="text" placeholder="예: RTU-10011001" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">시리얼 번호</label>
+          <input id="rtu-r-serial" type="text" placeholder="예: SN10011001007" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">모델명</label>
+          <input id="rtu-r-model" type="text" placeholder="예: XEMS-RTU-2000" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">제조사</label>
+          <input id="rtu-r-mfr" type="text" placeholder="예: Xems Korea" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">설치일</label>
+          <input id="rtu-r-installed" type="date" value="${todayStr()}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">최근 점검일</label>
+          <input id="rtu-r-inspected" type="date" value="${todayStr()}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">장비 IP 주소</label>
+          <input id="rtu-r-ip" type="text" placeholder="예: 10.20.30.40" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">인터넷 연결 방식</label>
+          <select id="rtu-r-conn" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;background:#fff;">
+            <option value="유선 이더넷(LAN)">유선 이더넷(LAN)</option>
+            <option value="무선 LTE">무선 LTE</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">OpenADR TCP 포트</label>
+          <input id="rtu-r-port" type="number" value="8443" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">현장 콘솔 포트</label>
+          <input id="rtu-r-console" type="text" value="MicroUSB" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">VEN 인증서 ID</label>
+          <input id="rtu-r-cert-id" type="text" placeholder="예: VEN-CERT-1001" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">VEN 인증서 만료일</label>
+          <input id="rtu-r-cert-exp" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px;">
+      <div style="font-size:12px;color:var(--text-sub);font-weight:700;margin-bottom:10px;">하위 연결 설비</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">연결된 전력량계</label>
+          <input id="rtu-r-meter-name" type="text" placeholder="예: 본관 메인 계량기" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">계량기 KEPCO (자동)</label>
+          <input id="rtu-r-meter-kepco" type="text" readonly placeholder="사업장 KEPCO와 동일" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:13px;box-sizing:border-box;background:var(--bg);">
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="display:block;font-size:11px;color:var(--text-sub);font-weight:600;margin-bottom:4px;">하위 연동 기기 <span style="font-weight:400;color:var(--text-hint);">(한 줄에 하나: "유형 · 모델명")</span></label>
+        <textarea id="rtu-r-downstream" rows="3" placeholder="예)&#10;인버터 · KSTAR KSG1-250K&#10;접속함 · DY-5010" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;box-sizing:border-box;font-family:monospace;resize:vertical;"></textarea>
+      </div>
+    </div>
+  `;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-primary" onclick="rtuSubmitRegister()">등록</button>`;
+  openModal('commonModal');
+  rtuRegisterFilterCustomers();
+}
+
+/* 사업자 검색 필터 — 계약완료만 노출, 검색어 부분일치 */
+function rtuRegisterFilterCustomers(){
+  const q = ($('rtu-r-cust-q')?.value||'').trim().toLowerCase();
+  const sel = $('rtu-r-cust');
+  if(!sel) return;
+  const list = store.customers.filter(c => c.status==='계약완료' && (
+    !q ||
+    (c.name||'').toLowerCase().includes(q) ||
+    (c.bizno||'').toLowerCase().includes(q) ||
+    (c.ceo||'').toLowerCase().includes(q)
+  ));
+  sel.innerHTML = '<option value="">— 사업자 선택 —</option>' +
+    list.map(c => `<option value="${c.id}">${c.name} (${c.bizno||c.id})</option>`).join('');
+  // 사업장·KEPCO는 사업자 선택 전까진 비활성
+  const siteSel = $('rtu-r-site');
+  if(siteSel){ siteSel.disabled = true; siteSel.innerHTML = '<option value="">— 사업자를 먼저 선택 —</option>'; }
+  const kepcoEl = $('rtu-r-site-kepco'); if(kepcoEl) kepcoEl.value = '';
+  const meterKepcoEl = $('rtu-r-meter-kepco'); if(meterKepcoEl) meterKepcoEl.value = '';
+}
+
+/* 사업자 선택 시 사업장 옵션 채움 (이미 등록된 사업장은 disabled) */
+function rtuRegisterOnPickCustomer(){
+  const cid = $('rtu-r-cust')?.value;
+  const siteSel = $('rtu-r-site');
+  const kepcoEl = $('rtu-r-site-kepco');
+  const meterKepcoEl = $('rtu-r-meter-kepco');
+  if(kepcoEl) kepcoEl.value = '';
+  if(meterKepcoEl) meterKepcoEl.value = '';
+  if(!cid){
+    if(siteSel){ siteSel.disabled = true; siteSel.innerHTML = '<option value="">— 사업자를 먼저 선택 —</option>'; }
+    return;
+  }
+  const c = custById(cid);
+  const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites || [{id:c.id+'-S1', siteName:c.name+' 본사', kepco:c.kepco}]);
+  siteSel.disabled = false;
+  siteSel.innerHTML = '<option value="">— 사업장 선택 —</option>' +
+    sites.map(s => {
+      const already = !!s.rtu;
+      return `<option value="${s.id}" ${already?'disabled':''}>${s.siteName} · KEPCO ${s.kepco||'-'}${already?' (이미 등록됨)':''}</option>`;
+    }).join('');
+}
+
+/* 사업장 선택 시 KEPCO 자동 채움 + RTU 번호·시리얼 초기값 제안 */
+function rtuRegisterOnPickSite(){
+  const cid = $('rtu-r-cust')?.value;
+  const sid = $('rtu-r-site')?.value;
+  const c = custById(cid);
+  const sites = c ? ((typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites||[])) : [];
+  const s = sites.find(x => x.id === sid);
+  const kepco = s?.kepco || '';
+  const kepcoEl = $('rtu-r-site-kepco'); if(kepcoEl) kepcoEl.value = kepco;
+  const meterKepcoEl = $('rtu-r-meter-kepco'); if(meterKepcoEl) meterKepcoEl.value = kepco;
+  // 편의: RTU 번호 초기값을 KEPCO 기반 제안 (비어있을 때만)
+  const idEl = $('rtu-r-id'); if(idEl && !idEl.value && kepco) idEl.value = 'RTU-' + kepco;
+  const serEl = $('rtu-r-serial'); if(serEl && !serEl.value && kepco) serEl.value = 'SN' + kepco;
+}
+
+/* 등록 확정 — site.rtu에 저장, 감사로그 기록, 리스트 리렌더 */
+function rtuSubmitRegister(){
+  const cid = $('rtu-r-cust')?.value;
+  const sid = $('rtu-r-site')?.value;
+  if(!cid){ alert('사업자를 선택하세요.'); return; }
+  if(!sid){ alert('사업장을 선택하세요.'); return; }
+  const c = custById(cid);
+  const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites||[]);
+  const s = sites.find(x => x.id === sid);
+  if(!s){ alert('사업장 정보를 찾을 수 없습니다.'); return; }
+  if(s.rtu){ alert('해당 사업장에는 이미 RTU가 등록되어 있습니다.'); return; }
+
+  const newId = $('rtu-r-id')?.value?.trim();
+  if(!newId){ alert('RTU 번호는 필수 입력입니다.'); return; }
+
+  const kepco = s.kepco || c.kepco || '';
+  const downstreamRaw = $('rtu-r-downstream')?.value || '';
+  const downstream = downstreamRaw.split('\n').map(line=>{
+    const [type, model] = line.split('·').map(x=>x.trim()).filter(Boolean);
+    if(!type) return null;
+    return {type, model: model || ''};
+  }).filter(Boolean);
+
+  s.rtu = {
+    id: newId,
+    serial: $('rtu-r-serial')?.value?.trim() || '',
+    model: $('rtu-r-model')?.value?.trim() || '',
+    manufacturer: $('rtu-r-mfr')?.value?.trim() || '',
+    firmware: '-',
+    ip: $('rtu-r-ip')?.value?.trim() || '',
+    port: parseInt($('rtu-r-port')?.value, 10) || 8443,
+    connType: $('rtu-r-conn')?.value || '유선 이더넷(LAN)',
+    consolePort: $('rtu-r-console')?.value?.trim() || 'MicroUSB',
+    hzCommStatus: 'UNKNOWN',
+    kpxCommStatus: 'UNKNOWN',
+    lastHzSyncMinutesAgo: 999,
+    lastKpxSyncMinutesAgo: 999,
+    venCertId: $('rtu-r-cert-id')?.value?.trim() || '',
+    venCertExpires: $('rtu-r-cert-exp')?.value || '',
+    installedAt: $('rtu-r-installed')?.value || todayStr(),
+    lastInspectedAt: $('rtu-r-inspected')?.value || todayStr(),
+    meterName: $('rtu-r-meter-name')?.value?.trim() || '',
+    meterKepco: kepco,
+    downstream,
+    registeredAt: nowStr(),
+  };
+
+  logAudit?.({
+    objectType:'rtu', objectId: newId, action:'rtu_registered',
+    title:`RTU 신규 등록 — ${c.name} · ${s.siteName}`,
+    desc:`${newId} · ${s.rtu.model||'-'} · KEPCO ${kepco}`,
+    actor:'운영자', tone:'success'
+  });
+  closeModal('commonModal');
+  // 등록한 사업장이 리스트에 잘 보이도록 검색어를 사업장명으로 세팅
+  if($('rtu-q')){ $('rtu-q').value = s.siteName; rtuState.filter.q = s.siteName; }
+  rtuRender();
+  if(typeof showToast === 'function') showToast(`RTU 등록 완료 — ${c.name} · ${s.siteName}`);
+}
+
 function rtuOpenEditRtu(rtuId){
   const rows = rtuCollectRows();
   const r = rows.find(x => x.rtu.id === rtuId);
