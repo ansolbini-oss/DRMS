@@ -18,7 +18,7 @@ const store = {
          contract:{startDate:'2024-07-05', endDate:'2027-07-04', power:400, feeRate:3.5, docs:{}}},
        {id:'C011-S2', siteName:'평택공장',       kepco:'10011002', addr:'경기 평택시',         power:350, tel:'031-680-2222', manager:'최평택', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-06',
          contract:{startDate:'2024-07-06', endDate:'2026-08-10', power:350, feeRate:3.5, docs:{}}},  // 만료 예정 (60일 내)
-       {id:'C011-S3', siteName:'화성반도체',     kepco:'10011003', addr:'경기 화성시',         power:250, tel:'031-209-3333', manager:'정화성', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-07',
+       {id:'C011-S3', siteName:'화성반도체',     kepco:'10011003', addr:'경기 화성시',         power:250, tel:'031-209-3333', manager:'정화성', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2024-07-07', _pendingRtu:true,
          contract:{startDate:'2023-07-07', endDate:'2025-12-31', power:250, feeRate:3.5, docs:{}}}    // 계약만료 (과거)
      ]},
     {id:'C012',name:'LG전자',           ceo:'조주완',tel:'02-3777-1114',addr:'서울 영등포구',recno:'DR-2024-0102',date:'2024-07-08',power:900, kepco:'10012002',drType:'표준DR',       status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'860kW',reduction:450,rrmseVal:'6%',infraS:'완료',
@@ -100,7 +100,7 @@ const store = {
      bizno:'617-81-44556', bizcat:'운수업', biztype:'물류운송',
      sites:[
        {id:'C114-S1', siteName:'강서물류센터', kepco:'44556600', addr:'부산 강서구 대저1동',  power:380, tel:'051-446-7701', manager:'송강서', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-15'},
-       {id:'C114-S2', siteName:'사상물류센터', kepco:'44556601', addr:'부산 사상구 학장동',    power:300, tel:'051-446-7702', manager:'한사상', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-16'}
+       {id:'C114-S2', siteName:'사상물류센터', kepco:'44556601', addr:'부산 사상구 학장동',    power:300, tel:'051-446-7702', manager:'한사상', steps:[2,2,2,2,2,2], dataStatus:'수집완료', verifyStatus:'검증완료', date:'2026-05-16', _pendingRtu:true}
      ]},
     {id:'C115',name:'제주에너지조합',    ceo:'고지훈',tel:'064-779-2200',addr:'제주 제주시',  recno:'DR-2026-0023',date:'2026-05-20',power:240, kepco:'55667700',drType:'제주DR',       status:'검증완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'225kW',reduction:120,rrmseVal:'9%',infraS:'완료',
      bizno:'616-82-55667', bizcat:'전기·가스', biztype:'발전사업',

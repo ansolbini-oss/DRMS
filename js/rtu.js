@@ -30,8 +30,9 @@ function rtuCollectRows(){
     if(c.status !== '계약완료') return;
     const sites = (typeof pcGetSites === 'function') ? pcGetSites(c) : (c.sites || [{id:c.id+'-S1', siteName:c.name+' 본사', kepco:c.kepco}]);
     sites.forEach(s => {
-      // RTU 정보가 없으면 시드 기본값 자동 생성 (KEPCO 끝자리 기반 시뮬레이션)
-      if(!s.rtu) s.rtu = rtuGenerateMockRtu(s, c);
+      // [v0.7] '_pendingRtu' 플래그가 붙은 사업장은 auto-generate 스킵 → RTU 등록 팝업 대상으로 남김
+      if(!s.rtu && !s._pendingRtu) s.rtu = rtuGenerateMockRtu(s, c);
+      if(!s.rtu) return; // 아직 등록되지 않은 사업장은 목록에서 제외
       // 자원그룹 찾기
       const ownerGroup = store.groups.find(g => (g.customerIds||[]).includes(c.id));
       rows.push({
