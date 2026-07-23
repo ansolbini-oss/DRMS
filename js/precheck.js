@@ -2989,15 +2989,17 @@ function ctRenderSitesTable(c, sites){
     const addrText = s.addr ? `${s.addr}${s.addrDetail?` ${s.addrDetail}`:''}` : '—';
     // 사업장 정보 — 한 줄씩 (라벨 좌 회색 중앙정렬 / 값 우)
     const curStatus = s.siteStatus || '계약대기';
-    // [Phase 17-DX] 계약상태 편집 드롭다운 제거 — 상태는 시스템이 자동 관리
-    //   (계약이관 → 계약대기 / 계약기간·수수료 저장 → 계약완료 / 만료 → 계약만료 / 해지 액션 → 계약해지)
-    //   운영자가 직접 상태값 편집하는 케이스 없음. 편집 모드에서도 뱃지만 노출.
+    // [Phase 17-EW] 계약상태 편집 드롭다운 복원 — 편집 모드일 때 4종 상태값 선택 가능
+    //   시스템 자동 산정(이관·저장·만료)은 초기값 세팅이고, 운영자가 예외적으로 override 가능해야 함 (계약해지 등)
     const isEditingSite = ctSiteEditingId === s.id;
     const stBadge = curStatus === '계약완료' ? 'badge-done'
                   : curStatus === '계약대기' ? 'badge-pending'
                   : curStatus === '계약만료' ? 'badge-gray'
                   : 'badge-fail';
-    const statusDropdown = `<span class="badge ${stBadge}" style="font-size:12px;padding:5px 12px;">${curStatus}</span>`;
+    const statusOpts = ['계약대기','계약완료','계약만료','계약해지'];
+    const statusDropdown = isEditingSite
+      ? `<select onchange="ctSetSiteStatus('${c.id}','${s.id}',this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;">${statusOpts.map(o=>`<option value="${o}" ${o===curStatus?'selected':''}>${o}</option>`).join('')}</select>`
+      : `<span class="badge ${stBadge}" style="font-size:12px;padding:5px 12px;">${curStatus}</span>`;
     const siteFields = [
       ['사업장명', s.siteName],
       ['담당자', s.manager],
@@ -3110,8 +3112,24 @@ function ctToggleSiteExpand(bizId, siteId){
   ctRenderDetailPage(c);
 }
 
-/* [Phase 17-DX] ctSetSiteStatus 제거 — 계약상태 수동 변경 드롭다운 삭제됨.
-   계약상태는 시스템이 자동 산정: 계약이관 → 계약대기 / 계약기간·수수료 저장 → 계약완료
+/* [Phase 17-EW] 계약상태 수동 override — 편집 모드 드롭다운 저장 */
+function ctSetSiteStatus(bizId, siteId, newStatus){
+  const c = store.customers.find(x => x.id === bizId); if(!c) return;
+  const s = (c.sites || []).find(x => x.id === siteId); if(!s) return;
+  const prev = s.siteStatus || '계약대기';
+  if(prev === newStatus) return;
+  s.siteStatus = newStatus;
+  logAudit?.({
+    objectType:'site_contract', objectId: siteId, action:'site_status_changed',
+    title:`계약상태 변경 — ${s.siteName}`, desc:`${prev} → ${newStatus}`,
+    actor:'운영자', tone: newStatus==='계약해지'||newStatus==='계약만료' ? 'warn' : 'info'
+  });
+  if(typeof showToast === 'function') showToast(`계약상태 변경 — ${prev} → ${newStatus}`);
+  // 편집 모드 유지한 채 다시 렌더
+  ctRenderDetailPage(c);
+}
+
+/* [Phase 17-DX] 참고: 기본 자동 산정 규칙은 유지 — 이관 → 계약대기 / 계약기간·수수료 저장 → 계약완료
    계약만료(만료일 경과) / 계약해지(별도 액션)는 향후 필요 시 별도 UI로 처리. */
 
 /* [Fix] 사업장 삭제 가능 여부 판정 (2026-07-15 정책 확정)
