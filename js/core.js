@@ -767,7 +767,7 @@ function renderDashboard(){
   $('d-cust-total').textContent = totalCust;
   const d = new Date();
   const curYm = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  // 이번 달 신규 = 이번 달 계약 전환된 고객 (contractDate 기준, 없으면 접수일로 fallback)
+  // 계약완료 = 이번 달 계약이 완료된 고객 (contractDate 기준, 없으면 접수일로 fallback)
   const newThisMonth = cs.filter(c=>{
     if(c.status!=='계약완료') return false;
     const ref = c.contractDate || c.date;
@@ -782,7 +782,7 @@ function renderDashboard(){
   $('dashPending').innerHTML = `
     <div class="pend-item"><span class="p-label">신규 접수 (검증대기)</span><span class="${registered>0?'p-warn':'p-num'}">${registered}건${registered>0?' · 확인 필요':''}</span></div>
     <div class="pend-item"><span class="p-label">검증 진행중</span><span class="p-num">${inProgress}건</span></div>
-    <div class="pend-item"><span class="p-label">계약 전환 대기</span><span class="${contractWait>0?'p-warn':'p-num'}">${contractWait}건</span></div>`;
+    <div class="pend-item"><span class="p-label">계약대기</span><span class="${contractWait>0?'p-warn':'p-num'}">${contractWait}건</span></div>`;
 }
 
 /* ════════════════════════════════════════════════════════════

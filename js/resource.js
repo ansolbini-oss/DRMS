@@ -283,8 +283,11 @@ function rmToggleBulk(gid, checked){
   rmUpdateBulkBtn();
 }
 function rmUpdateBulkBtn(){
+  const empty = rmState.bulkSelected.size===0;
   const btn = $('rm-btn-bulk-delete');
-  btn.disabled = rmState.bulkSelected.size===0;
+  if(btn) btn.disabled = empty;
+  const hard = $('rm-btn-bulk-delete-hard');
+  if(hard) hard.disabled = empty;
 }
 
 /* 자원그룹 생성 */
@@ -932,9 +935,9 @@ function rmTabTrialHtml(g){
             <div class="trial-decision-title">재시험 대기 전환</div>
             <div class="trial-decision-desc">차기 등록 신청기간 재시험 응시</div>
           </button>
-          <button class="trial-decision-btn danger" onclick="rmDeleteGroupConfirm(${g.id})" title="이 자원그룹을 비활성 상태로 전환합니다. 반복 실패·재구성 불가 등으로 등록을 포기할 때 선택합니다. (실제 데이터 삭제는 아니며 조회에서 제외됨 — v0.2 M-05 반영 예정)">
-            <div class="trial-decision-title">자원 비활성화</div>
-            <div class="trial-decision-desc">등록 포기</div>
+          <button class="trial-decision-btn danger" onclick="rmSuspend(${g.id})" title="등록시험 불합격 자원은 일시중지로 전환합니다. 등록시험은 재시험 제도가 없어 다음 등록 신청기간에 재등록해야 하며, 재등록 준비는 일시중지에서 승인대기로 되돌려 진행합니다. (정책서 3-2-1)">
+            <div class="trial-decision-title">일시중지 전환</div>
+            <div class="trial-decision-desc">사유: 등록시험 불합격</div>
           </button>
         </div>
       </div>
@@ -1059,42 +1062,6 @@ function rmConfirmRetry(gid){
   showToast('재시험 대기 상태로 전환되었습니다. KPX 재시험 일정 통보를 기다립니다.');
 }
 
-/* 자원 삭제 확인 (FAILED 자원의 등록 포기) — 기존 rmDeleteGroup 플로우 재활용 */
-function rmDeleteGroupConfirm(gid){
-  const g = groupById(gid); if(!g) return;
-  $('cm-title').textContent = '자원 비활성화 (등록 포기)';
-  $('cm-sub').textContent = `${g.name}`;
-  $('cm-body').innerHTML = `<div class="info-box danger">
-    이 자원은 <b>비활성 처리</b>됩니다. 상용 감축지시 대상에서 제외되며,
-    시험 이력·참여고객 히스토리는 유지됩니다. 재계약 시 다시 활성화할 수 있습니다.
-  </div>
-  <div class="form-row"><label class="form-label">등록 포기 사유 <span style="color:var(--red)">*</span></label>
-    <textarea class="form-textarea" id="trial-delete-reason" placeholder="예: 반복 시험 실패, 자원 재구성 불가"></textarea>
-  </div>`;
-  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-danger" onclick="rmConfirmDeleteFromTrial(${gid})">비활성 처리 확정</button>`;
-  openModal('commonModal');
-}
-function rmConfirmDeleteFromTrial(gid){
-  const g = groupById(gid); if(!g) return;
-  const noteInput = $('trial-delete-reason')?.value.trim() || '';
-  if(!noteInput){ showToast('등록 포기 사유를 입력하세요.'); return; }
-  // [v0.2 M-05] Soft delete: status='inactive'로 전환 + 감사 로그
-  const prev = g.status;
-  g.status = 'inactive';
-  g.deactivatedAt = nowStr();
-  g.deactivateReason = '등록 포기';
-  g.deactivateNote = noteInput;
-  g.audit = g.audit || [];
-  g.audit.push({type:'DEACTIVATE', at: g.deactivatedAt, from: prev, reason:'등록 포기', note: noteInput});
-  closeModal('commonModal');
-  rmCloseDetail();
-  rmApplyFilter();
-  refreshSidebarBadges();
-  showToast(`${g.name} 비활성 처리 완료 (등록 포기: ${noteInput})`);
-}
-
-
 function rmTabHistoryHtml(g){
   if(!g.reductionHistory?.length) return '<div class="empty">감축이력이 없습니다.</div>';
   return `<div style="font-size:11px;color:var(--text-hint);margin-bottom:10px;">* 감축 모니터링 페이지에서 각 이벤트 상세를 확인할 수 있습니다.</div>
@@ -1163,6 +1130,7 @@ function rmRenderDetailFooter(g){
   const btns = [];
   if(g.status==='pending'){
     // [v0.2 M-07] 승인대기 상태에서만 참여고객 편입·삭제 가능
+    if(rmDeleteEligibility(g).ok) btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteResource(${g.id})">자원 삭제</button>`);
     btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteGroup(${g.id})">자원 비활성화</button>`);
     btns.push(`<button class="btn btn-primary btn-sm" onclick="rmOpenMapping(${g.id})">+ 고객추가</button>`);
     // [v0.2 M-09] 상태 전환 버튼 시험 대상 여부에 따라 분기
@@ -1188,6 +1156,7 @@ function rmRenderDetailFooter(g){
       const tm = trialStatusMeta(g.trial);
       disableReason = `등록시험 합격 필요 — 현재 상태: ${tm.label}`;
     }
+    if(rmDeleteEligibility(g).ok) btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteResource(${g.id})">자원 삭제</button>`);
     btns.push(`<button class="btn btn-danger btn-sm" onclick="rmDeleteGroup(${g.id})">자원 비활성화</button>`);
     btns.push(`<button class="btn btn-success btn-sm" onclick="rmActivate(${g.id})" ${canActivate?'':'disabled'} title="${canActivate?'':disableReason}">활성 전환</button>`);
   } else if(g.status==='active'){
@@ -1403,13 +1372,120 @@ function rmResume(gid){
   rmOpenDetail(gid);
   showToast(`${g.name} 운영 재개`);
 }
+/* ═══ 자원 삭제 (정책서 4-4-1) ═══
+   제도 참여 이력이 없는 자원만 물리 삭제. 조건 5개를 모두 충족해야 한다.
+   ※ 목업은 시험대기(waiting) 상태가 아직 남아 있어 pending·waiting 둘 다
+     승인대기로 취급한다. 정책서는 v0.12에서 시험대기를 승인대기로 통합했다. */
+function rmDeleteEligibility(g){
+  const fails = [];
+  if(g.status!=='pending' && g.status!=='waiting') fails.push('운영 상태가 승인대기가 아님');
+  const kpxRequested = !!(g.kpxRegRequestedAt || g.trial?.currentTestEventId || g.trial?.autoOptedInAt);
+  if(kpxRequested) fails.push('KPX 자원 등록을 신청함');
+  if((g.trial?.history||[]).length) fails.push('시험 이력 있음');
+  if(rmEventParticipated(g.id)) fails.push('감축 이력 있음');
+  if(rmSettlementExists(g.id)) fails.push('정산 기록 있음');
+  return {ok: fails.length===0, fails};
+}
+/* 감축 이벤트 참여 여부 — 이벤트 자원 목록에 해당 자원이 있으면 참여 이력으로 본다 */
+function rmEventParticipated(gid){
+  if((groupById(gid)?.reductionHistory||[]).length) return true;
+  const buckets = Object.values(store.events||{});
+  return buckets.some(list => (list||[]).some(ev =>
+    (ev.resources||[]).some(rs => rs.groupId===gid)));
+}
+/* 정산 기록 여부 — 정산 필드가 부여된 이벤트에 해당 자원이 있으면 정산 기록으로 본다 */
+function rmSettlementExists(gid){
+  const buckets = Object.values(store.events||{});
+  return buckets.some(list => (list||[]).some(ev =>
+    ev.settlement && (ev.resources||[]).some(rs => rs.groupId===gid)));
+}
+function rmDeleteResource(gid){
+  const g = groupById(gid); if(!g) return;
+  const el = rmDeleteEligibility(g);
+  if(!el.ok){
+    showToast(`삭제 불가 — ${el.fails.join(' / ')}`);
+    return;
+  }
+  $('cm-title').textContent = '자원 삭제';
+  $('cm-sub').textContent = `${g.name}`;
+  $('cm-body').innerHTML = `<div class="info-box danger">
+    이 자원을 삭제하시겠습니까? <b>삭제된 자원은 복구할 수 없습니다.</b>
+  </div>
+  <div style="font-size:11px;color:var(--text-sub);line-height:1.7;padding:8px 10px;background:var(--bg);border-radius:var(--radius);margin-top:10px;">
+    편입된 사업장은 매핑만 해제되고 사업장 데이터는 유지됩니다.
+  </div>`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-danger" onclick="rmConfirmDeleteResource(${gid})">확인</button>`;
+  openModal('commonModal');
+}
+function rmConfirmDeleteResource(gid){
+  const g = groupById(gid); if(!g) return;
+  const el = rmDeleteEligibility(g);
+  if(!el.ok){ showToast(`삭제 불가 — ${el.fails.join(' / ')}`); return; }
+  const name = g.name;
+  logAudit({objectType:'resource', objectId:gid, action:'deleted', title:'[DELETE] 자원 삭제',
+    desc:`${name} · ${g.type} · 삭제 조건 5개 충족`, actor:'운영관리자', tone:'danger'});
+  const i = store.groups.findIndex(x=>x.id===gid);
+  if(i>=0) store.groups.splice(i,1);
+  rmState.bulkSelected.delete(gid);
+  closeModal('commonModal');
+  rmCloseDetail();
+  rmApplyFilter();
+  refreshSidebarBadges();
+  showToast(`${name} 삭제 완료`);
+}
+/* 목록 체크박스 일괄 삭제 — 미충족 자원은 표시하고 차단 */
+function rmOpenBulkDeleteResource(){
+  if(rmState.bulkSelected.size===0) return;
+  const ids = [...rmState.bulkSelected];
+  const rows = ids.map(id=>{
+    const g = groupById(id);
+    return {g, el: rmDeleteEligibility(g)};
+  });
+  const blocked = rows.filter(x=>!x.el.ok);
+  const okRows = rows.filter(x=>x.el.ok);
+  $('cm-title').textContent = '자원 삭제';
+  $('cm-sub').textContent = `선택된 ${ids.length}개 자원을 삭제합니다.`;
+  $('cm-body').innerHTML = `<div class="info-box danger">
+    이 자원을 삭제하시겠습니까? <b>삭제된 자원은 복구할 수 없습니다.</b>
+  </div>
+  ${okRows.length?`<div style="font-size:11px;color:var(--text-sub);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin:10px 0;">
+    <div style="font-weight:600;margin-bottom:4px;">삭제 대상 ${okRows.length}건</div>
+    ${okRows.map(x=>`<div>• ${x.g.name}</div>`).join('')}
+  </div>`:''}
+  ${blocked.length?`<div style="font-size:11px;color:var(--red);border:1px solid var(--red);border-radius:var(--radius);padding:8px 10px;margin:10px 0;">
+    <div style="font-weight:600;margin-bottom:4px;">삭제 불가 ${blocked.length}건 — 비활성 또는 일시중지 대상</div>
+    ${blocked.map(x=>`<div>• ${x.g.name} — ${x.el.fails.join(' / ')}</div>`).join('')}
+  </div>`:''}`;
+  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
+    <button class="btn btn-danger" ${okRows.length?'':'disabled'} onclick="rmConfirmBulkDeleteResource()">확인 (${okRows.length}건)</button>`;
+  openModal('commonModal');
+}
+function rmConfirmBulkDeleteResource(){
+  let cnt = 0;
+  [...rmState.bulkSelected].forEach(id=>{
+    const g = groupById(id); if(!g) return;
+    if(!rmDeleteEligibility(g).ok) return;
+    logAudit({objectType:'resource', objectId:id, action:'deleted', title:'[DELETE] 자원 삭제',
+      desc:`${g.name} · ${g.type} · 삭제 조건 5개 충족 (일괄 처리)`, actor:'운영관리자', tone:'danger'});
+    const i = store.groups.findIndex(x=>x.id===id);
+    if(i>=0) store.groups.splice(i,1);
+    rmState.bulkSelected.delete(id);
+    cnt++;
+  });
+  closeModal('commonModal');
+  rmApplyFilter();
+  refreshSidebarBadges();
+  showToast(`${cnt}개 자원 삭제 완료`);
+}
+
 function rmDeleteGroup(gid){
   const g = groupById(gid); if(!g) return;
   // [v0.2 M-05] Hard delete 금지. 사유 입력 필수 + 상태를 'inactive'로 전환 (soft delete)
   $('cm-title').textContent = '자원 비활성화';
   $('cm-sub').textContent = `${g.name}`;
   $('cm-body').innerHTML = `<div class="info-box danger">
-    이 자원은 <b>비활성 처리</b>됩니다. 참여고객 히스토리·감축이력·시험이력은 모두 유지되며, 재계약 시 다시 활성화할 수 있습니다.
+    이 자원을 비활성하시겠습니까? <b>비활성된 자원은 활성 자원으로 복구할 수 없습니다.</b>
   </div>
   <div class="form-row"><label class="form-label">비활성화 사유 <span style="color:var(--red)">*</span></label>
     <select class="form-select" id="rm-deactivate-reason">
@@ -1417,7 +1493,6 @@ function rmDeleteGroup(gid){
       <option value="계약 해지">계약 해지</option>
       <option value="계약 만료">계약 만료</option>
       <option value="자원 재구성">자원 재구성 (참여고객 변경 필요)</option>
-      <option value="등록 포기">등록 포기 (반복 시험 실패 등)</option>
       <option value="기타">기타 (아래 상세 사유 필수)</option>
     </select>
   </div>
@@ -1455,7 +1530,7 @@ function rmOpenBulkDelete(){
   $('cm-sub').textContent = `선택된 ${ids.length}개 자원그룹을 비활성 처리합니다.`;
   // [v0.2 M-05] Soft delete + 사유 입력 필수 (일괄)
   $('cm-body').innerHTML = `<div class="info-box danger">
-    비활성 처리된 자원은 조회에서 제외되며, 참여고객·감축·시험 이력은 모두 유지됩니다. 재계약 시 다시 활성화할 수 있습니다.
+    선택한 자원을 비활성하시겠습니까? <b>비활성된 자원은 활성 자원으로 복구할 수 없습니다.</b>
   </div>
   <div style="max-height:140px;overflow-y:auto;font-size:11px;color:var(--text-sub);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin:10px 0;">
     ${ids.map(id=>{ const g=groupById(id); return `<div>• ${g.name}</div>`; }).join('')}
@@ -1466,7 +1541,6 @@ function rmOpenBulkDelete(){
       <option value="계약 해지">계약 해지</option>
       <option value="계약 만료">계약 만료</option>
       <option value="자원 재구성">자원 재구성 (참여고객 변경 필요)</option>
-      <option value="등록 포기">등록 포기 (반복 시험 실패 등)</option>
       <option value="기타">기타</option>
     </select>
   </div>`;
