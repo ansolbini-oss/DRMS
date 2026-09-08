@@ -511,7 +511,7 @@ function groupById(id){ return store.groups.find(g=>g.id===id); }
 function statusBadgeClass(s){
   switch(s){
     case '검증대기': return 'badge-pending';
-    case '검증중':   return 'badge-progress';
+    case '검증진행':   return 'badge-progress';
     case '검증완료': return 'badge-done';
     case '계약완료': return 'badge-purple';
     case '반려':     return 'badge-fail';
@@ -549,7 +549,7 @@ function dataBadgeClass(d){ return d==='수집완료'?'badge-done':d==='수집�
 /* ════════════════════════════════════════════════════════════
    ★ 네비게이션
 ════════════════════════════════════════════════════════════ */
-function navigate(pageKey, subTab){
+function navigate(pageKey, subTab, stmStatus){
   closeTransientUi();
   $$('.sidebar-item').forEach(el=>el.classList.toggle('active', el.dataset.page===pageKey));
   // [Phase 17-BP] settlement sub-menu active 처리
@@ -568,7 +568,8 @@ function navigate(pageKey, subTab){
   if(pageKey==='communication') comInit();
   if(pageKey==='monitoring')    monInit();
   if(pageKey==='report')        rpInit();
-  if(pageKey==='settlement')    { stmInit(); if(typeof stmSwitchSubTab==='function') stmSwitchSubTab(subTab||'basic'); }
+  if(pageKey==='settlement')    { stmInit(); if(typeof stmSwitchSubTab==='function') stmSwitchSubTab(subTab||'basic');
+                                  if(stmStatus && typeof stmApplyDashboardFilter==='function') stmApplyDashboardFilter(subTab||'basic', stmStatus); }
   if(pageKey==='bidding')       bidInit();
   if(pageKey==='datacollect')   dcInit();
   if(pageKey==='rtu')           rtuInit();
@@ -777,12 +778,23 @@ function renderDashboard(){
 
   // 대기 리스트
   const registered = cs.filter(c=>c.status==='검증대기').length;
-  const inProgress = cs.filter(c=>c.status==='검증중').length;
+  const inProgress = cs.filter(c=>c.status==='검증진행').length;
   const contractWait = cs.filter(c=>c.status==='검증완료').length;
-  $('dashPending').innerHTML = `
-    <div class="pend-item"><span class="p-label">신규 접수 (검증대기)</span><span class="${registered>0?'p-warn':'p-num'}">${registered}건${registered>0?' · 확인 필요':''}</span></div>
-    <div class="pend-item"><span class="p-label">검증 진행중</span><span class="p-num">${inProgress}건</span></div>
-    <div class="pend-item"><span class="p-label">계약대기</span><span class="${contractWait>0?'p-warn':'p-num'}">${contractWait}건</span></div>`;
+  // [Phase 17-EY] 대시보드 정책서 3.3 이동 규칙
+  //   1건 이상인 항목만 클릭 가능하며, 사전검증 상태를 필터로 전달한다.
+  //   0건 항목은 비활성 처리하여 클릭 시 이동하지 않는다.
+  const pendRow = (label, cnt, status, warn, note) => {
+    const clickable = cnt > 0;
+    const cls   = clickable ? 'pend-item' : 'pend-item is-disabled';
+    const click = clickable ? ` style="cursor:pointer;" onclick="event.stopPropagation();dashGoToPrecheck('${status}')"` : '';
+    const num   = (warn && clickable) ? 'p-warn' : 'p-num';
+    const tail  = (note && clickable) ? ' · 확인 필요' : '';
+    return `<div class="${cls}"${click}><span class="p-label">${label}</span><span class="${num}">${cnt}건${tail}</span></div>`;
+  };
+  $('dashPending').innerHTML =
+      pendRow('신규 접수 (검증대기)', registered,   '검증대기', true,  true)
+    + pendRow('검증 진행중',        inProgress,   '검증진행', false, false)
+    + pendRow('계약대기',           contractWait, '검증완료', true,  false);
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1327,6 +1339,10 @@ let newPermOverrides = null;
   }catch(_){}
   $('loginId').focus();
   // 앱 본체는 로그인 전에는 렌더만 준비 (display:none 상태)
-  renderDashboard();
-  refreshSidebarBadges();
+  // [Phase 17-EY] renderDashboard는 dashboard.js의 함수를 호출하는데, 이 파일이
+  //   index.html에서 core.js보다 뒤에 로드되어 즉시 실행 시 ReferenceError로 중단됐다.
+  //   나머지 스크립트가 모두 평가된 뒤로 미룬다.
+  const bootRender = () => { renderDashboard(); refreshSidebarBadges(); };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootRender);
+  else bootRender();
 })();

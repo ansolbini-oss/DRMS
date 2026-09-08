@@ -80,6 +80,31 @@ function dashRenderSettlement(){
   setText('dashStlDoneMand',     `${mandDoneCnt}건`);
   setText('dashStlDoneAmtVol',   won10k(volDoneAmt));
   setText('dashStlDoneVol',      `${volDoneCnt}건`);
+
+  // [Phase 17-EY] 대시보드 정책서 4.5 이동 규칙
+  //   건수 0건인 카드는 비활성 처리하여 클릭 시 이동하지 않는다.
+  dashStlCounts = {
+    pending: {basic: basicPendCnt, mandatory: mandPendCnt, voluntary: volPendCnt},
+    done:    {basic: basicDoneCnt, mandatory: mandDoneCnt, voluntary: volDoneCnt},
+  };
+  const stTag = {pending:'Pend', done:'Done'};
+  const tTag  = {basic:'Basic', mandatory:'Mand', voluntary:'Vol'};
+  Object.keys(dashStlCounts).forEach(st => {
+    Object.keys(dashStlCounts[st]).forEach(type => {
+      const el = document.getElementById(`dashStlBlock${stTag[st]}${tTag[type]}`);
+      if(el) el.classList.toggle('is-disabled', dashStlCounts[st][type] === 0);
+    });
+  });
+}
+
+/* [Phase 17-EY] 정산 현황 카드 → 고객정산관리 이동 (정책서 4.5)
+   전달 파라미터: 정산 유형(basic/mandatory/voluntary) + 정산 상태(pending/done).
+   건수 0건 카드는 이동하지 않는다. */
+let dashStlCounts = {pending:{}, done:{}};
+
+function dashStlGo(status, type){
+  if(!(dashStlCounts[status] || {})[type]) return;
+  navigate('settlement', type, status);
 }
 
 function dashRenderMonitoringStatusCards(){

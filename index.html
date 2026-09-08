@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260908-1835. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260908-1835">
+<!-- css/js 모두 ?v=260908-1902. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260908-1902">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260908-1835</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260908-1902</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -263,7 +263,7 @@
     <div class="dash-grid">
       
       <!-- 3. 참여고객 · 사전검증 현황 -->
-      <div class="dash-card" style="cursor:pointer;" onclick="navigate('precheck')">
+      <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">참여고객 현황</div>
           <button class="dash-card-link" onclick="event.stopPropagation();navigate('precheck')">사전검증 →</button>
@@ -281,7 +281,7 @@
           </div>
         </div>
         <div class="pend-list" id="dashPending">
-    <div class="pend-item" style="cursor:pointer;" onclick="event.stopPropagation();dashGoToPrecheck('검증진행')"><span class="p-label">신규 접수 (검증대기)</span><span class="p-warn">3건 · 확인 필요</span></div>
+    <div class="pend-item" style="cursor:pointer;" onclick="event.stopPropagation();dashGoToPrecheck('검증대기')"><span class="p-label">신규 접수 (검증대기)</span><span class="p-warn">3건 · 확인 필요</span></div>
     <div class="pend-item" style="cursor:pointer;" onclick="event.stopPropagation();dashGoToPrecheck('검증진행')"><span class="p-label">검증 진행중</span><span class="p-num">3건</span></div>
     <div class="pend-item" style="cursor:pointer;" onclick="event.stopPropagation();dashGoToPrecheck('검증완료')"><span class="p-label">계약대기</span><span class="p-warn">2건</span></div></div>
       </div>
@@ -304,21 +304,21 @@
         <div style="font-size:11px;color:var(--text-hint);">완료 안 된 모든 건</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-        <div class="stl-block" style="cursor:pointer;border-left:3px solid var(--amber);" onclick="event.stopPropagation();navigate('settlement','basic')">
+        <div class="stl-block" id="dashStlBlockPendBasic" style="cursor:pointer;border-left:3px solid var(--amber);" onclick="event.stopPropagation();dashStlGo('pending','basic')">
           <div class="stl-head">
             <div><div class="stl-name">① 기본 정산금</div></div>
             <div class="stl-amount" id="dashStlPendAmtBasic" style="color:var(--navy);">₩ 0만</div>
           </div>
           <div class="stl-row"><span style="color:var(--text-hint);">대기 건수</span><span style="color:var(--amber);font-weight:700;font-size:14px;" id="dashStlPendBasic">0건</span></div>
         </div>
-        <div class="stl-block" style="cursor:pointer;border-left:3px solid var(--amber);" onclick="event.stopPropagation();navigate('settlement','mandatory')">
+        <div class="stl-block" id="dashStlBlockPendMand" style="cursor:pointer;border-left:3px solid var(--amber);" onclick="event.stopPropagation();dashStlGo('pending','mandatory')">
           <div class="stl-head">
             <div><div class="stl-name">② 실적정산금 (의무)</div></div>
             <div class="stl-amount" id="dashStlPendAmtMand" style="color:var(--navy);">₩ 0만</div>
           </div>
           <div class="stl-row"><span style="color:var(--text-hint);">대기 건수</span><span style="color:var(--amber);font-weight:700;font-size:14px;" id="dashStlPendMand">0건</span></div>
         </div>
-        <div class="stl-block" style="cursor:pointer;border-left:3px solid var(--amber);" onclick="event.stopPropagation();navigate('settlement','voluntary')">
+        <div class="stl-block" id="dashStlBlockPendVol" style="cursor:pointer;border-left:3px solid var(--amber);" onclick="event.stopPropagation();dashStlGo('pending','voluntary')">
           <div class="stl-head">
             <div><div class="stl-name">③ 실적정산금 (자발)</div></div>
             <div class="stl-amount" id="dashStlPendAmtVol" style="color:var(--navy);">₩ 0만</div>
@@ -336,21 +336,21 @@
         <div style="font-size:11px;color:var(--text-hint);">해당 월 완료 처리분</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-        <div class="stl-block" style="cursor:pointer;border-left:3px solid var(--green);" onclick="event.stopPropagation();navigate('settlement','basic')">
+        <div class="stl-block" id="dashStlBlockDoneBasic" style="cursor:pointer;border-left:3px solid var(--green);" onclick="event.stopPropagation();dashStlGo('done','basic')">
           <div class="stl-head">
             <div><div class="stl-name">① 기본 정산금</div></div>
             <div class="stl-amount" id="dashStlDoneAmtBasic" style="color:var(--navy);">₩ 0만</div>
           </div>
           <div class="stl-row"><span style="color:var(--text-hint);">완료 건수</span><span style="color:var(--green);font-weight:700;font-size:14px;" id="dashStlDoneBasic">0건</span></div>
         </div>
-        <div class="stl-block" style="cursor:pointer;border-left:3px solid var(--green);" onclick="event.stopPropagation();navigate('settlement','mandatory')">
+        <div class="stl-block" id="dashStlBlockDoneMand" style="cursor:pointer;border-left:3px solid var(--green);" onclick="event.stopPropagation();dashStlGo('done','mandatory')">
           <div class="stl-head">
             <div><div class="stl-name">② 실적정산금 (의무)</div></div>
             <div class="stl-amount" id="dashStlDoneAmtMand" style="color:var(--navy);">₩ 0만</div>
           </div>
           <div class="stl-row"><span style="color:var(--text-hint);">완료 건수</span><span style="color:var(--green);font-weight:700;font-size:14px;" id="dashStlDoneMand">0건</span></div>
         </div>
-        <div class="stl-block" style="cursor:pointer;border-left:3px solid var(--green);" onclick="event.stopPropagation();navigate('settlement','voluntary')">
+        <div class="stl-block" id="dashStlBlockDoneVol" style="cursor:pointer;border-left:3px solid var(--green);" onclick="event.stopPropagation();dashStlGo('done','voluntary')">
           <div class="stl-head">
             <div><div class="stl-name">③ 실적정산금 (자발)</div></div>
             <div class="stl-amount" id="dashStlDoneAmtVol" style="color:var(--navy);">₩ 0만</div>
@@ -392,7 +392,7 @@
         <div class="summary-label">신규 접수</div>
         <div class="summary-val amber" id="pc-new">0</div>
       </div>
-      <div class="summary-card" id="pc-card-progress" onclick="pcFilterByStatus('검증중')">
+      <div class="summary-card" id="pc-card-progress" onclick="pcFilterByStatus('검증진행')">
         <div class="summary-label">검증진행</div>
         <div class="summary-val blue" id="pc-progress">0</div>
       </div>
@@ -859,6 +859,7 @@
       <label style="margin-left:10px;">상태</label>
       <select class="filter-select" id="stmb-status" onchange="stmBasicRender()">
         <option value="all">전체</option>
+        <option value="waiting">정산 대기 (누적)</option>
         <option value="pending">KPX 입금 대기</option>
         <option value="invoiced">세금계산서 발행</option>
         <option value="in_progress">입금 진행</option>
@@ -902,6 +903,7 @@
       <label style="margin-left:10px;">상태</label>
       <select class="filter-select" id="stm-status-filter" onchange="stmRender()">
         <option value="all">전체</option>
+        <option value="waiting">정산 대기 (누적)</option>
         <option value="received">정산대기</option>
         <option value="invoiced">세금계산서 발행</option>
         <option value="in_progress">입금 진행</option>
@@ -2196,20 +2198,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260908-1835"></script>
-<script src="data/tips.js?v=260908-1835"></script>
-<script src="js/core.js?v=260908-1835"></script>
-<script src="js/dashboard.js?v=260908-1835"></script>
-<script src="js/precheck.js?v=260908-1835"></script>
-<script src="js/resource.js?v=260908-1835"></script>
-<script src="js/monitoring.js?v=260908-1835"></script>
-<script src="js/report.js?v=260908-1835"></script>
-<script src="js/settlement.js?v=260908-1835"></script>
-<script src="js/datacollect.js?v=260908-1835"></script>
-<script src="js/rtu.js?v=260908-1835"></script>
-<script src="js/communication.js?v=260908-1835"></script>
-<script src="js/bidding.js?v=260908-1835"></script>
-<script src="js/account.js?v=260908-1835"></script>
-<script src="js/system.js?v=260908-1835"></script>
+<script src="data/store.js?v=260908-1902"></script>
+<script src="data/tips.js?v=260908-1902"></script>
+<script src="js/core.js?v=260908-1902"></script>
+<script src="js/dashboard.js?v=260908-1902"></script>
+<script src="js/precheck.js?v=260908-1902"></script>
+<script src="js/resource.js?v=260908-1902"></script>
+<script src="js/monitoring.js?v=260908-1902"></script>
+<script src="js/report.js?v=260908-1902"></script>
+<script src="js/settlement.js?v=260908-1902"></script>
+<script src="js/datacollect.js?v=260908-1902"></script>
+<script src="js/rtu.js?v=260908-1902"></script>
+<script src="js/communication.js?v=260908-1902"></script>
+<script src="js/bidding.js?v=260908-1902"></script>
+<script src="js/account.js?v=260908-1902"></script>
+<script src="js/system.js?v=260908-1902"></script>
 
 </body></html>

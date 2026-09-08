@@ -35,6 +35,39 @@ function stmInit(){
 
 /* [Phase 17-BS] 정산 sub-tab 전환 — 기본 정산금 / 실적정산금 view 분기 */
 let stmActiveSubTab = 'basic';
+/* [Phase 17-EY] 대시보드 정산 현황 카드에서 넘어온 정산 상태를 필터로 적용 (정책서 4.5)
+   정산 대기는 월 구분 없이 전체 미완료 건(4.1), 정산 완료는 현재 정산월 건(4.2)을 조회한다.
+   상태 필터만 걸면 기간·정산월 필터가 남아 카드 건수와 목록 건수가 어긋나므로 함께 맞춘다. */
+function stmApplyDashboardFilter(subTab, status){
+  const pending = status !== 'done';
+  const now = new Date();
+  const ym  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  if(subTab === 'basic'){
+    // 정산월: 대기는 전체(빈 값), 완료는 현재 정산월
+    stmBasicState.month = pending ? '' : ym;
+    const mEl = document.getElementById('stmb-month');
+    if(mEl) mEl.value = stmBasicState.month;
+    if(typeof stmBasicFilterByStatus === 'function') stmBasicFilterByStatus(pending ? 'waiting' : 'completed');
+    return;
+  }
+
+  // 실적 정산금(의무·자발): 조회 기간을 상태에 맞춘다
+  const periodEl = document.getElementById('stm-period');
+  if(pending){
+    stmState.period = 'all';
+    if(periodEl) periodEl.value = 'all';
+  } else {
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    stmState.period = 'custom';
+    if(periodEl) periodEl.value = 'custom';
+    if(document.getElementById('stm-from')) document.getElementById('stm-from').value = `${ym}-01`;
+    if(document.getElementById('stm-to'))   document.getElementById('stm-to').value   = `${ym}-${String(lastDay).padStart(2,'0')}`;
+  }
+  if(typeof stmApplyPeriodRange === 'function') stmApplyPeriodRange();
+  if(typeof stmFilterByStatus === 'function') stmFilterByStatus(pending ? 'waiting' : 'completed');
+}
+
 function stmSwitchSubTab(tab){
   stmActiveSubTab = tab || 'basic';
   const titleEl = document.querySelector('#page-settlement .page-title');
@@ -154,7 +187,9 @@ function stmBasicFilteredRows(){
   stmBasicState.search = search;
   return stmBasicSeed.filter(r => {
     if(month && r.month !== month) return false;
-    if(status !== 'all' && r.status !== status) return false;
+    // [Phase 17-EY] waiting = 금액 확정 후 입금 미완료(누적). 정책서 4.1 기준
+    if(status === 'waiting'){ if(r.status !== 'invoiced' && r.status !== 'in_progress') return false; }
+    else if(status !== 'all' && r.status !== status) return false;
     if(search && !(r.groupName.toLowerCase().includes(search))) return false;
     return true;
   });
@@ -654,7 +689,9 @@ function stmFilteredEvents(){
     if(stmState.from && e.date < stmState.from) return false;
     if(stmState.to && e.date > stmState.to) return false;
     // 상태
-    if(stmState.statusFilter !== 'all' && e.settlement.status !== stmState.statusFilter) return false;
+    // [Phase 17-EY] waiting = 정산금 확정 후 입금 미완료(누적). 정책서 4.1 기준
+    if(stmState.statusFilter === 'waiting'){ if(e.settlement.status === 'completed') return false; }
+    else if(stmState.statusFilter !== 'all' && e.settlement.status !== stmState.statusFilter) return false;
     // DR 유형
     if(stmState.typeFilter !== 'all' && e.dispatch_type !== stmState.typeFilter) return false;
     // Phase 11-A: 검색 — 범위 select 기준으로 분기

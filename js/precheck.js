@@ -127,7 +127,7 @@ const PC_CARD_IDS = ['pc-card-all','pc-card-new','pc-card-progress','pc-card-don
 const PC_CARD_MAP = {
   '':          'pc-card-all',
   '검증대기':   'pc-card-new',
-  '검증중':     'pc-card-progress',
+  '검증진행':     'pc-card-progress',
   '검증완료':   'pc-card-done',
   '반려':      'pc-card-reject',
 };
@@ -152,7 +152,7 @@ function pcRefreshCards(){
   const scope = store.customers.filter(c=>c.status!=='계약완료');
   $('pc-total').textContent    = scope.length;
   $('pc-new').textContent      = scope.filter(c=>c.status==='검증대기').length;
-  $('pc-progress').textContent = scope.filter(c=>c.status==='검증중').length;
+  $('pc-progress').textContent = scope.filter(c=>c.status==='검증진행').length;
   $('pc-done').textContent     = scope.filter(c=>c.status==='검증완료').length;
   $('pc-reject').textContent   = scope.filter(c=>c.status==='반려').length;
 }
@@ -359,7 +359,7 @@ function pcRenderSitesInfo(c){
     const done = stepsArr.filter(x=>x===2).length;
     const verifyBadge = done===totalSteps
       ? `<span class="badge badge-done" style="font-size:10px;">검증완료</span>`
-      : `<span class="badge badge-progress" style="font-size:10px;">검증중 ${done}/${totalSteps}</span>`;
+      : `<span class="badge badge-progress" style="font-size:10px;">검증진행 ${done}/${totalSteps}</span>`;
     const ct = s.contract || {};
     const docList = (ct.docs && ct.docs.length)
       ? `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px;">${ct.docs.map(d=>`
@@ -1193,9 +1193,9 @@ function pcCompleteStep(stepIdx){
   c.steps[stepIdx] = 2;
   pcAddLog(c, pcStepDefs[stepIdx].name+' 완료', `${c.recno} · ${pcStepDefs[stepIdx].name} 완료 처리`, 'done');
   // 상태 업데이트
-  if(c.status==='검증대기' && c.steps.some(s=>s===2)) c.status='검증중';
+  if(c.status==='검증대기' && c.steps.some(s=>s===2)) c.status='검증진행';
   if(c.steps.every(s=>s===2)) c.status='검증완료';
-  if(c.status==='반려' && c.steps.some(s=>s===2) && !c.steps.some(s=>s===0)) c.status='검증중';
+  if(c.status==='반려' && c.steps.some(s=>s===2) && !c.steps.some(s=>s===0)) c.status='검증진행';
   closeModal('stepModal');
   pcShowDetail(c.id);
   showToast(`${pcStepDefs[stepIdx].name} 완료 처리되었습니다.`);
@@ -1215,8 +1215,8 @@ function pcRunStep(stepIdx){
 
 function pcRunAuto(c, stepIdx, msg, cb){
   c.steps[stepIdx] = 3;
-  // 재실행 시점 status 강등: 이전에 검증완료였어도 하나라도 재실행 중이면 '검증중'으로 복귀
-  if(c.status==='검증완료') c.status='검증중';
+  // 재실행 시점 status 강등: 이전에 검증완료였어도 하나라도 재실행 중이면 '검증진행'으로 복귀
+  if(c.status==='검증완료') c.status='검증진행';
   pcRenderSteps(c);
   showToast(msg);
   pcAddLog(c, pcStepDefs[stepIdx].name+' 진행중', msg, 'progress');
@@ -1224,7 +1224,7 @@ function pcRunAuto(c, stepIdx, msg, cb){
     c.steps[stepIdx] = 2;
     if(stepIdx===4){ c.rrmseVal = (6+Math.floor(Math.random()*5))+'%'; c.rrmseS='완료'; }
     if(stepIdx===3) {} // 악의성: 별도 값 없음
-    if(c.status==='검증대기') c.status='검증중';
+    if(c.status==='검증대기') c.status='검증진행';
     if(c.steps.every(s=>s===2)) c.status='검증완료';
     pcShowDetail(c.id);
     showToast(pcStepDefs[stepIdx].name + ' 완료');
