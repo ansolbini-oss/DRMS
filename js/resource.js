@@ -663,6 +663,7 @@ function rmTabOpHtml(g){
       const dm = dispatchTypeMeta(ev.dispatch_type);
       const monTabKey = dm.direction==='increase' ? 'plus' : 'reduction';
       const directionWord = dm.direction==='increase' ? '증대' : '감축';
+      const noTarget = ev.dispatch_type==='REALTIME_INCREASE_REQUEST'; // [Phase 17-EZ] 실시간 증대요청: 목표량·이행률 없음
       return `<div class="op-live-event-block">
         <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="badge ${dm.badge}" style="font-size:10px;">${dm.label}</span>
@@ -671,8 +672,8 @@ function rmTabOpHtml(g){
         </div>
         <div class="op-metric op-metric-3">
           <div class="op-metric-item">
-            <div class="op-metric-lbl">지시용량</div>
-            <div class="op-metric-val">${r.ordered.toLocaleString()} kW</div>
+            <div class="op-metric-lbl">${noTarget?'목표 증대량':dm.direction==='increase'?'계획 증대량':'지시용량'}</div>
+            <div class="op-metric-val">${r.ordered!=null ? `${r.ordered.toLocaleString()} kW` : '—'}</div>
           </div>
           <div class="op-metric-item">
             <div class="op-metric-lbl">현재 실적</div>
@@ -680,7 +681,7 @@ function rmTabOpHtml(g){
           </div>
           <div class="op-metric-item">
             <div class="op-metric-lbl">실시간 이행률</div>
-            <div class="op-metric-val" style="color:${rateColor};">${rateLabel}</div>
+            <div class="op-metric-val" style="color:${rateColor};" ${noTarget?'title="실시간 증대요청 · 이행량 기준 없음"':''}>${rateLabel}</div>
           </div>
         </div>
         <div style="padding:6px 14px 10px;">

@@ -8,9 +8,22 @@ var monDmState = { groupId:null, eventId:null, customerId:null, queryDate:null, 
 
 function monAllowedCategories(type){
   // FIX-02: 의무감축·자발적 별도 표시 정책
+  // [Phase 17-EZ] 플러스DR은 계획증대(plan) / 실시간증대(realtime) 구분
   return type==='plus'
-    ? ['all']
+    ? ['all','plan','realtime']
     : ['all','mandatory','voluntary','test'];
+}
+/* [Phase 17-EZ] 실시간 증대요청 — 목표량(이행량 기준)이 없어 이행률·달성률을 산정하지 않는 이벤트 */
+function monIsRealtimeIncrease(ev){
+  return ev?.dispatch_type==='REALTIME_INCREASE_REQUEST';
+}
+function monIsIncrease(ev){
+  return dispatchTypeMeta(ev?.dispatch_type).direction==='increase';
+}
+/* 자원 1건의 이행률 — 목표 없음(ordered null/0) 또는 실적 미수신이면 null */
+function monResRate(r){
+  if(!r || r.ordered==null || !(r.ordered>0) || r.actual==null) return null;
+  return r.actual / r.ordered;
 }
 function monEventStatusKey(ev){
   if(ev?.live) return 'live';
@@ -26,7 +39,8 @@ function monEventTypeKey(ev){
   if(ev.dispatch_type==='MANDATORY_REDUCTION') return 'mandatory';
   if(ev.dispatch_type==='VOLUNTARY_REDUCTION') return 'voluntary';
   if(ev.dispatch_type==='REGISTRATION_TEST') return 'test';
-  if(ev.dispatch_type==='VOLUNTARY_INCREASE' || ev.dispatch_type==='REALTIME_INCREASE_REQUEST') return 'increase';
+  if(ev.dispatch_type==='VOLUNTARY_INCREASE') return 'plan';
+  if(ev.dispatch_type==='REALTIME_INCREASE_REQUEST') return 'realtime';
   return 'all';
 }
 function monFilteredEvents(){
@@ -73,7 +87,7 @@ function monSyncFilterButtons(){
   const reductionBox = $('mon-type-filter-reduction');
   const plusBox = $('mon-type-filter-plus');
   if(reductionBox) reductionBox.style.display = monState.eventType==='reduction' ? 'inline-flex' : 'none';
-  if(plusBox) plusBox.style.display = 'none';
+  if(plusBox) plusBox.style.display = monState.eventType==='plus' ? 'inline-flex' : 'none';
   $$('#page-monitoring .mon-category-btn').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.category === monState.category);
   });
@@ -188,11 +202,13 @@ function monTypeClass(t){
 }
 
 function monEventSummary(ev){
-  const totalOrd = ev.resources.reduce((sum, r)=>sum + (r.ordered || 0), 0);
+  const realtime = monIsRealtimeIncrease(ev);
+  // 실시간 증대요청은 목표량이 없다 → totalOrd null, rate null
+  const totalOrd = realtime ? null : ev.resources.reduce((sum, r)=>sum + (r.ordered || 0), 0);
   const hasActual = ev.resources.some(r=>r.actual!=null);
   const totalAct = hasActual ? ev.resources.reduce((sum, r)=>sum + (r.actual || 0), 0) : null;
-  const rate = (!ev.scheduled && hasActual && totalOrd>0) ? totalAct / totalOrd : null;
-  return {totalOrd, totalAct, rate, targetCount:ev.resources.length};
+  const rate = (!ev.scheduled && !realtime && hasActual && totalOrd>0) ? totalAct / totalOrd : null;
+  return {totalOrd, totalAct, rate, targetCount:ev.resources.length, realtime};
 }
 // FIX-06: 4단계 상태값 — 대기(neutral) / 정상(good ≥90%) / 주의(warn 70~90%) / 이상(bad <70%)
 function monEventHealth(ev){
@@ -201,8 +217,10 @@ function monEventHealth(ev){
   }
   let abnormalCount = 0;   // <70% 또는 데이터 불량
   let warnCount = 0;       // 70~90%
+  const realtime = monIsRealtimeIncrease(ev);
   ev.resources.forEach(r=>{
-    const rate = (r.actual!=null && r.ordered>0) ? (r.actual / r.ordered) : 1;
+    // 실시간 증대요청: 이행률 판정 없음 → 데이터 수신 상태만 본다
+    const rate = realtime ? 1 : ((r.actual!=null && r.ordered>0) ? (r.actual / r.ordered) : 1);
     const dataBad = r.status==='FAILED' || r.status==='DELAYED';
     if(dataBad || rate < 0.7) abnormalCount += 1;
     else if(rate < 0.9) warnCount += 1;
@@ -254,7 +272,7 @@ function monRenderEventTable(evs){
       <span style="color:var(--text-sub);font-variant-numeric:tabular-nums;">${ev.date}<br>${ev.timeRange}</span>
       <span><span class="badge ${typeMeta.badge}" style="font-size:10px;">${typeMeta.label}</span></span>
       <span style="text-align:right;font-weight:600;">${summary.targetCount}개</span>
-      <span style="text-align:right;font-weight:600;">${summary.totalOrd.toLocaleString()} kW</span>
+      <span style="text-align:right;font-weight:600;">${summary.totalOrd!=null ? `${summary.totalOrd.toLocaleString()} kW` : '<span style="color:var(--text-hint);font-weight:500;">—</span>'}</span>
       <span style="text-align:center;">${rateText}</span>
       <span style="text-align:center;"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();monOpenDetailModal('${ev.id}')">상세</button></span>
     </div>`;
@@ -339,21 +357,36 @@ function monRenderKPI(ev){
   const abnormalText = health.tone==='bad' ? `${health.abnormalCount}개 자원`
                      : health.tone==='warn' ? `${health.warnCount}개 자원`
                      : '없음';
+  const inc = monIsIncrease(ev);
+  const dirWord = inc ? '증대' : '감축';
   if(ev.scheduled){
     bar.innerHTML = `
-      <div class="kpi-card accent"><div class="kpi-label">대상 자원</div><div class="kpi-value blue">${summary.targetCount}개</div><div class="kpi-sub">감축 지시 대상</div></div>
-      <div class="kpi-card"><div class="kpi-label">예정 지시용량</div><div class="kpi-value">${summary.totalOrd.toLocaleString()}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div></div>
+      <div class="kpi-card accent"><div class="kpi-label">대상 자원</div><div class="kpi-value blue">${summary.targetCount}개</div><div class="kpi-sub">${dirWord} 지시 대상</div></div>
+      <div class="kpi-card"><div class="kpi-label">예정 지시용량</div><div class="kpi-value">${summary.totalOrd!=null?summary.totalOrd.toLocaleString():'—'}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div></div>
       <div class="kpi-card"><div class="kpi-label">이벤트 일시</div><div class="kpi-value" style="font-size:14px;">${ev.date}</div><div class="kpi-sub">${ev.timeRange}</div></div>
       <div class="kpi-card"><div class="kpi-label">이벤트 유형</div><div class="kpi-value" style="font-size:14px;">${dispatchTypeMeta(ev.dispatch_type).label}</div><div class="kpi-sub">${ev.category==='test'?'자격 검증 이벤트':'시작 전 이벤트'}</div></div>
       <div class="kpi-card"><div class="kpi-label">상태</div><div class="kpi-value" style="font-size:14px;color:var(--text-sub);">대기</div><div class="kpi-sub">시작 전</div></div>`;
     return;
   }
-  const resultLabel = ev.live ? '현재 실적' : '최종 실적';
+  const resultLabel = ev.live ? (inc ? '현재 증대량' : '현재 실적') : (inc ? '최종 증대량' : '최종 실적');
+  if(summary.realtime){
+    // [Phase 17-EZ] 실시간 증대요청 — 목표량·이행률·달성률 없음 → "—" 표기, 이상 판정은 데이터 수신만
+    bar.innerHTML = `
+      <div class="kpi-card accent"><div class="kpi-label">대상 자원</div><div class="kpi-value blue">${summary.targetCount}개</div><div class="kpi-sub">증대 요청 대상</div></div>
+      <div class="kpi-card"><div class="kpi-label">목표 증대량</div><div class="kpi-value" style="color:var(--text-hint);">—</div><div class="kpi-sub">실시간 증대요청 · 이행량 기준 없음</div></div>
+      <div class="kpi-card"><div class="kpi-label">${resultLabel}</div><div class="kpi-value" style="color:var(--blue);">${(summary.totalAct||0).toLocaleString()}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div><div class="kpi-sub">CBL 대비 실측 증가분</div></div>
+      <div class="kpi-card"><div class="kpi-label">종합 이행률</div><div class="kpi-value" style="color:var(--text-hint);">—</div><div class="kpi-sub">산정 대상 아님</div></div>
+      <div class="kpi-card ${health.tone==='bad'?'warn':''}"><div class="kpi-label">이상 자원</div><div class="kpi-value" style="color:${health.tone==='bad'?'var(--red)':'var(--green)'};">${health.tone==='bad'?`${health.abnormalCount}개 자원`:'없음'}</div><div class="kpi-sub">${health.tone==='bad'?'데이터 미수신·지연':'데이터 수신 정상'}</div></div>
+      <div class="kpi-card ${ev.live?'warn':''}"><div class="kpi-label">${ev.live?'잔여 시간':'종료'}</div>
+        <div class="kpi-value" style="font-size:14px;color:${ev.live?'var(--blue)':'var(--text-sub)'};">${ev.live?`${ev.remainingMinutes}분`:'완료됨'}</div>
+        <div class="kpi-sub">${ev.date} ${ev.timeRange}</div></div>`;
+    return;
+  }
   bar.innerHTML = `
-    <div class="kpi-card accent"><div class="kpi-label">대상 자원</div><div class="kpi-value blue">${summary.targetCount}개</div><div class="kpi-sub">감축 지시 대상</div></div>
-    <div class="kpi-card"><div class="kpi-label">지시용량</div><div class="kpi-value">${summary.totalOrd.toLocaleString()}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div></div>
+    <div class="kpi-card accent"><div class="kpi-label">대상 자원</div><div class="kpi-value blue">${summary.targetCount}개</div><div class="kpi-sub">${dirWord} 지시 대상</div></div>
+    <div class="kpi-card"><div class="kpi-label">${inc?'계획 증대량':'지시용량'}</div><div class="kpi-value">${summary.totalOrd.toLocaleString()}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div></div>
     <div class="kpi-card"><div class="kpi-label">${resultLabel}</div><div class="kpi-value" style="color:${rateColor};">${(summary.totalAct||0).toLocaleString()}<span style="font-size:12px;color:var(--text-hint);font-weight:500;"> kW</span></div></div>
-    <div class="kpi-card"><div class="kpi-label">종합 이행률</div><div class="kpi-value" style="color:${rateColor};">${summary.rate!=null?`${Math.round(summary.rate*100)}%`:'—'}</div><div class="kpi-sub">목표 100% · 달성기준 97% 이상</div></div>
+    <div class="kpi-card"><div class="kpi-label">종합 이행률</div><div class="kpi-value" style="color:${rateColor};">${summary.rate!=null?`${Math.round(summary.rate*100)}%`:'—'}</div><div class="kpi-sub">${inc?'계획 증대량 대비':'목표 100% · 달성기준 97% 이상'}</div></div>
     <div class="kpi-card ${health.tone==='bad'?'warn':health.tone==='warn'?'warn':''}"><div class="kpi-label">이상 자원</div><div class="kpi-value" style="color:${health.tone==='bad'?'var(--red)':health.tone==='warn'?'#f59e0b':'var(--green)'};">${abnormalText}</div><div class="kpi-sub">${health.tone==='bad'?'이행률 70% 미만 또는 데이터 미수신':health.tone==='warn'?'이행률 70~90% (주의)':'정상 운영'}</div></div>
     <div class="kpi-card ${ev.live?'warn':''}"><div class="kpi-label">${ev.live?'잔여 시간':'종료'}</div>
       <div class="kpi-value" style="font-size:14px;color:${ev.live?'var(--blue)':'var(--text-sub)'};">${ev.live?`${ev.remainingMinutes}분`:'완료됨'}</div>
@@ -374,11 +407,11 @@ function monRenderResourceList(ev){
     const g = groupById(r.groupId);
     const name = g?.name || `자원그룹 #${r.groupId}`;
     const type = g?.type || '-';
-    const rate = r.actual!=null ? r.actual/r.ordered : null;
+    const rate = monResRate(r);
     const isActive = r.groupId===monState.selectedGroupId;
     return `<div class="res-row ${isActive?'active':''}" onclick="monSelectResource(${r.groupId})">
       <div><div class="res-row-name">${name}</div><div class="res-row-type"><span class="badge ${monTypeClass(type)}" style="font-size:9px;padding:1px 6px;">${type}</span></div></div>
-      <div class="res-row-val">${r.ordered.toLocaleString()}</div>
+      <div class="res-row-val">${r.ordered!=null?r.ordered.toLocaleString():'—'}</div>
       <div class="res-row-val">${r.actual!=null?r.actual.toLocaleString():'—'}</div>
       <div style="text-align:right;">${rate!=null?`<span class="rate-pill ${monRateCls(rate)}">${Math.round(rate*100)}%</span>`:'<span style="color:var(--text-hint);font-size:11px;">—</span>'}</div>
       <div style="text-align:center;">${r.status==='SCHEDULED'?'<span style="font-size:10px;color:var(--text-hint);">대기</span>':`<span class="dot ${monDotCls(r.status)}"></span>`}</div>
@@ -428,10 +461,14 @@ function monStartLiveTimer(totalSeconds){
 }
 
 function monRenderLiveOverview(r, ev, g){
-  const rate = r.actual/r.ordered;
-  const pct = Math.round(rate*100);
-  const gaugePct = Math.max(0, Math.min(100, pct));
+  const realtime = monIsRealtimeIncrease(ev);
+  const inc = monIsIncrease(ev);
+  const rate = monResRate(r);
+  const pct = rate!=null ? Math.round(rate*100) : null;
+  const gaugePct = pct!=null ? Math.max(0, Math.min(100, pct)) : 0;
   const health = monLiveStatusMeta(r);
+  const targetLabel = inc ? '목표 증대량' : '목표 감축량';
+  const progressLabel = inc ? '현재 증대량' : '현재 진행량';
   return `
     <div class="mon-section">
       <div class="mon-live-layout">
@@ -450,12 +487,15 @@ function monRenderLiveOverview(r, ev, g){
 
         <div class="mon-live-summary-grid">
           <div class="mon-live-summary-card">
-            <div class="mon-live-summary-label">목표 감축량</div>
-            <div class="mon-live-summary-value">${r.ordered.toLocaleString()}<span class="mon-live-summary-unit">kW</span></div>
+            <div class="mon-live-summary-label">${targetLabel}</div>
+            ${realtime
+              ? `<div class="mon-live-summary-value" style="color:var(--text-hint);">—</div><div style="font-size:11px;color:var(--text-hint);">실시간 증대요청 · 이행량 기준 없음</div>`
+              : `<div class="mon-live-summary-value">${r.ordered.toLocaleString()}<span class="mon-live-summary-unit">kW</span></div>`}
           </div>
           <div class="mon-live-summary-card accent">
-            <div class="mon-live-summary-label">현재 진행량</div>
-            <div class="mon-live-summary-value ${rate>=1?'good':''}">${r.actual.toLocaleString()}<span class="mon-live-summary-unit">kW</span></div>
+            <div class="mon-live-summary-label">${progressLabel}</div>
+            <div class="mon-live-summary-value ${rate!=null && rate>=1?'good':''}">${(r.actual||0).toLocaleString()}<span class="mon-live-summary-unit">kW</span></div>
+            ${realtime ? `<div style="font-size:11px;color:var(--text-hint);">CBL 대비 실측 증가분</div>` : ''}
           </div>
         </div>
 
@@ -464,19 +504,20 @@ function monRenderLiveOverview(r, ev, g){
             <div class="chart-legend" style="padding-top:2px;padding-bottom:14px;">
               <span class="legend-item"><span class="legend-line" style="background:#64748b;"></span>CBL (기준)</span>
               <span class="legend-item"><span class="legend-line" style="background:var(--blue);"></span>실제 사용량</span>
-              <span class="legend-item"><span class="legend-line" style="background:var(--red);"></span>${dispatchTypeMeta(ev.dispatch_type).direction==='increase'?'증대 목표선':'감축 목표선'}</span>
+              ${realtime ? '' : `<span class="legend-item"><span class="legend-line" style="background:var(--red);"></span>${inc?'증대 목표선':'감축 목표선'}</span>`}
             </div>
             ${monRenderChart(r, ev)}
           </div>
           <div class="mon-live-side">
             <div class="mon-live-gauge-card">
               <div class="mon-live-gauge-label">현재 이행률</div>
-              <div class="mon-live-gauge-wrap" style="--gauge-angle:${gaugePct * 3.6}deg;">
+              <div class="mon-live-gauge-wrap" style="--gauge-angle:${gaugePct * 3.6}deg;${realtime?'background:#e8eef8;':''}">
                 <div class="mon-live-gauge-inner">
-                  <div class="mon-live-gauge-rate">${pct}%</div>
-                  <div class="mon-live-gauge-sub">달성률</div>
+                  <div class="mon-live-gauge-rate" style="${pct==null?'color:var(--text-hint);':''}">${pct!=null?`${pct}%`:'—'}</div>
+                  <div class="mon-live-gauge-sub">${pct!=null?'달성률':'달성률 —'}</div>
                 </div>
               </div>
+              ${realtime ? `<div style="font-size:11px;color:var(--text-hint);text-align:center;margin-top:-6px;">실시간 증대요청은 이행량 기준이 없어<br>이행률·달성률을 산정하지 않습니다</div>` : ''}
               <div class="mon-live-timer-block">
                 <div class="mon-live-timer-label">잔여시간</div>
                 <div class="mon-live-timer" id="mon-live-timer">${monFormatLiveTimer((ev.remainingMinutes || 0) * 60)}</div>
@@ -500,8 +541,11 @@ function monSyncGroupSelector(ev){
     const g = groupById(r.groupId);
     const name = g?.name || `자원그룹 #${r.groupId}`;
     const type = g?.type || '-';
-    const rate = (r.actual!=null && r.ordered>0) ? Math.round((r.actual/r.ordered)*100) : null;
-    const statusLabel = r.status==='SCHEDULED' ? '대기' : (rate!=null ? `${rate}%` : '실적 미수신');
+    const rr = monResRate(r);
+    const rate = rr!=null ? Math.round(rr*100) : null;
+    const statusLabel = r.status==='SCHEDULED' ? '대기'
+      : monIsRealtimeIncrease(ev) ? (r.actual!=null ? `${r.actual.toLocaleString()} kW 증대 중` : '실적 미수신')
+      : (rate!=null ? `${rate}%` : '실적 미수신');
     return `<option value="${r.groupId}">${name} · ${type} · ${statusLabel}</option>`;
   }).join('');
   select.innerHTML = options;
@@ -587,8 +631,11 @@ function monRenderRightPane(ev){
     return;
   }
 
-  const rate = r.actual/r.ordered;
-  const statusText = r.status==='NORMAL'?'정상 감축 중':r.status==='DELAYED'?'데이터 지연':r.status==='FAILED'?'감축 미달':'';
+  const rate = monResRate(r);
+  const realtime = monIsRealtimeIncrease(ev);
+  const inc = monIsIncrease(ev);
+  const dirWord = inc ? '증대' : '감축';
+  const statusText = r.status==='NORMAL'?`정상 ${dirWord} 중`:r.status==='DELAYED'?'데이터 지연':r.status==='FAILED'?(realtime?'데이터 수집 이상':`${dirWord} 미달`):'';
   if(ev.live){
     pane.innerHTML = `
       ${monRenderLiveOverview(r, ev, g)}
@@ -602,7 +649,7 @@ function monRenderRightPane(ev){
 
       <div class="mon-section">
       <div class="mon-section-head"><div><div class="mon-section-title">참여고객 현황</div><div class="mon-section-sub">고객별 실시간 ${dispatchTypeMeta(ev.dispatch_type).direction==='increase'?'증대':'감축'} 실적</div></div></div>
-      ${monRenderCustTable(r, g)}
+      ${monRenderCustTable(r, g, ev)}
     </div>`;
     monStartLiveTimer((ev.remainingMinutes || 0) * 60);
     return;
@@ -623,16 +670,18 @@ function monRenderRightPane(ev){
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
         <div style="padding:10px 12px;background:var(--bg);border-radius:6px;">
-          <div style="font-size:10px;color:var(--text-hint);">지시용량</div>
-          <div style="font-size:17px;font-weight:700;color:var(--text);margin-top:2px;">${r.ordered.toLocaleString()} <span style="font-size:11px;font-weight:500;color:var(--text-hint);">kW</span></div>
+          <div style="font-size:10px;color:var(--text-hint);">${inc?'계획 증대량':'지시용량'}</div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-top:2px;">${r.ordered!=null ? `${r.ordered.toLocaleString()} <span style="font-size:11px;font-weight:500;color:var(--text-hint);">kW</span>` : '<span style="color:var(--text-hint);">—</span>'}</div>
+          ${realtime?'<div style="font-size:10px;color:var(--text-hint);margin-top:2px;">이행량 기준 없음</div>':''}
         </div>
         <div style="padding:10px 12px;background:var(--bg);border-radius:6px;">
-          <div style="font-size:10px;color:var(--text-hint);">현재 실적</div>
-          <div style="font-size:17px;font-weight:700;color:${monRateColor(rate)};margin-top:2px;">${r.actual.toLocaleString()} <span style="font-size:11px;font-weight:500;color:var(--text-hint);">kW</span></div>
+          <div style="font-size:10px;color:var(--text-hint);">${inc?'최종 증대량':'최종 실적'}</div>
+          <div style="font-size:17px;font-weight:700;color:${rate!=null?monRateColor(rate):'var(--blue)'};margin-top:2px;">${(r.actual||0).toLocaleString()} <span style="font-size:11px;font-weight:500;color:var(--text-hint);">kW</span></div>
         </div>
-        <div style="padding:10px 12px;background:${rate>=0.9?'var(--green-light)':rate>=0.7?'var(--amber-light)':'var(--red-light)'};border-radius:6px;">
-          <div style="font-size:10px;color:${monRateColor(rate)};">이행률</div>
-          <div style="font-size:17px;font-weight:700;color:${monRateColor(rate)};margin-top:2px;">${Math.round(rate*100)}%</div>
+        <div style="padding:10px 12px;background:${rate==null?'var(--bg)':rate>=0.9?'var(--green-light)':rate>=0.7?'var(--amber-light)':'var(--red-light)'};border-radius:6px;">
+          <div style="font-size:10px;color:${rate!=null?monRateColor(rate):'var(--text-hint)'};">이행률</div>
+          <div style="font-size:17px;font-weight:700;color:${rate!=null?monRateColor(rate):'var(--text-hint)'};margin-top:2px;">${rate!=null?`${Math.round(rate*100)}%`:'—'}</div>
+          ${realtime?'<div style="font-size:10px;color:var(--text-hint);margin-top:2px;">산정 대상 아님</div>':''}
         </div>
       </div>
     </div>
@@ -640,8 +689,8 @@ function monRenderRightPane(ev){
     <div class="mon-section">
       <div class="mon-section-head">
         <div>
-          <div class="mon-section-title">${dispatchTypeMeta(ev.dispatch_type).direction==='increase'?'증대 추이':'감축 추이'}</div>
-          <div class="mon-section-sub">CBL · 실제 사용량 · ${dispatchTypeMeta(ev.dispatch_type).direction==='increase'?'증대 지시선':'감축 지시선'}</div>
+          <div class="mon-section-title">${inc?'증대 추이':'감축 추이'}</div>
+          <div class="mon-section-sub">CBL · 실제 사용량${realtime?'':` · ${inc?'증대 지시선':'감축 지시선'}`}</div>
         </div>
         <div class="view-tab-group">
           <button class="view-tab ${monState.viewMode==='5min'?'active':''}" onclick="monSwitchView('5min')">5분 단위</button>
@@ -651,7 +700,7 @@ function monRenderRightPane(ev){
       <div class="chart-legend">
         <span class="legend-item"><span class="legend-line" style="background:#64748b;"></span>CBL (기준)</span>
         <span class="legend-item"><span class="legend-line" style="background:var(--blue);"></span>실제 사용량</span>
-        <span class="legend-item"><span class="legend-line" style="background:var(--red);"></span>${dispatchTypeMeta(ev.dispatch_type).direction==='increase'?'증대 목표선':'감축 목표선'}</span>
+        ${realtime ? '' : `<span class="legend-item"><span class="legend-line" style="background:var(--red);"></span>${inc?'증대 목표선':'감축 목표선'}</span>`}
       </div>
       ${monRenderChart(r, ev)}
     </div>
@@ -665,7 +714,7 @@ function monRenderRightPane(ev){
 
     <div class="mon-section">
       <div class="mon-section-head"><div><div class="mon-section-title">참여고객 현황</div><div class="mon-section-sub">고객별 실시간 ${dispatchTypeMeta(ev.dispatch_type).direction==='increase'?'증대':'감축'} 실적</div></div></div>
-      ${monRenderCustTable(r, g)}
+      ${monRenderCustTable(r, g, ev)}
     </div>`;
 }
 
@@ -680,9 +729,12 @@ function monRenderChart(r, ev){
   // - VOLUNTARY_INCREASE / REALTIME_INCREASE_REQUEST: CBL 위로 증대
   const dm = dispatchTypeMeta(ev?.dispatch_type);
   const isIncrease = dm.direction === 'increase';
+  // [Phase 17-EZ] 실시간 증대요청: 목표량 없음 → 실측 증대량(actual)으로 CBL 기준 산정, 목표선 미표시
+  const hasTarget = r.ordered!=null && r.ordered>0;
+  const refKw = hasTarget ? r.ordered : (r.actual||0);
   // CBL 기준 산식: 감축은 지시량이 CBL의 약 35%, 증대는 약 25%
-  const cblBase = isIncrease ? (r.ordered/0.25) : (r.ordered/0.35);
-  const rate = (r.actual!=null && r.ordered>0) ? r.actual/r.ordered : 0;
+  const cblBase = isIncrease ? (refKw/0.25) : (refKw/0.35);
+  const rate = hasTarget ? ((r.actual!=null) ? r.actual/r.ordered : 0) : 1;
   // 데이터 생성
   const seed = r.groupId*137 + points;
   const rand = (i)=>{ const s=Math.sin(seed*i+seed)*10000; return s-Math.floor(s); };
@@ -691,12 +743,12 @@ function monRenderChart(r, ev){
     cbl.push(cblBase + Math.sin(i*0.7)*cblBase*0.04 + (rand(i)-0.5)*cblBase*0.03);
     if(i<points/2) actual.push(cbl[i] + (rand(i+10)-0.5)*cblBase*0.03);
     else {
-      const delta = r.ordered * rate;
+      const delta = refKw * rate;
       actual.push(cbl[i] + (isIncrease?1:-1)*delta + (rand(i+20)-0.5)*cblBase*0.04);
     }
   }
-  const target = isIncrease ? (cblBase + r.ordered) : (cblBase - r.ordered);
-  const all = [...cbl, ...actual, target];
+  const target = isIncrease ? (cblBase + refKw) : (cblBase - refKw);
+  const all = hasTarget ? [...cbl, ...actual, target] : [...cbl, ...actual];
   const yMax = Math.max(...all)*1.08, yMin = Math.min(...all)*0.88;
   const x = i => P.l + (i/(points-1))*innerW;
   const y = v => P.t + innerH - ((v-yMin)/(yMax-yMin))*innerH;
@@ -711,8 +763,8 @@ function monRenderChart(r, ev){
     <text x="${eventBgX + eventBgW/2}" y="${P.t+10}" font-size="9" fill="var(--red)" text-anchor="middle" font-weight="600">${eventLabel}</text>
     ${yTicks.map(t=>`<line x1="${P.l}" y1="${t.y}" x2="${W-P.r}" y2="${t.y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,3"/><text x="${P.l-5}" y="${t.y+3}" font-size="9" fill="var(--text-hint)" text-anchor="end">${t.label}</text>`).join('')}
     ${xLabels.map((lb,i)=>{ const xpos=P.l+(i/(xLabels.length-1))*innerW; return `<text x="${xpos}" y="${H-8}" font-size="9" fill="var(--text-hint)" text-anchor="middle">${lb}</text>`; }).join('')}
-    <line x1="${P.l}" y1="${y(target)}" x2="${W-P.r}" y2="${y(target)}" stroke="var(--red)" stroke-width="1.5" stroke-dasharray="4,3"/>
-    <text x="${W-P.r-50}" y="${y(target)-3}" font-size="9" fill="var(--red)" font-weight="600">${targetLabel}</text>
+    ${hasTarget ? `<line x1="${P.l}" y1="${y(target)}" x2="${W-P.r}" y2="${y(target)}" stroke="var(--red)" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <text x="${W-P.r-50}" y="${y(target)-3}" font-size="9" fill="var(--red)" font-weight="600">${targetLabel}</text>` : ''}
     <path d="${pathStr(cbl)}" fill="none" stroke="#64748b" stroke-width="1.5"/>
     <path d="${pathStr(actual)}" fill="none" stroke="var(--blue)" stroke-width="2"/>
   </svg>`;
@@ -761,27 +813,44 @@ function monRenderHeatmap(r, g){
   </div>`;
 }
 
-function monRenderCustTable(r, g){
+function monRenderCustTable(r, g, ev){
   const custIds = g?.customerIds||[];
   if(!custIds.length) return '<div class="empty" style="padding:20px;">참여고객이 없습니다.</div>';
-  const baseRate = r.actual/r.ordered;
+  const realtime = ev ? monIsRealtimeIncrease(ev) : (r.ordered==null);
+  const inc = ev ? monIsIncrease(ev) : false;
+  const baseRate = realtime ? 1 : monResRate(r) ?? 0;
   const seed = r.groupId*137;
   const rand = i=>{ const s=Math.sin(seed*i+3)*10000; return s-Math.floor(s); };
   // 고객별 지시용량/원시 변동률을 먼저 계산한 뒤,
   // 실적 합이 그룹 r.actual과 일치하도록 스케일 팩터 적용 (회계 원칙: 그룹 실적 = 고객 실적 합)
-  const rows = custIds.map((cid,i)=>{
-    const c = custById(cid); if(!c) return null;
-    const ordered = c.reduction||100;
+  // 고객별 지시량은 고객 계약 감축량(c.reduction) 비율로 자원 지시량(r.ordered)을 안분
+  // → 고객 지시 합 = 자원 지시량 (참여고객 1명이면 자원 지시량 그대로)
+  const custList = custIds.map(cid=>custById(cid)).filter(Boolean);
+  const weightSum = custList.reduce((s,c)=>s + (c.reduction||100), 0);
+  const rows = custList.map((c,i)=>{
+    const weight = c.reduction||100;
+    const ordered = (r.ordered!=null && r.ordered>0 && weightSum>0) ? Math.round(r.ordered * weight / weightSum) : weight;
     const rawV = Math.max(0.3, Math.min(1.0, baseRate + (rand(i)-0.5)*0.2));
     return {c, ordered, rawV};
-  }).filter(Boolean);
+  });
   const rawActualSum = rows.reduce((s,x)=>s + x.ordered*x.rawV, 0);
-  const scale = rawActualSum>0 ? (r.actual / rawActualSum) : 1;
+  const scale = rawActualSum>0 ? ((r.actual||0) / rawActualSum) : 1;
+  const ordHead = realtime ? '목표(kW)' : inc ? '계획(kW)' : '지시(kW)';
+  const actHead = inc ? '증대(kW)' : '실적(kW)';
   return `<div class="cust-head">
-      <span>고객명</span><span style="text-align:right;">지시(kW)</span><span style="text-align:right;">실적(kW)</span><span style="text-align:center;">이행률</span>
+      <span>고객명</span><span style="text-align:right;">${ordHead}</span><span style="text-align:right;">${actHead}</span><span style="text-align:center;">이행률</span>
     </div>
     ${rows.map(({c,ordered,rawV})=>{
       const actual = Math.round(ordered * rawV * scale);
+      if(realtime){
+        // 실시간 증대요청: 고객별 목표·이행률 없음 → "—", 실측 증대량만 표시
+        return `<div class="cust-row">
+          <span><div style="font-weight:600;color:var(--navy);">${c.name}</div><div style="font-size:10px;color:var(--text-hint);margin-top:1px;">${c.recno}</div></span>
+          <span style="text-align:right;font-weight:500;color:var(--text-hint);">—</span>
+          <span style="text-align:right;font-weight:500;color:var(--blue);">${actual.toLocaleString()}</span>
+          <span style="text-align:center;color:var(--text-hint);font-size:11px;" title="실시간 증대요청 · 이행량 기준 없음">—</span>
+        </div>`;
+      }
       const v = ordered>0 ? actual/ordered : 0;
       return `<div class="cust-row">
         <span><div style="font-weight:600;color:var(--navy);">${c.name}</div><div style="font-size:10px;color:var(--text-hint);margin-top:1px;">${c.recno}</div></span>

@@ -76,7 +76,7 @@ const store = {
     {id:'C022',name:'포스코에너지',     ceo:'정기섭',tel:'02-3457-1114',addr:'인천 연수구',  recno:'DR-2024-0401',date:'2024-11-01',power:700, kepco:'40022022',drType:'주파수DR',     status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'680kW',reduction:350,rrmseVal:'7%',infraS:'완료'},
     {id:'C023',name:'GS파워',           ceo:'허연수',tel:'031-400-1114',addr:'경기 안산시',  recno:'DR-2024-0402',date:'2024-11-03',power:500, kepco:'40023023',drType:'주파수DR',     status:'계약완료',dataStatus:'수집완료',inflow:'영업',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'485kW',reduction:250,rrmseVal:'8%',infraS:'완료'},
     {id:'C024',name:'카카오모빌리티',   ceo:'류긍선',tel:'1544-5005',addr:'경기 성남시',  recno:'DR-2024-0501',date:'2024-11-25',power:1200, kepco:'50024024',drType:'플러스DR',     status:'계약완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'1150kW',reduction:800,rrmseVal:'6%',infraS:'완료'},
-    {id:'C025',name:'쏘카',             ceo:'박재욱',tel:'1588-0000',addr:'서울 성동구',  recno:'DR-2024-0502',date:'2024-11-27',power:1100, kepco:'50025025',drType:'플러스DR',     status:'계약완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'1050kW',reduction:700,rrmseVal:'7%',infraS:'완료'},
+    {id:'C025',name:'쏘카 제주터미널',   ceo:'박재욱',tel:'1588-0000',addr:'제주 제주시',  recno:'DR-2024-0502',date:'2024-11-27',power:950,  kepco:'50025025',drType:'플러스DR',     status:'계약완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'High 5 of 10',cblAvg:'1050kW',reduction:700,rrmseVal:'7%',infraS:'완료'},
     // 검증완료 - 계약전환 대기 [Phase 17-AU] 시연용 시드 보강 — 사업장 1:N + DR유형/유입경로 다양화
     {id:'C100',name:'(주)태양광에너텍', ceo:'윤서연',tel:'061-567-8901',addr:'전남 여수시',  recno:'DR-2026-0011',date:'2026-04-10',power:380, kepco:'11223344',drType:'국민DR',       status:'검증완료',dataStatus:'수집완료',inflow:'사이트',steps:[2,2,2,2,2,2],extS:'통과',rrmseS:'완료',cblS:'완료',cblType:'동일요일 평균',cblAvg:'352kW',reduction:76,rrmseVal:'7%',infraS:'완료',
      bizno:'612-81-11223', bizcat:'전기·가스', biztype:'발전사업',
@@ -208,7 +208,13 @@ const store = {
     { id:12, name:'플러스DR 서울', type:'플러스DR', typeKey:'plus', status:'active', date:'2024-12-01',
       reg:{region:'육지권', landSubRegion:['서울','인천','경기'], increaseCapacity:1800},
       file:{name:'수요반응자원_등록신청서_플러스DR_서울.pdf', size:678234, uploadedAt:'2024-12-01 11:00'},
-      customerIds:['C024','C025'],
+      customerIds:['C024'],
+      trial:{required:false, status:'NOT_REQUIRED', history:[]}},
+    // [Phase 17-EZ] 제주권 플러스DR — 참여고객 1개(쏘카 제주터미널). 실시간 증대·계획증대 화면 구분 시연용
+    { id:13, name:'플러스DR 제주', type:'플러스DR', typeKey:'plus', status:'active', date:'2025-12-01',
+      reg:{region:'제주권', increaseCapacity:950},
+      file:{name:'수요반응자원_등록신청서_플러스DR_제주.pdf', size:654120, uploadedAt:'2025-12-01 10:30'},
+      customerIds:['C025'],
       trial:{required:false, status:'NOT_REQUIRED', history:[]}},
   ],
 
@@ -349,6 +355,36 @@ const store = {
       },
     ],
     plus: [
+      // [Phase 17-EZ] 제주 플러스DR 계획증대 (LIVE) — 전일 입찰·낙찰된 계획량 대비 이행률 평가
+      {
+        id:'EVP-PLAN-20260420-01',
+        dispatch_type:'VOLUNTARY_INCREASE',
+        category:'operation',
+        date:'2026-04-20', timeRange:'13:00~15:00',
+        label:'2026-04-20 13:00~15:00 · 플러스DR 계획증대',
+        source:'KPX', live:true, remainingMinutes:38,
+        bid:{
+          submittedAt:'2026-04-19 09:40', submittedBy:'현진영',
+          bidVolume:600, bidProgram:'PLUS_PLANNED',
+          awardedAt:'2026-04-19 17:00', awardedVolume:600, rejectionReason:''
+        },
+        resources:[
+          {groupId:13, ordered:600, actual:540, status:'NORMAL'},
+        ]
+      },
+      // [Phase 17-EZ] 제주 플러스DR 실시간 증대요청 (LIVE) — 목표량(이행량 기준) 없음 → ordered:null
+      //   이행률·달성률은 산정 대상이 아니라 화면에 "—"로 표기. 실제 증대량(CBL 대비 증가분)만 표시
+      {
+        id:'EVP-RT-20260420-01',
+        dispatch_type:'REALTIME_INCREASE_REQUEST',
+        category:'operation',
+        date:'2026-04-20', timeRange:'14:00~15:00',
+        label:'2026-04-20 14:00~15:00 · 플러스DR 실시간 증대',
+        source:'KPX', live:true, remainingMinutes:38,
+        resources:[
+          {groupId:13, ordered:null, actual:410, status:'NORMAL'},
+        ]
+      },
       // 플러스DR 계획 이벤트 (VOLUNTARY_INCREASE)
       {
         id:'EVP-PLAN-20260421-01',

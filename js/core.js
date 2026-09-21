@@ -78,6 +78,7 @@ function showFullAuditLogs(objectType, objectId){
     8:  {col:'FAILED',  lastMin:62, failed:2, rate:0.65, trend:'down', count:7,  last:0.58},
     10: {col:'NORMAL',  lastMin:1,  failed:0, rate:0.96, trend:'up',   count:15, last:0.98},
     12: {col:'NORMAL',  lastMin:6,  failed:0, rate:0.91, trend:'up',   count:11, last:0.94},
+    13: {col:'NORMAL',  lastMin:2,  failed:0, rate:0.90, trend:'flat', count:4,  last:0.90},  // [Phase 17-EZ] 플러스DR 제주
   };
   const pastLabel = (daysAgo, hour) => {
     const d = new Date(Date.now() - daysAgo*86400000);

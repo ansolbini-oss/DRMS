@@ -205,14 +205,16 @@ function dashRenderEventList(){
   const show = all.slice(0, 4);
   if(!show.length){ list.innerHTML = '<div class="empty" style="padding:30px 20px;">최근 이벤트가 없습니다.</div>'; return; }
   list.innerHTML = show.map(e=>{
-    const totalOrd = e.resources.reduce((s,r)=>s+r.ordered, 0);
+    // [Phase 17-EZ] 실시간 증대요청은 목표량(ordered) 없음 → 이행률 "-"
+    const noTarget = e.dispatch_type==='REALTIME_INCREASE_REQUEST';
+    const totalOrd = e.resources.reduce((s,r)=>s+(r.ordered||0), 0);
     const totalAct = e.resources.reduce((s,r)=>s+(r.actual||0), 0);
-    const rate = totalOrd>0 ? totalAct/totalOrd : 0;
+    const rate = (!noTarget && totalOrd>0) ? totalAct/totalOrd : null;
     const cls = e.live?'live':e.scheduled?'scheduled':'done';
     const tagHtml = e.live ? '<span class="badge badge-progress" style="font-size:10px;">진행중</span>' :
                     e.scheduled ? '<span class="badge badge-pending" style="font-size:10px;">예정</span>' :
                     '<span class="badge badge-done" style="font-size:10px;">완료</span>';
-    const rateHtml = e.scheduled ? '-' : `<span style="color:${monRateColor(rate)};font-weight:700;">${Math.round(rate*100)}%</span>`;
+    const rateHtml = (e.scheduled || rate==null) ? '-' : `<span style="color:${monRateColor(rate)};font-weight:700;">${Math.round(rate*100)}%</span>`;
     // dispatch_type 기반 라벨 (단일 원천)
     const dm = dispatchTypeMeta(e.dispatch_type);
     return `<div class="ev-row ${cls}" onclick="navigate('monitoring');setTimeout(()=>{monState.eventType='${e._monTab}';monState.currentEventId='${e.id}';monState.selectedGroupId=null;monRender();},100);">
