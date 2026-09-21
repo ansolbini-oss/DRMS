@@ -1347,7 +1347,7 @@ function dmRenderDetail(g, ev, state=dmState, bodyId='dm-body', scope='dm'){
    [Phase 17-FA] 이벤트 생성 — 낙찰 결과(계획량) 수기 등록
    - 대상: 감축 → 자발적감축(VOLUNTARY_REDUCTION) / 증대 → 계획증대(VOLUNTARY_INCREASE)
    - 의무감축·실시간 증대요청·등록시험은 KPX 발령 자동 수신 → 수기 생성 대상 아님
-   - 입력: 거래일 · 대상 자원 · 거래시간(1h)별 계획량(kW) · KPX 통지 확인 시각 · KPX 이벤트ID(선택) · 메모(선택)
+   - 입력: 거래일 · 대상 자원 · 거래시간(1h)별 계획량(kW) · KPX 통지 확인 시각  (KPX 이벤트ID·메모는 2026-09-21 PM 지시로 제외)
    - 저장: 계획량 > 0 인 연속 시간대를 묶어 이벤트 1건씩 생성(끊어지면 분리). 지시용량 = 시간대 평균 kW
    - 근거: 규칙 제12.7.3.1조(09~18시, 시간당 0.01MWh 이상) · 제12.7.3.8조(거래시간별 증대계획량 배분)
            제12.7.4.1조 ①(계획량 있는 시간대엔 실시간 증대요청 없음) · MONITOR-001 3-7(등록과 상태전환 분리)
@@ -1416,16 +1416,6 @@ function monOpenCreateEvent(){
           </div>`).join('')}
       </div>
       <div style="font-size:11px;color:var(--text-hint);margin-top:6px;" id="mon-create-hour-hint"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;">
-      <div class="form-row">
-        <label class="form-label">KPX 이벤트ID <span class="hint">선택 · 화면 비노출, 대사용</span></label>
-        <input class="form-input" id="mon-create-kpxid" placeholder="KPX 전력거래시스템 표기 ID">
-      </div>
-      <div class="form-row">
-        <label class="form-label">메모 <span class="hint">선택</span></label>
-        <input class="form-input" id="mon-create-memo" placeholder="예: 18:05 통지 화면 확인">
-      </div>
     </div>`;
   openCommonModal('이벤트 생성', '낙찰 결과(계획량)를 등록해 대기 이벤트를 만듭니다. 의무감축·실시간 증대·시험은 KPX 발령으로 자동 생성됩니다.', body, [
     {label:'취소', cls:'btn-secondary', onclick:"closeModal('commonModal')"},
@@ -1481,8 +1471,6 @@ function monCreateSubmit(){
   const groupId = parseInt($('mon-create-group')?.value, 10);
   const g = groupById(groupId);
   const noticeRaw = $('mon-create-notice')?.value || '';
-  const kpxEventId = ($('mon-create-kpxid')?.value || '').trim();
-  const memo = ($('mon-create-memo')?.value || '').trim();
   if(!date){ showToast('거래일을 입력하세요.'); return; }
   if(date < todayStr()){ showToast('거래일은 오늘 이후여야 합니다.'); return; }
   if(!g){ showToast('대상 자원을 선택하세요.'); return; }
@@ -1529,7 +1517,7 @@ function monCreateSubmit(){
       date, timeRange,
       label:`${date} ${timeRange} · 플러스DR ${meta.label}`.replace('플러스DR 자발적감축','자발적감축'),
       source:'KPX 낙찰 통지', live:false, scheduled:true,
-      manual:true, kpxNoticeAt: noticeAt, kpxEventId: kpxEventId || null, memo: memo || null,
+      manual:true, kpxNoticeAt: noticeAt,
       createdBy:'현진영', createdAt: nowStr(),
       hourlyPlan: run.map(p=>({hour:p.hour, kw:p.kw})),
       resources:[{groupId, ordered: avgKw, actual:null, status:'SCHEDULED'}],
