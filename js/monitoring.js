@@ -331,6 +331,12 @@ function monRender(){
     if(counterpart){
       metaHtml += ` <span style="margin-left:8px;font-size:11px;color:var(--text-hint);">· 병행: ${eventDisplayName(counterpart)}</span>`;
     }
+    // [Phase 17-FA] 수기 등록(낙찰 결과) 이벤트 — 거래시간별 계획량·KPX 통지 확인 시각 표기
+    if(Array.isArray(ev.hourlyPlan) && ev.hourlyPlan.length){
+      const planTxt = ev.hourlyPlan.map(p=>`${monCreateHourLabel(p.hour)} ${p.kw.toLocaleString()}`).join(' / ');
+      metaHtml += ` <span style="margin-left:8px;font-size:11px;color:var(--text-hint);" title="KPX 낙찰 통지 기준 거래시간별 계획량 (kW)">· 시간대별 계획: ${planTxt} kW</span>`;
+      if(ev.kpxNoticeAt) metaHtml += ` <span style="margin-left:8px;font-size:11px;color:var(--text-hint);">· KPX 통지 확인 ${ev.kpxNoticeAt}</span>`;
+    }
     // 완료된 운영 이벤트 → 운영 리포트 진입점 (시니어 기획 판단: 감축 종료 후 바로 정산 업무로 이어지는 동선)
     if(!ev.live && !ev.scheduled && ev.category==='operation' && ev.settlement){
       const stlMap = {pending:'정산요청 대기', requested:'정산요청 완료', received:'수금 완료'};
@@ -1336,3 +1342,209 @@ function dmRenderDetail(g, ev, state=dmState, bodyId='dm-body', scope='dm'){
 /* ════════════════════════════════════════════════════════════
    ★ PAGE: 대시보드
 ════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════════
+   [Phase 17-FA] 이벤트 생성 — 낙찰 결과(계획량) 수기 등록
+   - 대상: 감축 → 자발적감축(VOLUNTARY_REDUCTION) / 증대 → 계획증대(VOLUNTARY_INCREASE)
+   - 의무감축·실시간 증대요청·등록시험은 KPX 발령 자동 수신 → 수기 생성 대상 아님
+   - 입력: 거래일 · 대상 자원 · 거래시간(1h)별 계획량(kW) · KPX 통지 확인 시각 · KPX 이벤트ID(선택) · 메모(선택)
+   - 저장: 계획량 > 0 인 연속 시간대를 묶어 이벤트 1건씩 생성(끊어지면 분리). 지시용량 = 시간대 평균 kW
+   - 근거: 규칙 제12.7.3.1조(09~18시, 시간당 0.01MWh 이상) · 제12.7.3.8조(거래시간별 증대계획량 배분)
+           제12.7.4.1조 ①(계획량 있는 시간대엔 실시간 증대요청 없음) · MONITOR-001 3-7(등록과 상태전환 분리)
+════════════════════════════════════════════════════════════ */
+const MON_CREATE_HOURS = [9,10,11,12,13,14,15,16,17];   // 거래시간 시작 시각 (09~10시 … 17~18시)
+const MON_CREATE_META = {
+  reduce:   { dispatch:'VOLUNTARY_REDUCTION', prefix:'EVV', label:'자발적감축', bucket:'reduction', typeKeys:['standard','jeju','national'], minKw:0,  unitWord:'감축계획량' },
+  increase: { dispatch:'VOLUNTARY_INCREASE',  prefix:'EVP', label:'계획증대',   bucket:'plus',      typeKeys:['plus'],                       minKw:10, unitWord:'증대계획량' },
+};
+let monCreateDir = 'increase';
+
+function monCreateHourLabel(h){ return `${String(h).padStart(2,'0')}~${String(h+1).padStart(2,'0')}시`; }
+function monCreateTomorrowStr(){
+  const d = new Date(); d.setDate(d.getDate()+1);
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function monCreateGroupOptions(dir){
+  const meta = MON_CREATE_META[dir];
+  const groups = store.groups.filter(g=>g.status==='active' && meta.typeKeys.includes(g.typeKey));
+  if(!groups.length) return `<option value="">활성 상태의 대상 자원이 없습니다</option>`;
+  return groups.map(g=>{
+    const region = g.reg?.region ? ` · ${g.reg.region}` : '';
+    return `<option value="${g.id}">${g.name} · ${g.type}${region} · 참여고객 ${(g.customerIds||[]).length}</option>`;
+  }).join('');
+}
+function monOpenCreateEvent(){
+  monCreateDir = monState.eventType==='plus' ? 'increase' : 'reduce';
+  const body = `
+    <div class="form-row">
+      <label class="form-label">방향 <span class="req">*</span></label>
+      <div class="event-tab-group" id="mon-create-dir">
+        <button class="event-tab ${monCreateDir==='reduce'?'active':''}" onclick="monCreateSetDirection('reduce')">감축</button>
+        <button class="event-tab ${monCreateDir==='increase'?'active':''}" onclick="monCreateSetDirection('increase')">증대</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:6px;" id="mon-create-type-hint"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;">
+      <div class="form-row">
+        <label class="form-label">거래일 <span class="req">*</span></label>
+        <input class="form-input" id="mon-create-date" type="date" value="${monCreateTomorrowStr()}" min="${todayStr()}">
+      </div>
+      <div class="form-row">
+        <label class="form-label">KPX 통지 확인 시각 <span class="req">*</span></label>
+        <input class="form-input" id="mon-create-notice" type="datetime-local" value="${new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)}">
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">대상 자원 <span class="req">*</span></label>
+      <select class="form-select" id="mon-create-group">${monCreateGroupOptions(monCreateDir)}</select>
+    </div>
+    <div class="form-row">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+        <span>거래시간별 <span id="mon-create-unit-word">${MON_CREATE_META[monCreateDir].unitWord}</span> (kW) <span class="req">*</span></span>
+        <span style="margin-left:auto;display:inline-flex;gap:6px;align-items:center;font-weight:400;">
+          <input class="form-input" id="mon-create-fill" type="number" min="0" step="10" placeholder="같은 값" style="width:90px;height:28px;font-size:11px;">
+          <button class="btn btn-secondary btn-sm" type="button" onclick="monCreateFillAll()">전 시간대 적용</button>
+          <button class="btn btn-secondary btn-sm" type="button" onclick="monCreateClearAll()">초기화</button>
+        </span>
+      </label>
+      <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:6px;">
+        ${MON_CREATE_HOURS.map(h=>`
+          <div style="text-align:center;">
+            <div style="font-size:10px;color:var(--text-hint);margin-bottom:4px;">${monCreateHourLabel(h)}</div>
+            <input class="form-input mon-create-hour" data-hour="${h}" type="number" min="0" step="10" value="0" style="height:30px;padding:0 6px;font-size:12px;text-align:right;">
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text-hint);margin-top:6px;" id="mon-create-hour-hint"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px;">
+      <div class="form-row">
+        <label class="form-label">KPX 이벤트ID <span class="hint">선택 · 화면 비노출, 대사용</span></label>
+        <input class="form-input" id="mon-create-kpxid" placeholder="KPX 전력거래시스템 표기 ID">
+      </div>
+      <div class="form-row">
+        <label class="form-label">메모 <span class="hint">선택</span></label>
+        <input class="form-input" id="mon-create-memo" placeholder="예: 18:05 통지 화면 확인">
+      </div>
+    </div>`;
+  openCommonModal('이벤트 생성', '낙찰 결과(계획량)를 등록해 대기 이벤트를 만듭니다. 의무감축·실시간 증대·시험은 KPX 발령으로 자동 생성됩니다.', body, [
+    {label:'취소', cls:'btn-secondary', onclick:"closeModal('commonModal')"},
+    {label:'등록', cls:'btn-primary', onclick:'monCreateSubmit()'},
+  ]);
+  const modal = $('commonModal')?.querySelector('.modal');
+  if(modal) modal.style.maxWidth = '760px';
+  monCreateSetDirection(monCreateDir);
+}
+function monCreateSetDirection(dir){
+  monCreateDir = dir;
+  const meta = MON_CREATE_META[dir];
+  $$('#mon-create-dir .event-tab').forEach((el,i)=>el.classList.toggle('active', (i===0&&dir==='reduce')||(i===1&&dir==='increase')));
+  const sel = $('mon-create-group'); if(sel) sel.innerHTML = monCreateGroupOptions(dir);
+  const uw = $('mon-create-unit-word'); if(uw) uw.textContent = meta.unitWord;
+  const th = $('mon-create-type-hint');
+  if(th) th.innerHTML = dir==='increase'
+    ? `유형 <b>플러스DR 계획증대</b> · 대상 자원은 활성 플러스DR · 09~18시 거래시간만 · 시간당 10kW(0.01MWh) 이상 (규칙 제12.7.3.1조)`
+    : `유형 <b>자발적감축</b> · 대상 자원은 활성 표준·중소형·제주·국민DR · 시간대 요건은 확인 필요(제12.4.2절 미확인)`;
+  const hh = $('mon-create-hour-hint');
+  if(hh) hh.textContent = '0은 미낙찰. 값이 있는 연속 시간대를 묶어 이벤트 1건으로 만들고, 끊어지면 이벤트를 나눕니다. 지시용량은 시간대 평균 kW로 표시합니다.';
+}
+function monCreateFillAll(){
+  const v = Number($('mon-create-fill')?.value || 0);
+  $$('.mon-create-hour').forEach(inp=>inp.value = v);
+}
+function monCreateClearAll(){ $$('.mon-create-hour').forEach(inp=>inp.value = 0); }
+
+function monTimeRangeToMinutes(tr){
+  const m = String(tr||'').match(/(\d{1,2}):(\d{2})~(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  return {start: Number(m[1])*60+Number(m[2]), end: Number(m[3])*60+Number(m[4])};
+}
+function monFindOverlaps(groupId, date, startMin, endMin){
+  const all = [...(store.events?.reduction||[]), ...(store.events?.plus||[])];
+  return all.filter(ev=>{
+    if(ev.date!==date) return false;
+    if(!(ev.resources||[]).some(r=>r.groupId===groupId)) return false;
+    const t = monTimeRangeToMinutes(ev.timeRange); if(!t) return false;
+    return t.start < endMin && startMin < t.end;
+  });
+}
+function monNextEventId(prefix, ymd){
+  const re = new RegExp(`^${prefix}-${ymd}-(\\d{2})$`);
+  const all = [...(store.events?.reduction||[]), ...(store.events?.plus||[])];
+  const used = all.map(e=>(e.id.match(re)||[])[1]).filter(Boolean).map(Number);
+  const n = (used.length ? Math.max(...used) : 0) + 1;
+  return `${prefix}-${ymd}-${String(n).padStart(2,'0')}`;
+}
+function monCreateSubmit(){
+  const meta = MON_CREATE_META[monCreateDir];
+  const date = $('mon-create-date')?.value || '';
+  const groupId = parseInt($('mon-create-group')?.value, 10);
+  const g = groupById(groupId);
+  const noticeRaw = $('mon-create-notice')?.value || '';
+  const kpxEventId = ($('mon-create-kpxid')?.value || '').trim();
+  const memo = ($('mon-create-memo')?.value || '').trim();
+  if(!date){ showToast('거래일을 입력하세요.'); return; }
+  if(date < todayStr()){ showToast('거래일은 오늘 이후여야 합니다.'); return; }
+  if(!g){ showToast('대상 자원을 선택하세요.'); return; }
+  if(!noticeRaw){ showToast('KPX 통지 확인 시각을 입력하세요.'); return; }
+  // 시간대별 계획량 수집
+  const plan = MON_CREATE_HOURS.map(h=>{
+    const inp = document.querySelector(`.mon-create-hour[data-hour="${h}"]`);
+    return {hour:h, kw: Math.max(0, Number(inp?.value || 0))};
+  });
+  const active = plan.filter(p=>p.kw>0);
+  if(!active.length){ showToast('계획량이 0보다 큰 시간대가 하나 이상 필요합니다.'); return; }
+  if(meta.minKw && active.some(p=>p.kw < meta.minKw)){
+    showToast(`계획증대는 시간당 ${meta.minKw}kW(0.01MWh) 이상이어야 합니다 (규칙 제12.7.3.1조 2호).`); return;
+  }
+  // 연속 시간대 묶기
+  const runs = [];
+  active.forEach(p=>{
+    const last = runs[runs.length-1];
+    if(last && last[last.length-1].hour === p.hour-1) last.push(p);
+    else runs.push([p]);
+  });
+  // 중복·충돌 검증 (저장 전 전체 검사 → 하나라도 걸리면 전부 중단)
+  for(const run of runs){
+    const startMin = run[0].hour*60, endMin = (run[run.length-1].hour+1)*60;
+    const overlaps = monFindOverlaps(groupId, date, startMin, endMin);
+    const rt = overlaps.find(ev=>ev.dispatch_type==='REALTIME_INCREASE_REQUEST');
+    if(monCreateDir==='increase' && rt){
+      showToast(`${rt.timeRange} 실시간 증대요청(${rt.id})과 겹칩니다. 계획량이 있는 시간대엔 실시간 요청이 오지 않습니다 (규칙 제12.7.4.1조 ①).`); return;
+    }
+    const dup = overlaps.find(ev=>ev.dispatch_type===meta.dispatch);
+    if(dup){ showToast(`같은 자원·거래일·시간대에 이미 ${meta.label} 이벤트가 있습니다 (${dup.id} ${dup.timeRange}).`); return; }
+  }
+  // 이벤트 생성
+  const ymd = date.replaceAll('-','');
+  const noticeAt = noticeRaw.replace('T',' ');
+  const created = [];
+  runs.forEach(run=>{
+    const id = monNextEventId(meta.prefix, ymd);
+    const startH = run[0].hour, endH = run[run.length-1].hour+1;
+    const timeRange = `${String(startH).padStart(2,'0')}:00~${String(endH).padStart(2,'0')}:00`;
+    const avgKw = Math.round(run.reduce((s,p)=>s+p.kw,0) / run.length);
+    const ev = {
+      id, dispatch_type: meta.dispatch, category:'operation',
+      date, timeRange,
+      label:`${date} ${timeRange} · 플러스DR ${meta.label}`.replace('플러스DR 자발적감축','자발적감축'),
+      source:'KPX 낙찰 통지', live:false, scheduled:true,
+      manual:true, kpxNoticeAt: noticeAt, kpxEventId: kpxEventId || null, memo: memo || null,
+      createdBy:'현진영', createdAt: nowStr(),
+      hourlyPlan: run.map(p=>({hour:p.hour, kw:p.kw})),
+      resources:[{groupId, ordered: avgKw, actual:null, status:'SCHEDULED'}],
+    };
+    store.events[meta.bucket].unshift(ev);
+    created.push(ev);
+    if(typeof logAudit==='function') logAudit({objectType:'event', objectId:id, action:'created', title:`${meta.label} 이벤트 생성`, desc:`${g.name} · ${date} ${timeRange} · 평균 ${avgKw.toLocaleString()}kW (${run.map(p=>`${monCreateHourLabel(p.hour)} ${p.kw}`).join(', ')}) · KPX 통지 ${noticeAt}`, actor:'현진영', tone:'done'});
+  });
+  closeModal('commonModal');
+  monState.eventType = meta.bucket;
+  monState.status = 'all'; monState.category = 'all';
+  monState.currentEventId = created[0].id; monState.selectedGroupId = groupId;
+  monRender();
+  if(typeof refreshSidebarBadges==='function') refreshSidebarBadges();
+  showToast(created.length===1
+    ? `${created[0].id} ${meta.label} 이벤트가 대기 상태로 생성되었습니다.`
+    : `${meta.label} 이벤트 ${created.length}건이 생성되었습니다 (시간대가 끊어져 분리).`);
+}

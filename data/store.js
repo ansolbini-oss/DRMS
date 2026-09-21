@@ -355,19 +355,18 @@ const store = {
       },
     ],
     plus: [
-      // [Phase 17-EZ] 제주 플러스DR 계획증대 (LIVE) — 전일 입찰·낙찰된 계획량 대비 이행률 평가
+      // [Phase 17-EZ→FA] 제주 플러스DR 계획증대 (당일 완료) — 전일 낙찰 계획량 대비 이행률 평가
+      //   규칙 제12.7.4.1조 ①: 증대계획량이 있는 거래시간에는 실시간 증대요청이 오지 않는다
+      //   → 계획증대(10~12시)와 실시간 증대(14~15시)는 같은 자원이라도 시간대가 겹치지 않게 시드 구성
       {
-        id:'EVP-PLAN-20260420-01',
+        id:'EVP-20260420-01',
         dispatch_type:'VOLUNTARY_INCREASE',
         category:'operation',
-        date:'2026-04-20', timeRange:'13:00~15:00',
-        label:'2026-04-20 13:00~15:00 · 플러스DR 계획증대',
-        source:'KPX', live:true, remainingMinutes:38,
-        bid:{
-          submittedAt:'2026-04-19 09:40', submittedBy:'현진영',
-          bidVolume:600, bidProgram:'PLUS_PLANNED',
-          awardedAt:'2026-04-19 17:00', awardedVolume:600, rejectionReason:''
-        },
+        date:'2026-04-20', timeRange:'10:00~12:00',
+        label:'2026-04-20 10:00~12:00 · 플러스DR 계획증대',
+        source:'KPX 낙찰 통지', live:false,
+        manual:true, kpxNoticeAt:'2026-04-19 18:05', createdBy:'현진영', createdAt:'2026-04-19 18:20',
+        hourlyPlan:[{hour:10, kw:600},{hour:11, kw:600}],   // 거래시간별 증대계획량 (kW, 1h)
         resources:[
           {groupId:13, ordered:600, actual:540, status:'NORMAL'},
         ]
