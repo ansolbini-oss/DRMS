@@ -3038,3 +3038,7 @@ aside.sidebar .sidebar-badge,
     grid-template-columns:1fr !important;
   }
 }
+
+/* [Phase 17-FA] 이벤트 생성 — 거래시간별 계획량 입력칸: 스핀 버튼 제거(3자리 값 잘림 방지) */
+.mon-create-hour::-webkit-inner-spin-button,.mon-create-hour::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.mon-create-hour{-moz-appearance:textfield;appearance:textfield;}

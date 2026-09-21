@@ -1432,7 +1432,7 @@ function monOpenCreateEvent(){
     {label:'등록', cls:'btn-primary', onclick:'monCreateSubmit()'},
   ]);
   const modal = $('commonModal')?.querySelector('.modal');
-  if(modal) modal.style.maxWidth = '760px';
+  if(modal) modal.style.maxWidth = '840px';
   monCreateSetDirection(monCreateDir);
 }
 function monCreateSetDirection(dir){
