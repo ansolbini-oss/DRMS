@@ -956,7 +956,7 @@ function rmTabTrialHtml(g){
     // g.status==='active'면 actionCard를 비워둠 — 요약 카드와 이력 테이블로 충분
   }
 
-  // 이력 테이블 — 이벤트 ID 클릭 시 감축 모니터링으로 이동
+  // 이력 테이블 — 운영 이벤트 클릭 시 이행검증(RPT-01)에서 해당 시험 이벤트 상세로 이동
   const historyCard = `<div class="op-card">
     <div class="op-card-title">시험 이력 (${attempts}회)</div>
     ${attempts===0
@@ -980,7 +980,7 @@ function rmTabTrialHtml(g){
           else if(r>=0.80){ verdictLabel='용량 조정'; verdictBadge='badge-pending'; }
           else { verdictLabel='참여 제한'; verdictBadge='badge-fail'; }
           const evIdCell = (h.testEventId && h.testEventId!=='—')
-            ? `<span class="trial-event-link" style="font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline;" onclick="rmGoToMonitoringEvent('${h.testEventId}')" title="감축 모니터링에서 상세 보기">${(()=>{ const tev = (store.events?.reduction||[]).find(e=>e.id===h.testEventId); return tev ? `${eventDisplayName(tev)}<span style="display:block;color:var(--text-hint);font-family:monospace;">${h.testEventId}</span>` : h.testEventId; })()}</span>`
+            ? `<span class="trial-event-link" style="font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline;" onclick="rpOpenEventExternal('${h.testEventId}')" title="이행검증에서 상세 보기">${(()=>{ const tev = (store.events?.reduction||[]).find(e=>e.id===h.testEventId); return tev ? `${eventDisplayName(tev)}<span style="display:block;color:var(--text-hint);font-family:monospace;">${h.testEventId}</span>` : h.testEventId; })()}</span>`
             : `<span class="trial-event-link" style="font-size:10px;color:var(--text-hint);">—</span>`;
           return `<div class="trial-row">
             <span><span class="badge ${isPass?'badge-done':'badge-fail'}" style="font-size:10px;">${isPass?'합격':'불합격'}</span></span>

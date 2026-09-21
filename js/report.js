@@ -31,11 +31,46 @@ function rpSyncRangeAndRender(){
   rpRender();
 }
 
-/* 대상 이벤트 추출 — 완료된 운영 감축 이벤트만 (등록시험·예정 제외) */
+/* 대상 이벤트 추출 — 완료된 운영 감축 이벤트 + 완료된 등록시험 (예정·진행중 제외)
+   등록시험은 이행률 판정만 하고 정산 대상이 아니므로 settlement 없음 → 아래 렌더에서 정산 칼럼은 '정산 대상 아님' 처리 */
 function rpCompletedEvents(){
   return store.events.reduction.filter(e =>
-    !e.live && !e.scheduled && e.category==='operation' && e.settlement
+    !e.live && !e.scheduled && (
+      (e.category==='operation' && e.settlement) ||
+      (e.category==='test' && (e.resources||[]).some(r=>r.actual!=null))
+    )
   );
+}
+function rpIsTest(e){ return e?.category==='test' || e?.dispatch_type==='REGISTRATION_TEST'; }
+function rpDispLabel(e){
+  if(rpIsTest(e)) return '등록시험';
+  return e.dispatch_type==='MANDATORY_REDUCTION' ? '의무감축' : '자발적감축';
+}
+/* 등록시험 이벤트 → 대상 자원의 trial.history 판정 행 */
+function rpTrialVerdict(ev){
+  const g = ev.trialTargetGroupId ? groupById(ev.trialTargetGroupId) : null;
+  const h = (g?.trial?.history||[]).find(x=>x.testEventId===ev.id);
+  if(!h) return null;
+  const r = h.performanceRate;
+  const label = r>=0.97 ? '정상 등록' : r>=0.80 ? '용량 조정' : '참여 제한';
+  const badge = r>=0.97 ? 'badge-done' : r>=0.80 ? 'badge-pending' : 'badge-fail';
+  return {g, h, label, badge};
+}
+
+/* 외부 화면(자원관리 › 등록시험 탭)에서 이벤트 상세 열기
+   기본 기간(최근 3개월) 밖의 과거 시험이면 기간을 이벤트 날짜까지 넓힌 뒤 상세 모달을 띄운다 */
+function rpOpenEventExternal(eventId){
+  const ev = store.events.reduction.find(e=>e.id===eventId);
+  navigate('report');
+  setTimeout(()=>{
+    if(!ev){ showToast(`이벤트 ${eventId} 의 시드 데이터가 없습니다.`); return; }
+    if(rpState.from && ev.date < rpState.from){ rpState.from = ev.date.substring(0,7)+'-01'; if($('rp-from')) $('rp-from').value = rpState.from; }
+    if(rpState.to && ev.date > rpState.to){ rpState.to = ev.date; if($('rp-to')) $('rp-to').value = rpState.to; }
+    rpState.drType = 'all';    if($('rp-type')) $('rp-type').value = 'all';
+    rpState.stlFilter = 'all'; if($('rp-stl'))  $('rp-stl').value  = 'all';
+    rpSwitchTab('events');
+    rpOpenEvent(eventId);
+  }, 120);
 }
 function rpFilteredEvents(){
   const from = $('rp-from')?.value || rpState.from;
@@ -51,7 +86,7 @@ function rpFilteredEvents(){
       });
       if(!hasType) return false;
     }
-    if(rpState.stlFilter!=='all' && e.settlement.status !== rpState.stlFilter) return false;
+    if(rpState.stlFilter!=='all' && (e.settlement?.status||'none') !== rpState.stlFilter) return false;
     return true;
   }).sort((a,b)=> b.date.localeCompare(a.date));
 }
@@ -100,7 +135,7 @@ function rpRender(){
   evs.forEach(e=>{
     const a = rpEventAgg(e);
     totalOrdered += a.ordered; totalActual += a.actual;
-    cnt[e.settlement.status] = (cnt[e.settlement.status]||0) + 1;
+    if(e.settlement) cnt[e.settlement.status] = (cnt[e.settlement.status]||0) + 1;
   });
   $('rp-kpi-events').textContent = evs.length;
   $('rp-kpi-reduction').textContent = (totalActual/1000).toFixed(1);
@@ -134,7 +169,23 @@ function rpRenderEventsTab(evs){
   const rows = evs.map(e=>{
     const a = rpEventAgg(e);
     const rateCls = a.rate>=0.97 ? 'rate-green' : a.rate>=0.8 ? 'rate-amber' : 'rate-red';
-    const dispLabel = e.dispatch_type==='MANDATORY_REDUCTION' ? '의무감축' : '자발적감축';
+    const dispLabel = rpDispLabel(e);
+    if(!e.settlement){
+      // 등록시험 — 이행률 판정만, 정산 칼럼은 대상 아님
+      const v = rpTrialVerdict(e);
+      return `<tr class="clickable" onclick="rpOpenEvent('${e.id}')">
+        <td><strong>${eventDisplayName(e)}</strong><div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${eventDisplaySub(e)}</div></td>
+        <td>${dispLabel}</td>
+        <td class="num">${a.resCount}</td>
+        <td class="num">${a.actual.toLocaleString()}</td>
+        <td class="num"><span class="rate-pill ${rateCls}">${Math.round(a.rate*100)}%</span></td>
+        <td><span style="color:var(--text-hint);font-size:10px;">정산 대상 아님</span>${v?`<div style="margin-top:2px;"><span class="badge ${v.badge}" style="font-size:10px;">${v.label}</span></div>`:''}</td>
+        <td><span style="color:var(--text-hint);font-size:10px;">—</span></td>
+        <td class="num"><span style="color:var(--text-hint);font-size:10px;">—</span></td>
+        <td class="num"><span style="color:var(--text-hint);font-size:10px;">—</span></td>
+        <td><button class="link" onclick="event.stopPropagation();rpOpenEvent('${e.id}')">상세</button></td>
+      </tr>`;
+    }
     const stlActive = ['received','in_progress','completed'].includes(e.settlement.status);
     const batchCell = stlActive
       ? `<button class="link" onclick="event.stopPropagation();navigate('settlement');setTimeout(()=>stmOpenDetail('${e.id}'),150);">STL-${e.id}</button>`
@@ -188,7 +239,7 @@ function rpRenderResourcesTab(evs){
       agg[r.groupId].ordered += r.ordered||0;
       agg[r.groupId].actual  += r.actual||0;
       // "pending" 컬럼의 의미: 아직 정산 완료가 아닌 진행 중 이벤트
-      if(e.settlement.status !== 'completed') agg[r.groupId].pending++;
+      if(e.settlement && e.settlement.status !== 'completed') agg[r.groupId].pending++;
     });
   });
   const list = Object.values(agg).sort((a,b)=>b.actual-a.actual);
@@ -249,7 +300,7 @@ function rpRenderMonthlyTab(evs){
   // 정산 파이프라인 (4단계 기준)
   let awaitAmt=0, recvAmt=0, ipAmt=0, compAmt=0;
   evs.forEach(e=>{
-    const s = e.settlement;
+    const s = e.settlement; if(!s) return;   // 등록시험은 정산 파이프라인 제외
     const amt = s.finalAmount || s.ourAmount || 0;
     if(s.status==='awaiting') awaitAmt += amt;
     else if(s.status==='received') recvAmt += amt;
@@ -321,7 +372,8 @@ function rpOpenEvent(eventId){
   if(!ev) return;
   rpState.selectedEventId = eventId;
   const a = rpEventAgg(ev);
-  const dispLabel = ev.dispatch_type==='MANDATORY_REDUCTION' ? '의무감축' : '자발적감축';
+  const dispLabel = rpDispLabel(ev);
+  const isTest = rpIsTest(ev) || !ev.settlement;
   // [v0.7] 자원별 이행 테이블 — 성능률 컬럼 제거 (이행률 단일 지표)
   const resRows = (ev.resources||[]).map(r=>{
     const g = groupById(r.groupId);
@@ -341,10 +393,13 @@ function rpOpenEvent(eventId){
   $('re-sub').textContent = '';
 
   // Phase 9-B: 상단 액션 버튼 — 상태별 분기 (정산 lifecycle 노출 X)
-  const stStatus = ev.settlement.status;
+  const stStatus = ev.settlement?.status;
   const slot = $('re-action-slot');
   if(slot){
-    if(stStatus==='awaiting'){
+    if(isTest){
+      // 등록시험 — 정산 없음. 발령·실시간 데이터는 감축 모니터링에서, 판정 결과는 자원관리 등록시험 탭에서
+      slot.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="closeModal('reEventModal');rmGoToMonitoringEvent('${ev.id}')">감축 모니터링에서 보기</button>`;
+    } else if(stStatus==='awaiting'){
       slot.innerHTML = `<button class="btn btn-primary btn-sm" onclick="closeModal('reEventModal');rpOpenSettlement('${ev.id}')">확정 데이터 입력</button>`;
     } else if(stStatus==='received'){
       slot.innerHTML = `<button class="btn btn-secondary btn-sm" onclick="closeModal('reEventModal');rpOpenSettlement('${ev.id}')">확정 이력 보기</button>`;
@@ -356,6 +411,7 @@ function rpOpenEvent(eventId){
   // Phase 9-B: re-meta — 확정 도메인 정보만 (정산 상태/ID/최종 확정금 등 정산 lifecycle 메타 제거)
   const confirmStateLabel = stStatus==='awaiting' ? 'KPX 데이터 대기' : '정산 대기 (확정 완료)';
   const confirmStateCls = stStatus==='awaiting' ? 'stl-pending' : 'stl-requested';
+  const verdict = isTest ? rpTrialVerdict(ev) : null;
   // [Phase 17-Q] 이벤트 전체 지시 감축용량·실 감축량 합산 (자원그룹별 ordered/actual 합)
   const totalOrdered = ev.resources.reduce((s, r) => s + (r.ordered||0), 0);
   const totalActual  = ev.resources.reduce((s, r) => s + (r.actual||0), 0);
@@ -369,8 +425,13 @@ function rpOpenEvent(eventId){
             <th style="text-align:left;background:#f8fafc;">이벤트ID</th><td>${ev.id}</td></tr>
         <tr><th style="text-align:left;background:#f8fafc;">지시 감축용량</th><td style="font-weight:600;">${totalOrdered.toLocaleString()} kW</td>
             <th style="text-align:left;background:#f8fafc;">실 감축량 / 이행률</th><td><b>${totalActual.toLocaleString()} kW</b> <span style="color:var(--text-hint);font-size:10px;">· ${totalRate}%</span></td></tr>
+        ${isTest ? `
+        <tr><th style="text-align:left;background:#f8fafc;">시험 대상 자원</th><td>${verdict?.g?.name || (ev.trialTargetGroupId ? groupById(ev.trialTargetGroupId)?.name : '-') || '-'}${ev.trialAttemptNo?` <span style="color:var(--text-hint);font-size:10px;">· ${ev.trialAttemptNo}차</span>`:''}</td>
+            <th style="text-align:left;background:#f8fafc;">등록 판정</th><td>${verdict ? `<span class="badge ${verdict.badge}" style="font-size:10px;">${verdict.label}</span> <span style="color:var(--text-hint);font-size:10px;">· ${verdict.h.result==='PASS'?'합격':'불합격'} · ${verdict.h.decidedBy||'KPX'} ${verdict.h.decidedAt||''}</span>` : '<span style="color:var(--text-hint);font-size:10px;">판정 기록 없음</span>'}</td></tr>
+        <tr><th style="text-align:left;background:#f8fafc;">정산</th><td colspan="3"><span style="color:var(--text-hint);font-size:11px;">등록시험은 정산 대상이 아닙니다 (이행률 판정만 수행)</span></td></tr>`
+        : `
         <tr><th style="text-align:left;background:#f8fafc;">확정 상태</th><td colspan="3"><span class="stl-badge ${confirmStateCls}">${confirmStateLabel}</span></td></tr>
-        <tr><th style="text-align:left;background:#f8fafc;">우리 측 예상 정산금</th><td colspan="3" style="font-weight:700;color:var(--navy);">${(ev.settlement.ourAmount||0).toLocaleString()} KRW</td></tr>
+        <tr><th style="text-align:left;background:#f8fafc;">우리 측 예상 정산금</th><td colspan="3" style="font-weight:700;color:var(--navy);">${(ev.settlement.ourAmount||0).toLocaleString()} KRW</td></tr>`}
       </tbody>
     </table>
   `;
@@ -422,7 +483,7 @@ function rpOpenResourceDetail(groupId, evs){
     if(!r) return '';
     const rate = r.ordered>0 ? r.actual/r.ordered : 0;
     const rateCls = rate>=0.97 ? 'rate-green' : rate>=0.8 ? 'rate-amber' : 'rate-red';
-    const dispLabel = ev.dispatch_type==='MANDATORY_REDUCTION' ? '의무감축' : '자발적감축';
+    const dispLabel = rpDispLabel(ev);
     return `<tr>
       <td><strong>${eventDisplayName(ev)}</strong><div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${ev.id}</div></td>
       <td>${ev.date} ${ev.timeRange}</td>
@@ -430,7 +491,7 @@ function rpOpenResourceDetail(groupId, evs){
       <td class="num">${(r.ordered||0).toLocaleString()}</td>
       <td class="num">${(r.actual||0).toLocaleString()}</td>
       <td class="num"><span class="rate-pill ${rateCls}">${Math.round(rate*100)}%</span></td>
-      <td>${rpStlBadge(ev.settlement.status)}</td>
+      <td>${ev.settlement ? rpStlBadge(ev.settlement.status) : '<span style="color:var(--text-hint);font-size:10px;">정산 대상 아님</span>'}</td>
       <td><button class="link" onclick="rpViewResourceCustomers('${ev.id}', ${groupId})">참여고객 상세</button></td>
     </tr>`;
   }).join('');

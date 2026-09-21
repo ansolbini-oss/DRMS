@@ -300,6 +300,32 @@ const store = {
           {groupId:8,  ordered:300,  actual:null, status:'SCHEDULED'},
         ]
       },
+      // 등록시험 이력 — 표준DR 제조A 최초 합격(용량 조정). groups[0].trial.history[0].testEventId 와 연결
+      {
+        id:'EVT-20240720-01',
+        dispatch_type:'REGISTRATION_TEST',
+        category:'test',
+        date:'2024-07-20', timeRange:'14:00~15:00',
+        label:'2024-07-20 14:00~15:00 · 등록시험 (표준DR 제조A 최초)',
+        source:'KPX', live:false,
+        trialTargetGroupId:1, trialAttemptNo:1,
+        resources:[
+          {groupId:1, ordered:2500, actual:2225, status:'NORMAL'},   // 이행률 89% → 용량 조정 합격
+        ]
+      },
+      // 등록시험 이력 — 제주DR A 최초 합격(정상 등록). groups 제주DR A trial.history[0].testEventId 와 연결
+      {
+        id:'EVT-20240613-01',
+        dispatch_type:'REGISTRATION_TEST',
+        category:'test',
+        date:'2024-06-13', timeRange:'14:00~15:00',
+        label:'2024-06-13 14:00~15:00 · 등록시험 (제주DR A 최초)',
+        source:'KPX', live:false,
+        trialTargetGroupId:8, trialAttemptNo:1,
+        resources:[
+          {groupId:8, ordered:400, actual:392, status:'NORMAL'},     // 이행률 98% → 정상 등록
+        ]
+      },
       // 등록시험 이력 — 완료된 시험 (중소형DR 상업A 2차 재시험 통과)
       {
         id:'EVT-20240930-01',
