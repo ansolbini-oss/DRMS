@@ -1352,11 +1352,24 @@ function dmRenderDetail(g, ev, state=dmState, bodyId='dm-body', scope='dm'){
    - 근거: 규칙 제12.7.3.1조(09~18시, 시간당 0.01MWh 이상) · 제12.7.3.8조(거래시간별 증대계획량 배분)
            제12.7.4.1조 ①(계획량 있는 시간대엔 실시간 증대요청 없음) · MONITOR-001 3-7(등록과 상태전환 분리)
 ════════════════════════════════════════════════════════════ */
-const MON_CREATE_HOURS = [9,10,11,12,13,14,15,16,17];   // 거래시간 시작 시각 (09~10시 … 17~18시)
+/* 거래시간 시작 시각 목록 — 방향별로 다름
+   - 자발적감축: 규칙에 시간대 제한 없음(제12.4.2.1조는 영업일만 제한) → 00~24시 24칸. 시간당 0.1MWh(100kW) 이상(동조 ① 2호). 영업일만(공휴일·토요일 제외, 동조 ① 1호)
+   - 계획증대  : 09~18시 9칸(제12.7.3.1조 1호·제12.7.3.8조 ③). 시간당 0.01MWh(10kW) 이상(제12.7.3.1조 2호). 매일 입찰 가능 */
 const MON_CREATE_META = {
-  reduce:   { dispatch:'VOLUNTARY_REDUCTION', prefix:'EVV', label:'자발적감축', bucket:'reduction', typeKeys:['standard','jeju','national'], minKw:0,  unitWord:'감축계획량' },
-  increase: { dispatch:'VOLUNTARY_INCREASE',  prefix:'EVP', label:'계획증대',   bucket:'plus',      typeKeys:['plus'],                       minKw:10, unitWord:'증대계획량' },
+  reduce:   { dispatch:'VOLUNTARY_REDUCTION', prefix:'EVV', label:'자발적감축', bucket:'reduction', typeKeys:['standard','jeju','national'], minKw:100, unitWord:'감축계획량', hours:Array.from({length:24},(_,i)=>i), businessDayOnly:true,  cols:12 },
+  increase: { dispatch:'VOLUNTARY_INCREASE',  prefix:'EVP', label:'계획증대',   bucket:'plus',      typeKeys:['plus'],                       minKw:10,  unitWord:'증대계획량', hours:[9,10,11,12,13,14,15,16,17],            businessDayOnly:false, cols:9 },
 };
+function monCreateHours(){ return MON_CREATE_META[monCreateDir].hours; }
+function monCreateHourGridHtml(dir){
+  const meta = MON_CREATE_META[dir];
+  return `<div style="display:grid;grid-template-columns:repeat(${meta.cols},1fr);gap:4px;">
+    ${meta.hours.map(h=>`
+      <div style="text-align:center;">
+        <div style="font-size:10px;color:var(--text-hint);margin-bottom:4px;">${monCreateHourLabel(h)}</div>
+        <input class="form-input mon-create-hour" data-hour="${h}" type="number" min="0" step="10" value="0" style="height:30px;padding:0 4px;font-size:12px;text-align:center;font-variant-numeric:tabular-nums;">
+      </div>`).join('')}
+  </div>`;
+}
 let monCreateDir = 'increase';
 
 function monCreateHourLabel(h){ return `${String(h).padStart(2,'0')}~${String(h+1).padStart(2,'0')}시`; }
@@ -1408,13 +1421,7 @@ function monOpenCreateEvent(){
           <button class="btn btn-secondary btn-sm" type="button" onclick="monCreateClearAll()">초기화</button>
         </span>
       </label>
-      <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:4px;">
-        ${MON_CREATE_HOURS.map(h=>`
-          <div style="text-align:center;">
-            <div style="font-size:10px;color:var(--text-hint);margin-bottom:4px;">${monCreateHourLabel(h)}</div>
-            <input class="form-input mon-create-hour" data-hour="${h}" type="number" min="0" step="10" value="0" style="height:30px;padding:0 4px;font-size:12px;text-align:center;font-variant-numeric:tabular-nums;">
-          </div>`).join('')}
-      </div>
+      <div id="mon-create-hour-grid">${monCreateHourGridHtml(monCreateDir)}</div>
       <div style="font-size:11px;color:var(--text-hint);margin-top:6px;" id="mon-create-hour-hint"></div>
     </div>`;
   openCommonModal('이벤트 생성', '낙찰 결과(계획량)를 등록해 대기 이벤트를 만듭니다. 의무감축·실시간 증대·시험은 KPX 발령으로 자동 생성됩니다.', body, [
@@ -1431,10 +1438,11 @@ function monCreateSetDirection(dir){
   $$('#mon-create-dir .event-tab').forEach((el,i)=>el.classList.toggle('active', (i===0&&dir==='reduce')||(i===1&&dir==='increase')));
   const sel = $('mon-create-group'); if(sel) sel.innerHTML = monCreateGroupOptions(dir);
   const uw = $('mon-create-unit-word'); if(uw) uw.textContent = meta.unitWord;
+  const grid = $('mon-create-hour-grid'); if(grid) grid.innerHTML = monCreateHourGridHtml(dir);
   const th = $('mon-create-type-hint');
   if(th) th.innerHTML = dir==='increase'
-    ? `유형 <b>플러스DR 계획증대</b> · 대상 자원은 활성 플러스DR · 09~18시 거래시간만 · 시간당 10kW(0.01MWh) 이상 (규칙 제12.7.3.1조)`
-    : `유형 <b>자발적감축</b> · 대상 자원은 활성 표준·중소형·제주·국민DR · 시간대 요건은 확인 필요(제12.4.2절 미확인)`;
+    ? `유형 <b>플러스DR 계획증대</b> · 대상 자원은 활성 플러스DR · 09~18시 거래시간만 · 시간당 10kW(0.01MWh) 이상 · 매일 입찰 가능 (규칙 제12.7.3.1조·제12.7.3.8조)`
+    : `유형 <b>자발적감축</b> · 대상 자원은 활성 표준·중소형·제주·국민DR · 영업일만(공휴일·토요일 제외) · 시간대 제한 없음(00~24시) · 시간당 100kW(0.1MWh) 이상 (규칙 제12.4.2.1조)`;
   const hh = $('mon-create-hour-hint');
   if(hh) hh.textContent = '0은 미낙찰. 값이 있는 연속 시간대를 묶어 이벤트 1건으로 만들고, 끊어지면 이벤트를 나눕니다. 지시용량은 시간대 평균 kW로 표시합니다.';
 }
@@ -1475,15 +1483,21 @@ function monCreateSubmit(){
   if(date < todayStr()){ showToast('거래일은 오늘 이후여야 합니다.'); return; }
   if(!g){ showToast('대상 자원을 선택하세요.'); return; }
   if(!noticeRaw){ showToast('KPX 통지 확인 시각을 입력하세요.'); return; }
+  if(meta.businessDayOnly){
+    const dow = new Date(date+'T00:00:00').getDay();
+    if(dow===0 || dow===6){ showToast('자발적감축은 영업일(공휴일·토요일 제외)에만 입찰할 수 있습니다 (규칙 제12.4.2.1조 ① 1호). 공휴일 여부는 별도 확인하세요.'); return; }
+  }
   // 시간대별 계획량 수집
-  const plan = MON_CREATE_HOURS.map(h=>{
+  const plan = monCreateHours().map(h=>{
     const inp = document.querySelector(`.mon-create-hour[data-hour="${h}"]`);
     return {hour:h, kw: Math.max(0, Number(inp?.value || 0))};
   });
   const active = plan.filter(p=>p.kw>0);
   if(!active.length){ showToast('계획량이 0보다 큰 시간대가 하나 이상 필요합니다.'); return; }
   if(meta.minKw && active.some(p=>p.kw < meta.minKw)){
-    showToast(`계획증대는 시간당 ${meta.minKw}kW(0.01MWh) 이상이어야 합니다 (규칙 제12.7.3.1조 2호).`); return;
+    showToast(monCreateDir==='increase'
+      ? `계획증대는 시간당 ${meta.minKw}kW(0.01MWh) 이상이어야 합니다 (규칙 제12.7.3.1조 2호).`
+      : `자발적감축은 시간당 ${meta.minKw}kW(0.1MWh) 이상이어야 합니다 (규칙 제12.4.2.1조 ① 2호).`); return;
   }
   // 연속 시간대 묶기
   const runs = [];
