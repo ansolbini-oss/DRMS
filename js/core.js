@@ -1052,7 +1052,8 @@ function openCommonModal(title, sub, bodyHTML, footerActions){
   $('cm-footer').innerHTML = (footerActions&&footerActions.length)
     ? footerActions.map(a=>`<button class="btn ${a.cls||''}" onclick="${a.onclick||''}">${a.label}</button>`).join('')
     : `<button class="btn btn-secondary" onclick="closeModal('commonModal')">닫기</button>`;
-  $('commonModal').classList.add('active');
+  // [Phase 17-FA] .overlay 표시 클래스는 'show'(styles.css .overlay.show). 'active'만 붙이면 모달이 보이지 않던 기존 버그 수정
+  $('commonModal').classList.add('show');
 }
 
 /* 사이드바 뱃지 갱신 (신규 메뉴 수신확인 / 입찰 포함) */

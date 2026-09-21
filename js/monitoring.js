@@ -1408,11 +1408,11 @@ function monOpenCreateEvent(){
           <button class="btn btn-secondary btn-sm" type="button" onclick="monCreateClearAll()">초기화</button>
         </span>
       </label>
-      <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:6px;">
+      <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:4px;">
         ${MON_CREATE_HOURS.map(h=>`
           <div style="text-align:center;">
             <div style="font-size:10px;color:var(--text-hint);margin-bottom:4px;">${monCreateHourLabel(h)}</div>
-            <input class="form-input mon-create-hour" data-hour="${h}" type="number" min="0" step="10" value="0" style="height:30px;padding:0 6px;font-size:12px;text-align:right;">
+            <input class="form-input mon-create-hour" data-hour="${h}" type="number" min="0" step="10" value="0" style="height:30px;padding:0 4px;font-size:12px;text-align:center;font-variant-numeric:tabular-nums;">
           </div>`).join('')}
       </div>
       <div style="font-size:11px;color:var(--text-hint);margin-top:6px;" id="mon-create-hour-hint"></div>
