@@ -333,7 +333,7 @@ function rmHandleCreate(){
     if(!s1||!s2||!m||!cap){ showToast('주파수DR 필수 항목을 모두 입력하세요.'); return; }
     reg.region='육지권'; reg.freqStep1=s1; reg.freqStep2=s2; reg.meterType=m; reg.estimatedCapacity=cap;
   } else if(meta.typeKey==='plus'){
-    // 플러스DR: 지역구분만 입력. 의무증대량 없음 (정책서 3-1)
+    // 플러스DR: 지역구분(육지/수도권 · 육지/비수도권 · 제주권)만 입력. 의무증대량 없음
     const region = document.querySelector('input[name="rm-plus-region"]:checked')?.value;
     if(!region){ showToast('지역구분을 선택하세요.'); return; }
     reg.region = region;

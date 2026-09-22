@@ -144,7 +144,7 @@ const store = {
   /* 자원그룹 (자원관리)
      status: pending(승인대기) / waiting(시험대기) / active(활성) / suspended(일시중지) / inactive(비활성)
      customerIds: 연결된 customer.id 배열 (계약완료 상태여야 함)
-     reg: 유형별 필드. 플러스DR은 region(육지권/제주권)만 갖는다 (의무증대량 없음)
+     reg: 유형별 필드. 플러스DR은 region(육지/수도권 · 육지/비수도권 · 제주권)만 갖는다 (의무증대량 없음)
      trial: {
        required: boolean       // 등록시험 대상 여부 (국민DR은 false, 표준·중소형·제주DR은 기본 true)
        status:   // NOT_REQUIRED | WAITING | PASSED | FAILED
@@ -203,7 +203,7 @@ const store = {
       customerIds:['C022','C023'],
       trial:{required:false, status:'NOT_REQUIRED', history:[]}},
     { id:12, name:'플러스DR 서울', type:'플러스DR', typeKey:'plus', status:'active', date:'2024-12-01',
-      reg:{region:'육지권'},
+      reg:{region:'육지/수도권'},
       file:{name:'수요반응자원_등록신청서_플러스DR_서울.pdf', size:678234, uploadedAt:'2024-12-01 11:00'},
       customerIds:['C024'],
       trial:{required:false, status:'NOT_REQUIRED', history:[]}},

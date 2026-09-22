@@ -10,8 +10,8 @@
 <title>수요반응자원 운영시스템</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<!-- css/js 모두 ?v=260922-1504. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
-<link rel="stylesheet" href="css/styles.css?v=260922-1504">
+<!-- css/js 모두 ?v=260922-1509. 매 푸시마다 단조 증가시켜 캐시 무력화. -->
+<link rel="stylesheet" href="css/styles.css?v=260922-1509">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
@@ -108,7 +108,7 @@
     <div class="sidebar-logo-text">수요반응자원<br>운영시스템</div>
     <div class="sidebar-logo-sub">DR Management</div>
     <!-- 비니 환경 캐시 진단용 버전 표기 -->
-    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260922-1504</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;font-family:monospace;" id="drms-version">Build v260922-1509</div>
   </div>
   <div class="sidebar-user">
     <div class="sidebar-user-avatar">현</div>
@@ -2112,10 +2112,11 @@
       <!-- plus -->
       <div id="rm-f-plus" class="field-hidden">
         <div class="modal-section-title">등록신청서 — 플러스DR</div>
-        <!-- 플러스DR: 지역구분만 입력. 의무증대량·등록시험 없음, 참여고객 1명 이상 (정책서 3-1·3-3) -->
+        <!-- 플러스DR: 지역구분만 입력 (육지/수도권 · 육지/비수도권 · 제주권). 의무증대량·등록시험 없음, 참여고객 1명 이상 -->
         <div class="form-row"><label class="form-label">지역구분 <span class="req">*</span></label>
           <div class="radio-group row">
-            <label class="radio-item"><input type="radio" name="rm-plus-region" value="육지권"> 육지권</label>
+            <label class="radio-item"><input type="radio" name="rm-plus-region" value="육지/수도권"> 육지/수도권</label>
+            <label class="radio-item"><input type="radio" name="rm-plus-region" value="육지/비수도권"> 육지/비수도권</label>
             <label class="radio-item"><input type="radio" name="rm-plus-region" value="제주권"> 제주권</label>
           </div>
         </div>
@@ -2184,20 +2185,20 @@
 
 <!-- 정적 script 로드 (안전·확정 동작). ?v=값은 매 푸시마다 cache-bust용으로 갱신.
      현재 v=17b. 다음 푸시 시 18a, 18b ... 식으로 단조 증가시켜 캐시 무력화. -->
-<script src="data/store.js?v=260922-1504"></script>
-<script src="data/tips.js?v=260922-1504"></script>
-<script src="js/core.js?v=260922-1504"></script>
-<script src="js/dashboard.js?v=260922-1504"></script>
-<script src="js/precheck.js?v=260922-1504"></script>
-<script src="js/resource.js?v=260922-1504"></script>
-<script src="js/monitoring.js?v=260922-1504"></script>
-<script src="js/report.js?v=260922-1504"></script>
-<script src="js/settlement.js?v=260922-1504"></script>
-<script src="js/datacollect.js?v=260922-1504"></script>
-<script src="js/rtu.js?v=260922-1504"></script>
-<script src="js/communication.js?v=260922-1504"></script>
-<script src="js/bidding.js?v=260922-1504"></script>
-<script src="js/account.js?v=260922-1504"></script>
-<script src="js/system.js?v=260922-1504"></script>
+<script src="data/store.js?v=260922-1509"></script>
+<script src="data/tips.js?v=260922-1509"></script>
+<script src="js/core.js?v=260922-1509"></script>
+<script src="js/dashboard.js?v=260922-1509"></script>
+<script src="js/precheck.js?v=260922-1509"></script>
+<script src="js/resource.js?v=260922-1509"></script>
+<script src="js/monitoring.js?v=260922-1509"></script>
+<script src="js/report.js?v=260922-1509"></script>
+<script src="js/settlement.js?v=260922-1509"></script>
+<script src="js/datacollect.js?v=260922-1509"></script>
+<script src="js/rtu.js?v=260922-1509"></script>
+<script src="js/communication.js?v=260922-1509"></script>
+<script src="js/bidding.js?v=260922-1509"></script>
+<script src="js/account.js?v=260922-1509"></script>
+<script src="js/system.js?v=260922-1509"></script>
 
 </body></html>
