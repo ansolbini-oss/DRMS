@@ -6,6 +6,8 @@
 function trialRequiredForType(typeKey){
   return typeKey==='standard' || typeKey==='jeju';
 }
+/* 방향은 자원 유형으로 판별한다. 플러스DR은 증대, 그 외는 감축 (정책서 3-1) */
+function rmIsIncrease(g){ return g?.typeKey==='plus'; }
 
 // [v0.2 M-03] 자원 유형 13종 코드 매핑. 라벨(g.type)로부터 코드 유추 (seed backfill용)
 const RM_TYPE_LABEL_TO_CODE = {
@@ -380,7 +382,7 @@ function rmOpenDetail(gid, tab){
       const color = g.trial.status==='PASSED'?'var(--green)':g.trial.status==='FAILED'?'var(--red)':'var(--amber)';
       return `<span class="tab-badge" style="background:${color};font-size:9px;">${tm.label}</span>`;
     })()},
-    {k:'history',   label:'감축이력',  suf:histCnt?`<span class="tab-badge" style="background:var(--gray);">${histCnt}</span>`:'', dis:isWait},
+    {k:'history',   label:rmIsIncrease(g)?'증대이력':'감축이력',  suf:histCnt?`<span class="tab-badge" style="background:var(--gray);">${histCnt}</span>`:'', dis:isWait},
     {k:'customers', label:'참여고객',  suf:custCnt?`<span class="tab-badge">${custCnt}</span>`:'', dis:false},
   ];
   $('rm-d-tabs').innerHTML = tabs.map(t=>`
@@ -592,11 +594,12 @@ function rmTabOpHtml(g){
   } else {
     // 이벤트가 없을 때: 이행률을 표시할 근거가 없으므로, 과거 이력 참조 안내만 표시
     const historyCount = g.reductionHistory?.length || 0;
+    const dirWord = rmIsIncrease(g) ? '증대' : '감축';
     liveEventCard = `<div class="op-card op-card-idle">
-      <div class="op-card-title">감축 이벤트 상태</div>
+      <div class="op-card-title">${dirWord} 이벤트 상태</div>
       <div class="op-idle">
-        <div class="op-idle-main">진행 중인 감축 이벤트 없음</div>
-        ${historyCount>0 ? `<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="rmSwitchDetailTab('history')">감축이력 보기 →</button>` : ''}
+        <div class="op-idle-main">진행 중인 ${dirWord} 이벤트 없음</div>
+        ${historyCount>0 ? `<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="rmSwitchDetailTab('history')">${dirWord}이력 보기 →</button>` : ''}
       </div>
     </div>`;
   }
@@ -764,22 +767,25 @@ function rmGoToMonitoringEvent(eventId){
 }
 
 function rmTabHistoryHtml(g){
-  if(!g.reductionHistory?.length) return '<div class="empty">감축이력이 없습니다.</div>';
+  const inc = rmIsIncrease(g);
+  if(!g.reductionHistory?.length) return `<div class="empty">${inc?'증대':'감축'}이력이 없습니다.</div>`;
+  // 증대(플러스DR): 계획증대는 계획량 대비 이행률, 실시간증대는 이행량 기준 없음 → 계획·이행률 '—' (Phase 17-EZ)
   return `<div class="hist-list">
     <div class="hist-row" style="background:#f8f9fc;font-weight:500;color:var(--text-sub);font-size:10px;cursor:default;">
-      <span>일시</span><span>유형</span><span style="text-align:right;">지시/실적</span><span style="text-align:right;">이행률</span><span style="text-align:center;">정산</span>
+      <span>일시</span><span>유형</span><span style="text-align:right;">${inc?'계획/실적':'지시/실적'}</span><span style="text-align:right;">이행률</span><span style="text-align:center;">정산</span>
     </div>
     ${g.reductionHistory.map(h=>{
       const rate = h.performanceRate;
-      const rateCls = rate>=0.9?'good':rate>=0.7?'mid':'bad';
+      const realtime = inc && h.type==='mandatory';
       const rateColor = rate>=0.9?'var(--green)':rate>=0.7?'var(--amber)':'var(--red)';
+      const typeLabel = inc ? (realtime?'실시간':'계획') : (h.type==='mandatory'?'의무':'계획');
       return `<div class="hist-row">
         <span class="hist-date">${h.date}</span>
-        <span><span class="badge ${h.type==='mandatory'?'badge-progress':'badge-purple'}">${h.type==='mandatory'?'의무':'계획'}</span></span>
+        <span><span class="badge ${h.type==='mandatory'?'badge-progress':'badge-purple'}">${typeLabel}</span></span>
         <span style="text-align:right;font-size:11px;">
-          <div style="color:var(--text);font-weight:500;">${h.orderedKw.toLocaleString()} / ${h.reducedKw.toLocaleString()}</div>
+          <div style="color:var(--text);font-weight:500;">${realtime?'—':h.orderedKw.toLocaleString()} / ${h.reducedKw.toLocaleString()}</div>
         </span>
-        <span class="hist-rate" style="color:${rateColor};">${Math.round(rate*100)}%</span>
+        <span class="hist-rate" style="color:${realtime?'var(--text-hint)':rateColor};">${realtime?'—':Math.round(rate*100)+'%'}</span>
         <span style="text-align:center;"><span class="badge ${h.settlement==='COMPLETE'?'badge-done':'badge-pending'}" style="font-size:9px;">${h.settlement==='COMPLETE'?'완료':'대기'}</span></span>
       </div>`;
     }).join('')}
@@ -1028,7 +1034,7 @@ function rmSuspend(gid){
   $('cm-title').textContent = '운영 일시중지';
   $('cm-sub').textContent = `${g.name} 운영을 일시중지합니다.`;
   // [v0.2 M-08] 정책서 §3-2 하위 사유 4종으로 통일 (등록시험 불합격 · 감축시험 불합격 · 관리자 임시 정지 · 기타)
-  $('cm-body').innerHTML = `<div class="info-box warning">일시중지된 자원은 감축지시 대상에서 제외됩니다.</div>
+  $('cm-body').innerHTML = `<div class="info-box warning">일시중지된 자원은 이벤트 대상에서 제외됩니다.</div>
     <div class="form-row"><label class="form-label">중지 사유 <span class="req">*</span></label>
       <select class="form-select" id="sus-reason">
         <option value="">사유 선택</option>
@@ -1077,7 +1083,7 @@ function rmDeleteEligibility(g){
   const kpxRequested = !!(g.kpxRegRequestedAt || g.trial?.currentTestEventId || g.trial?.autoOptedInAt);
   if(kpxRequested) fails.push('KPX 자원 등록을 신청함');
   if((g.trial?.history||[]).length) fails.push('시험 이력 있음');
-  if(rmEventParticipated(g.id)) fails.push('감축 이력 있음');
+  if(rmEventParticipated(g.id)) fails.push('이벤트 참여 이력 있음');
   if(rmSettlementExists(g.id)) fails.push('정산 기록 있음');
   return {ok: fails.length===0, fails};
 }
