@@ -26,7 +26,7 @@ function rmTypeCode(g){
 function trialStatusMeta(t){
   if(!t) return {label:'-', dashboardLabel:'-', badge:'badge-gray'};
   const map = {
-    NOT_REQUIRED:{label:'면제',     dashboardLabel:'면제',     badge:'badge-gray'},
+    NOT_REQUIRED:{label:'미대상',   dashboardLabel:'미대상',   badge:'badge-gray'},
     WAITING:     {label:'시험 대기', dashboardLabel:'시험 대기', badge:'badge-pending'},
     PASSED:      {label:'합격',     dashboardLabel:'합격',     badge:'badge-done'},
     FAILED:      {label:'불합격',   dashboardLabel:'불합격',   badge:'badge-fail'},
@@ -83,12 +83,6 @@ function rmGroupCurrentLiveEvents(g){
   });
   return result;
 }
-/* 하위 호환: 단일 반환 버전 — 첫 번째 라이브 이벤트 반환 (기존 호출부용) */
-function rmGroupCurrentLiveEvent(g){
-  const all = rmGroupCurrentLiveEvents(g);
-  return all.length ? all[0] : null;
-}
-
 function rmHealth(g){
   if(!g.operational) return 'normal';
   const dc = g.operational.dataCollection;
@@ -110,30 +104,9 @@ function rmRefreshSummary(){
     const el = document.getElementById(id);
     if(el) el.textContent = val;
   };
-  const setStyle = (id, prop, val) => {
-    const el = document.getElementById(id);
-    if(el) el.style[prop] = val;
-  };
-  // [Phase 17-EA] v0.2 상태값 5개 반영
-  //   'rm-chip-waiting'은 v0.2 기준 '시험대기+승인대기 합' (운영자 조치 필요 자원)
-  //   inactive는 조회 제외라 전체 카운트에서 배제
+  // inactive는 조회 제외라 전체 카운트에서 배제
   const g = store.groups.filter(x => x.status !== 'inactive');
-  const pendingCnt = g.filter(x=>x.status==='pending').length;
-  const waitCnt = g.filter(x=>x.status==='waiting').length;
-  const activeCnt = g.filter(x=>x.status==='active').length;
-  const suspendCnt = g.filter(x=>x.status==='suspended').length;
   setText('rm-cnt-all', g.length);
-  // 상태 칩 카운트 갱신 (Phase 10에서 제거된 element일 수 있음 → guard)
-  setText('rm-chip-waiting', pendingCnt + waitCnt);  // 승인대기 + 시험대기 (조치 대상)
-  setText('rm-chip-active', activeCnt);
-  setText('rm-chip-suspended', suspendCnt);
-  // 중지 상태 칩은 일시중지된 그룹이 있을 때만 표시
-  setStyle('rm-chip-suspended-btn', 'display', suspendCnt>0 ? '' : 'none');
-  // 칩 활성 상태는 rm-status-filter와 양방향 동기화
-  const curStatus = $('rm-status-filter')?.value || '';
-  document.querySelectorAll('.rm-status-chip').forEach(chip=>{
-    chip.classList.toggle('active', chip.dataset.status === curStatus);
-  });
   // 시험 대기 카운트
   const trialPending = (typeof trialPendingGroups === 'function') ? trialPendingGroups() : [];
   setText('rm-cnt-trial', trialPending.length);
@@ -142,18 +115,6 @@ function rmRefreshSummary(){
   const risk = problems.filter(p=>p.level==='risk').length;
   const warn = problems.filter(p=>p.level==='warn').length;
   setText('rm-cnt-risk', risk+warn);
-}
-
-/* 상태 필터 칩 토글 — rm-status-filter 드롭다운과 양방향 동기화 */
-function rmToggleStatusChip(status){
-  const sel = $('rm-status-filter'); if(!sel) return;
-  // 재클릭 시 해제 (= '상태 전체'로 복귀)
-  const cur = sel.value;
-  sel.value = (cur === status) ? '' : status;
-  // 상태 필터를 바꿀 때, 카드 필터가 'risk'인 경우에는 그대로 유지
-  //   ('risk' 그룹에서 '승인대기' 또는 '활성'만 추가 필터링하는 AND 조합이 유용함)
-  // 단, rm-card-all이 활성 상태가 아니면(=유형/위험 카드 활성) 상태만 바뀌는 것이 맞음.
-  rmRunSearch();
 }
 
 function rmFilterByCard(card){
@@ -294,7 +255,7 @@ function rmUpdateBulkBtn(){
 function rmOpenCreate(){
   $('rm-f-name').value='';
   $('rm-f-type').value='';
-  ['rm-f-standard','rm-f-national','rm-f-jeju','rm-f-freq','rm-f-plus','rm-dyn-fields','rm-plus-land']
+  ['rm-f-standard','rm-f-national','rm-f-jeju','rm-f-freq','rm-f-plus','rm-dyn-fields']
     .forEach(id=>$(id).classList.add('field-hidden'));
   document.querySelectorAll('#rmCreateModal input[type=radio]').forEach(r=>r.checked=false);
   document.querySelectorAll('#rmCreateModal input[type=checkbox]').forEach(c=>c.checked=false);
@@ -323,18 +284,10 @@ function rmOnTypeChange(val){
   if(trialRequiredForType(typeKey)){
     $('rm-f-trial-section').style.display = '';
     $('rm-f-trial-required').checked = true;
-    // 제주DR 세부 안내
-    $('rm-f-trial-hint').innerHTML = typeKey==='jeju'
-      ? '제주DR 자원은 등록시험 합격 후 감축지시 이행이 가능합니다.<br>이 항목을 체크하면 시험 상태가 <b>미시행</b>으로 초기화되며, 시험 합격 전까지 활성 전환이 제한됩니다.'
-      : '표준·중소형DR 자원은 등록시험 합격 후 감축지시 이행이 가능합니다.<br>이 항목을 체크하면 시험 상태가 <b>미시행</b>으로 초기화되며, 시험 합격 전까지 활성 전환이 제한됩니다.';
   } else {
     $('rm-f-trial-section').style.display = 'none';
     $('rm-f-trial-required').checked = false;
   }
-}
-function rmOnPlusRegion(val){
-  if(val==='육지권') $('rm-plus-land').classList.remove('field-hidden');
-  else $('rm-plus-land').classList.add('field-hidden');
 }
 function rmHandleCreate(){
   const name = $('rm-f-name').value.trim();
@@ -378,15 +331,10 @@ function rmHandleCreate(){
     if(!s1||!s2||!m||!cap){ showToast('주파수DR 필수 항목을 모두 입력하세요.'); return; }
     reg.region='육지권'; reg.freqStep1=s1; reg.freqStep2=s2; reg.meterType=m; reg.estimatedCapacity=cap;
   } else if(meta.typeKey==='plus'){
+    // 플러스DR: 지역구분만 입력. 의무증대량 없음 (정책서 3-1)
     const region = document.querySelector('input[name="rm-plus-region"]:checked')?.value;
     if(!region){ showToast('지역구분을 선택하세요.'); return; }
     reg.region = region;
-    if(region==='육지권'){
-      const subs = [...document.querySelectorAll('#rm-plus-land .check-group input:checked')].map(c=>c.value);
-      const cap = parseInt($('rm-f-plus-cap').value);
-      if(!subs.length||!cap){ showToast('육지권 세부구분과 증대 가능용량을 입력하세요.'); return; }
-      reg.landSubRegion = subs; reg.increaseCapacity = cap;
-    }
   }
   const newId = Math.max(...store.groups.map(g=>g.id), 0) + 1;
   // 등록시험 대상 여부: 모달 체크박스 값 사용 (단, typeKey가 trial 대상이 아닐 땐 강제 false)
@@ -407,8 +355,7 @@ function rmHandleCreate(){
   closeModal('rmCreateModal');
   rmApplyFilter();
   refreshSidebarBadges();
-  const trialMsg = trialRequired ? ' · 등록시험 필요' : '';
-  showToast(`${name} 생성 완료 — 승인대기 상태 (참여고객 매핑 대상)${trialMsg}`);
+  showToast(`${name} 생성 완료 (승인대기)`);
 }
 
 /* 상세 패널 */
@@ -428,7 +375,7 @@ function rmOpenDetail(gid, tab){
     {k:'info',      label:'기본정보',  suf:''},
     {k:'op',        label:'가동상태',  suf:healthDot, dis:isWait},
     {k:'trial',     label:'등록시험',  suf:(()=>{
-      if(!g.trial || !g.trial.required) return '<span class="tab-badge" style="background:var(--gray);font-size:9px;">면제</span>';
+      if(!g.trial || !g.trial.required) return '<span class="tab-badge" style="background:var(--gray);font-size:9px;">미대상</span>';
       const tm = trialStatusMeta(g.trial);
       const color = g.trial.status==='PASSED'?'var(--green)':g.trial.status==='FAILED'?'var(--red)':'var(--amber)';
       return `<span class="tab-badge" style="background:${color};font-size:9px;">${tm.label}</span>`;
@@ -475,10 +422,7 @@ function rmTabInfoHtml(g){
       <div class="detail-field"><div class="detail-field-label">기준주파수(개별)</div><div class="detail-field-val">${r.freqStep1||'-'}</div></div>
       <div class="detail-field"><div class="detail-field-label">기준주파수(양수)</div><div class="detail-field-val">${r.freqStep2||'-'}</div></div>
       <div class="detail-field full"><div class="detail-field-label">감축예상용량</div><div class="detail-field-val blue">${r.estimatedCapacity?r.estimatedCapacity.toLocaleString()+' kW':'-'}</div></div>`;
-    if(g.typeKey==='plus') return `
-      <div class="detail-field"><div class="detail-field-label">지역구분</div><div class="detail-field-val">${r.region||'-'}</div></div>
-      <div class="detail-field"><div class="detail-field-label">증대 가능용량</div><div class="detail-field-val blue">${r.increaseCapacity?r.increaseCapacity.toLocaleString()+' kW':'-'}</div></div>
-      ${r.landSubRegion?`<div class="detail-field full"><div class="detail-field-label">육지권 세부구분</div><div class="detail-field-val">${r.landSubRegion.join(', ')}</div></div>`:''}`;
+    if(g.typeKey==='plus') return `<div class="detail-field full"><div class="detail-field-label">지역구분</div><div class="detail-field-val">${r.region||'-'}</div></div>`;
     return '';
   })();
   // [Phase 17-CJ] 서류 업로드 영역 확장 — 등록신청서 + 추가 서류 여러 개
@@ -495,7 +439,6 @@ function rmTabInfoHtml(g){
     : `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px dashed var(--amber-border);background:var(--amber-light);border-radius:var(--r);">
          <div style="flex:1;">
            <div style="font-size:12px;color:var(--amber);font-weight:600;">📄 등록신청서 <span style="font-size:10px;color:var(--text-hint);font-weight:400;margin-left:6px;">필수 · 미업로드</span></div>
-           <div style="font-size:11px;color:var(--text-sub);margin-top:3px;">등록완료 전 업로드 필요</div>
          </div>
          <button class="btn btn-primary btn-sm" onclick="rmUploadFile()">파일 업로드</button>
        </div>`;
@@ -526,38 +469,15 @@ function rmTabInfoHtml(g){
          <div style="font-size:10px;color:var(--text-hint);margin-top:2px;">${g.suspendReason.at}</div>
        </div>`
     : '';
-  // [Phase 17-EA] 자원관리 v0.2 상태값 5개 (M-02)
-  //   승인대기 → 시험대기 → 활성 → 일시중지 / 비활성
-  //   등록불합격은 trial.status에서 자동 파생 (Phase 4에서 suspended 하위 사유로 통합 예정)
-  const isStatusEditing = rmStatusEditingId === g.id;
-  const statusOpts = [
-    { key:'pending',   label:'승인대기' },
-    { key:'waiting',   label:'시험대기' },
-    { key:'active',    label:'활성' },
-    { key:'suspended', label:'일시중지' },
-    { key:'inactive',  label:'비활성' },
-  ];
-  const opMeta = (typeof operationalStatusMeta === 'function') ? operationalStatusMeta(g) : {label:statusLabelRM(g.status), cls:statusBadgeClass(g.status)};
-  const statusEditCard = `
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--g-50);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <span style="font-size:12px;color:var(--text-sub);font-weight:500;">운영 상태</span>
-      ${isStatusEditing
-        ? `<select id="rm-status-edit-${g.id}" style="padding:6px 10px;border:1px solid var(--blue);border-radius:6px;font-size:12px;font-weight:500;color:var(--navy);background:#fff;cursor:pointer;outline:none;">
-             ${statusOpts.map(opt => `<option value="${opt.key}"${opt.key===g.status?' selected':''}>${opt.label}</option>`).join('')}
-           </select>`
-        : `<span class="badge ${opMeta.cls}" style="font-size:12px;padding:4px 10px;">${opMeta.label}</span>`}
-      <span style="font-size:10px;color:var(--text-hint);">활성 시 매월 KPX 기본정산금 대상</span>
-    </div>
-    ${isStatusEditing
-      ? `<div style="display:flex;gap:6px;">
-           <button class="btn btn-secondary btn-sm" onclick="rmCancelStatusEdit(${g.id})">취소</button>
-           <button class="btn btn-primary btn-sm" onclick="rmSaveStatus(${g.id})">저장</button>
-         </div>`
-      : `<button class="btn btn-secondary btn-sm" onclick="rmOpenStatusEdit(${g.id})">상태 수정</button>`}
+  // 운영 상태 뱃지만 표시. 상태 전환은 하단 액션 버튼(rmRenderDetailFooter)에서만 실행한다
+  const opMeta = operationalStatusMeta(g);
+  const statusCard = `
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--g-50);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;">
+    <span style="font-size:12px;color:var(--text-sub);font-weight:500;">운영 상태</span>
+    <span class="badge ${opMeta.cls}" style="font-size:12px;padding:4px 10px;">${opMeta.label}</span>
   </div>`;
 
-  return `${statusEditCard}
+  return `${statusCard}
   <div class="detail-field-grid">
     <div class="detail-field"><div class="detail-field-label">자원유형</div><div class="detail-field-val">${g.type}</div></div>
     ${extra}
@@ -570,39 +490,6 @@ function rmTabInfoHtml(g){
   ${suspendBox}`;
 }
 
-/* [Phase 17-CI] 자원 상태 편집 모드 관리 */
-let rmStatusEditingId = null;
-function rmOpenStatusEdit(gid){
-  rmStatusEditingId = gid;
-  const g = groupById(gid); if(!g) return;
-  rmOpenDetail(gid, 'info');
-}
-function rmCancelStatusEdit(gid){
-  rmStatusEditingId = null;
-  const g = groupById(gid); if(!g) return;
-  rmOpenDetail(gid, 'info');
-}
-function rmSaveStatus(gid){
-  const g = groupById(gid); if(!g) return;
-  const sel = document.getElementById(`rm-status-edit-${gid}`);
-  if(!sel) return;
-  const newStatus = sel.value;
-  const oldStatus = g.status;
-  if(newStatus !== oldStatus){
-    g.status = newStatus;
-    if(typeof logAudit === 'function'){
-      logAudit({objectType:'group', objectId:gid, action:'status_manual_override',
-        title:`자원그룹 상태 변경 — ${g.name}`,
-        desc:`${statusLabelRM(oldStatus)} → ${statusLabelRM(newStatus)}`,
-        actor:'운영자', tone:'info'});
-    }
-  }
-  rmStatusEditingId = null;
-  if(typeof showToast === 'function') showToast(`자원 상태 저장 — ${statusLabelRM(newStatus)}`);
-  rmOpenDetail(gid, 'info');
-  if(typeof rmApplyFilter === 'function') rmApplyFilter();
-  if(typeof rmRefreshSummary === 'function') rmRefreshSummary();
-}
 function rmTabOpHtml(g){
   if(!g.operational) return '<div class="empty">가동 데이터가 없습니다.</div>';
   const dc = g.operational.dataCollection;
@@ -643,7 +530,7 @@ function rmTabOpHtml(g){
       <div style="width:10px;height:10px;border-radius:50%;background:${statusColor};flex-shrink:0;"></div>
       <div style="flex:1;">
         <div style="font-size:12px;color:var(--text-hint);font-weight:500;">데이터 수집 상태</div>
-        <div style="font-size:14px;font-weight:700;color:${statusColor};margin-top:2px;">${statusText}${isAbnormal ? ' — 사업장별 진단 필요' : ''}</div>
+        <div style="font-size:14px;font-weight:700;color:${statusColor};margin-top:2px;">${statusText}</div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="rmGoToDataCollect(${g.id})">전력데이터 수집현황 →</button>
     </div>
@@ -709,11 +596,6 @@ function rmTabOpHtml(g){
       <div class="op-card-title">감축 이벤트 상태</div>
       <div class="op-idle">
         <div class="op-idle-main">진행 중인 감축 이벤트 없음</div>
-        <div class="op-idle-sub">
-          ${historyCount>0
-            ? `이 자원의 과거 감축 성과는 <b>감축이력</b> 탭(${historyCount}건)에서 확인할 수 있습니다.`
-            : `아직 이 자원의 감축 이력이 없습니다.`}
-        </div>
         ${historyCount>0 ? `<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="rmSwitchDetailTab('history')">감축이력 보기 →</button>` : ''}
       </div>
     </div>`;
@@ -740,140 +622,21 @@ function rmGoToDataCollect(gid){
   }, 0);
 }
 
-/* 참여고객 데이터 재조회 요청 (확인 모달) */
-function rmRequestRecollect(gid, cid){
-  const g = groupById(gid); if(!g) return;
-  const c = custById(cid); if(!c) return;
-  $('cm-title').textContent = '데이터 재조회';
-  $('cm-sub').textContent = `${c.name} (${c.recno})의 한전 AMI 계량 데이터를 즉시 재조회합니다.`;
-  $('cm-body').innerHTML = `<div class="info-box">
-    참여고객의 한전 AMI 채널로 재조회를 시도합니다. 통신 상태에 따라 수초 내 결과가 표시됩니다.
-  </div>
-  <div class="check-item-row"><span>참여고객</span><span style="font-weight:600;">${c.name}</span></div>
-  <div class="check-item-row"><span>한전 고객번호</span><span style="font-family:monospace;">${c.kepco||'-'}</span></div>
-  <div class="check-item-row"><span>최근 수신</span><span style="color:var(--red);font-weight:600;">${g.operational?.custDataStatus?.[cid]?.lastMinutesAgo||'-'}분 전</span></div>`;
-  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-primary" onclick="rmConfirmRecollect(${gid},'${cid}')">재조회 실행</button>`;
-  openModal('commonModal');
-}
-
-/* 재조회 시뮬레이션 — 참여고객(cid)별 결정론 분기.
-   cid 끝자리 패리티로 통신 성공/실패를 갈라 시연한다 (백엔드 연동 시 실제 API 응답으로 교체) */
-function rmSimulateRecollectOutcome(cid){
-  const m = (cid||'').match(/(\d+)$/);
-  const last = m ? parseInt(m[1].slice(-1), 10) : 0;
-  if(last % 2 === 0){
-    return {ok:true};
-  }
-  return {ok:false, reason:'한전 AMI 응답 없음 — 계량기 통신 또는 외부망 점검 필요'};
-}
-
-/* 재조회 실행 — 로딩 표시 후 시뮬레이션 결과를 모달에 표기 */
-function rmConfirmRecollect(gid, cid){
-  const g = groupById(gid); if(!g) return;
-  const c = custById(cid); if(!c) return;
-
-  // 1) 모달을 로딩 상태로 전환
-  $('cm-title').textContent = '데이터 재조회 중';
-  $('cm-sub').textContent = `${c.name} (${c.recno})`;
-  $('cm-body').innerHTML = `<div style="padding:32px 16px;text-align:center;">
-      <div class="spinner-inline" style="display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:rm-recollect-spin 0.9s linear infinite;"></div>
-      <div style="margin-top:14px;font-size:13px;color:var(--text-sub);font-weight:500;">한전 AMI 재조회 중...</div>
-      <div style="margin-top:4px;font-size:11px;color:var(--text-hint);">한전 고객번호 ${c.kepco||'-'} · 응답 대기</div>
-    </div>
-    <style>@keyframes rm-recollect-spin{to{transform:rotate(360deg);}}</style>`;
-  $('cm-footer').innerHTML = `<button class="btn btn-secondary" disabled style="opacity:0.5;cursor:not-allowed;">처리 중...</button>`;
-
-  // 2) 1.4초 후 결과 분기 (목업 — 백엔드 응답으로 교체될 위치)
-  setTimeout(()=>{
-    const result = rmSimulateRecollectOutcome(cid);
-    if(result.ok){
-      // 성공: 상태 정상 복구
-      if(g.operational?.custDataStatus?.[cid]){
-        g.operational.custDataStatus[cid] = {status:'NORMAL', lastMinutesAgo:1};
-      }
-      if(g.operational?.dataCollection){
-        const statusMap = g.operational.custDataStatus || {};
-        const failed = Object.values(statusMap).filter(s=>s.status==='FAILED').length;
-        const delayed = Object.values(statusMap).filter(s=>s.status==='DELAYED').length;
-        g.operational.dataCollection.failedCustomers = failed;
-        if(failed===0 && delayed===0){
-          g.operational.dataCollection.status = 'NORMAL';
-          g.operational.dataCollection.lastMinutesAgo = 1;
-        }
-      }
-      logAudit?.({
-        objectType:'customer', objectId:cid, action:'recollect_success',
-        title:`재조회 성공 — ${c.name}`,
-        desc:`한전 고객번호 ${c.kepco||'-'} · 한전 AMI 통신 정상 · 최신 데이터 수신`,
-        actor:'운영자', tone:'success'
-      });
-      $('cm-title').textContent = '재조회 결과';
-      $('cm-body').innerHTML = `<div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:var(--radius);padding:18px 16px;display:flex;gap:12px;align-items:center;">
-          <div style="width:28px;height:28px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">✓</div>
-          <div style="flex:1;">
-            <div style="font-size:14px;font-weight:700;color:var(--green);">수신 정상</div>
-            <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${c.name} · ${c.kepco||'-'}</div>
-          </div>
-        </div>`;
-      $('cm-footer').innerHTML = `<button class="btn btn-primary" onclick="rmCloseRecollect(${gid})">확인</button>`;
-    } else {
-      // 실패: 상태 유지 + 수동업로드 우회 경로 노출
-      logAudit?.({
-        objectType:'customer', objectId:cid, action:'recollect_failed',
-        title:`재조회 실패 — ${c.name}`,
-        desc:`한전 고객번호 ${c.kepco||'-'} · ${result.reason}`,
-        actor:'운영자', tone:'warn'
-      });
-      $('cm-title').textContent = '재조회 결과';
-      $('cm-body').innerHTML = `<div style="background:var(--red-light,#fef2f2);border:1px solid var(--red-border,#fecaca);border-radius:var(--radius);padding:18px 16px;display:flex;gap:12px;align-items:center;">
-          <div style="width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">!</div>
-          <div style="flex:1;">
-            <div style="font-size:14px;font-weight:700;color:var(--red);">통신 실패</div>
-            <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">${c.name} · ${c.kepco||'-'}</div>
-          </div>
-        </div>`;
-      $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">닫기</button>
-        <button class="btn btn-primary" onclick="rmConfirmRecollect(${gid},'${cid}')">다시 시도</button>`;
-    }
-  }, 1400);
-}
-
-/* 재조회 성공 후 모달 닫기 + 화면 동기화 */
-function rmCloseRecollect(gid){
-  closeModal('commonModal');
-  rmOpenDetail(gid, 'op');
-  rmApplyFilter();
-  refreshSidebarBadges?.();
-}
-
 /* ═══ 등록시험 탭 ═══ */
 function rmTabTrialHtml(g){
   // 면제 대상
   if(!g.trial || !g.trial.required){
     return `<div class="op-card">
-      <div class="op-card-title">등록시험 면제 대상</div>
-      <div style="padding:14px 16px;font-size:12px;color:var(--text-sub);line-height:1.7;">
-        이 자원(<b>${g.type}</b>)은 KPX 제도상 <b>등록시험이 면제</b>되는 자원입니다.<br>
-        감축지시 이행을 위한 사전 시험 없이 자원 등록 후 바로 활성화할 수 있습니다.
-      </div>
+      <div style="padding:14px 16px;font-size:12px;color:var(--text-sub);">등록시험 미대상 자원입니다.</div>
     </div>`;
   }
   // 시험 대상
   const tm = trialStatusMeta(g.trial);
   const history = g.trial.history || [];
   const attempts = history.length;
-  const lastAttempt = attempts>0 ? history[history.length-1] : null;
 
-  // 현재 상태 요약 카드 — 수치 중심, 설명은 CSS 툴팁으로
-  const summaryTipBody = `<b>등록시험</b>이란?<br>KPX(전력거래소)가 발령하는 감축지시로, 자원의 실제 이행 능력을 검증 (전력시장운영규칙 제12.3.1조).<br><br><b>판정 기준</b> (제12.3.1.4조):<br>• <span class="tip-good">97% 이상</span> 정상 등록<br>• <span class="tip-warn">80~97%</span> 용량 조정 등록<br>• <span class="tip-bad">80% 미만 또는 시간대별 70% 미만</span> 참여 제한<br><br>시험은 자격 검증 목적이며 <b>정산 대상 아님</b>.`;
   const summaryCard = `<div class="op-card">
-    <div class="op-card-title">
-      <span style="display:inline-flex;align-items:center;gap:6px;">
-        등록시험 현황
-        <span class="tip"><span class="tip-icon">ⓘ</span><span class="tip-body">${summaryTipBody}</span></span>
-      </span>
-    </div>
+    <div class="op-card-title">등록시험 현황</div>
     <div class="op-metric op-metric-1">
       <div class="op-metric-item">
         <div class="op-metric-lbl">시험 대상</div>
@@ -888,7 +651,6 @@ function rmTabTrialHtml(g){
     // 시험 대기 — 통보 전/수신 후/진행 중 모두 자동 처리 상태
     const testEventId = g.trial.currentTestEventId;
     const ev = testEventId ? store.events.reduction.find(e=>e.id===testEventId) : null;
-    const waitingTooltip = '시험 참여는 KPX 통신 규격에 따라 시스템이 자동 처리하며, 운영자의 별도 조작이 필요하지 않습니다. 시험 발령·진행 현황은 감축 모니터링 → 구분: 등록시험에서 확인할 수 있으며, 시험 종료 후 KPX 공식 판정 결과가 자동 반영됩니다.';
     const eventInfoRow = ev
       ? `<div class="trial-info-row">
           <span class="trial-info-lbl">시험 이벤트</span>
@@ -903,12 +665,7 @@ function rmTabTrialHtml(g){
           <span class="trial-info-val" style="color:var(--text-hint);">KPX 시험 이벤트 미수신</span>
         </div>`;
     actionCard = `<div class="op-card">
-      <div class="op-card-title">
-        <span style="display:inline-flex;align-items:center;gap:6px;">
-          ⏳ KPX 등록시험 대기
-          <span class="info-icon" title="${waitingTooltip}">ⓘ</span>
-        </span>
-      </div>
+      <div class="op-card-title">KPX 등록시험 대기</div>
       <div style="padding:12px 14px;">
         <div class="trial-info-grid">${eventInfoRow}</div>
         <div style="margin-top:10px;">
@@ -919,24 +676,12 @@ function rmTabTrialHtml(g){
       </div>
     </div>`;
   } else if(g.trial.status==='FAILED'){
-    // 참여 제한 → 운영자 판단 필요 (제12.3.1.4조 제2항)
-    // 이행률·이벤트 정보는 요약 카드 + 이력 테이블에 이미 표시됨 → 여기서는 판단 버튼만 제공
-    const failedAttempt = lastAttempt;
-    const failedTooltip = '전력시장운영규칙 제12.3.1.4조 제2항: 평균 감축이행률 80% 미만 또는 시간대별 최소 감축이행률 70% 미만인 수요반응자원은 해당 거래기간 참여가 제한되며, 기본정산금·실적정산금을 지급하지 않습니다.';
+    // 불합격 → 일시중지 전환만 제공. 등록시험은 재시험 제도가 없다 (정책서 3-7)
     actionCard = `<div class="op-card op-card-risk">
-      <div class="op-card-title" style="color:var(--red);">
-        <span style="display:inline-flex;align-items:center;gap:6px;">
-          운영자 판단 필요
-          <span class="info-icon" title="${failedTooltip}">ⓘ</span>
-        </span>
-      </div>
+      <div class="op-card-title" style="color:var(--red);">운영자 판단 필요</div>
       <div style="padding:12px 14px;">
         <div class="trial-decision-grid">
-          <button class="trial-decision-btn" onclick="rmRetryTrial(${g.id})" title="자원을 재시험 대기 상태로 전환. 필요 시 참여고객 탭에서 자원 구성 변경(제12.3.1.8조) 후 KPX 재시험 일정 통보를 대기할 수 있습니다.">
-            <div class="trial-decision-title">재시험 대기 전환</div>
-            <div class="trial-decision-desc">차기 등록 신청기간 재시험 응시</div>
-          </button>
-          <button class="trial-decision-btn danger" onclick="rmSuspend(${g.id})" title="등록시험 불합격 자원은 일시중지로 전환합니다. 등록시험은 재시험 제도가 없어 다음 등록 신청기간에 재등록해야 하며, 재등록 준비는 일시중지에서 승인대기로 되돌려 진행합니다. (정책서 3-2-1)">
+          <button class="trial-decision-btn danger" onclick="rmSuspend(${g.id})">
             <div class="trial-decision-title">일시중지 전환</div>
             <div class="trial-decision-desc">사유: 등록시험 불합격</div>
           </button>
@@ -946,21 +691,14 @@ function rmTabTrialHtml(g){
   } else if(g.trial.status==='PASSED'){
     // 합격 — 운영자가 할 일: waiting 상태면 활성 전환, active면 카드 불필요
     // (판정 기준·이행률·이벤트는 상단 요약 카드 + 하단 시험 이력 테이블에 이미 표시됨)
-    if(g.status==='waiting'){
-      actionCard = `<div class="op-card">
-        <div style="padding:12px 14px;font-size:12px;color:var(--text-sub);line-height:1.6;">
-          합격 상태입니다. 상단 <b>활성 전환</b> 버튼으로 상용 감축지시 대상 편입이 가능합니다.
-        </div>
-      </div>`;
-    }
-    // g.status==='active'면 actionCard를 비워둠 — 요약 카드와 이력 테이블로 충분
+    // 합격 후 활성 전환은 하단 액션 버튼에서 실행 — 별도 안내 카드 없음
   }
 
   // 이력 테이블 — 운영 이벤트 클릭 시 이행검증(RPT-01)에서 해당 시험 이벤트 상세로 이동
   const historyCard = `<div class="op-card">
     <div class="op-card-title">시험 이력 (${attempts}회)</div>
     ${attempts===0
-      ? '<div class="empty" style="padding:30px 20px;">아직 KPX로부터 시험 통보를 받지 않았습니다.<br><span style="font-size:10px;">시험 발령 시 감축 모니터링에서 자동으로 확인할 수 있습니다.</span></div>'
+      ? '<div class="empty" style="padding:30px 20px;">시험 이력이 없습니다.</div>'
       : `<div class="trial-list">
         <div class="trial-row trial-row-head">
           <span>시험 결과</span>
@@ -1025,48 +763,9 @@ function rmGoToMonitoringEvent(eventId){
   }, 120);
 }
 
-/* 불합격 자원 재시험 응시 결정 (운영자 판단 기록) */
-function rmRetryTrial(gid){
-  const g = groupById(gid); if(!g) return;
-  $('cm-title').textContent = '재시험 응시 결정';
-  $('cm-sub').textContent = `${g.name}`;
-  $('cm-body').innerHTML = `<div class="info-box">
-    이 자원을 <b>재시험 대기 상태</b>로 전환합니다.<br>
-    재시험 대기 중에는 언제든지 <b>참여고객 탭</b>에서 자원 구성을 변경할 수 있으며,
-    KPX로부터 재시험 일정이 통보되면 <b>감축 모니터링 → 구분: 등록시험</b>에서 확인할 수 있습니다.
-  </div>
-  <div class="form-row"><label class="form-label">운영자 판단 메모</label>
-    <textarea class="form-textarea" id="trial-retry-note" placeholder="재시험 사유, 자원 구성 변경 계획 등"></textarea>
-  </div>`;
-  $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
-    <button class="btn btn-primary" onclick="rmConfirmRetry(${gid})">재시험 응시 확정</button>`;
-  openModal('commonModal');
-}
-
-function rmConfirmRetry(gid){
-  const g = groupById(gid); if(!g) return;
-  const note = $('trial-retry-note').value.trim();
-  // FAILED → WAITING로 전환 (재시험 일정 통보 대기)
-  g.trial.status = 'WAITING';
-  // 운영자 판단 이력 기록
-  g.trial.retryDecisions = g.trial.retryDecisions || [];
-  g.trial.retryDecisions.push({
-    decidedAt: nowStr(),
-    afterAttemptNo: (g.trial.history?.length || 0),
-    note,
-    decidedBy: '운영자',
-  });
-  closeModal('commonModal');
-  rmOpenDetail(gid, 'trial');
-  rmApplyFilter();
-  refreshSidebarBadges();
-  showToast('재시험 대기 상태로 전환되었습니다. KPX 재시험 일정 통보를 기다립니다.');
-}
-
 function rmTabHistoryHtml(g){
   if(!g.reductionHistory?.length) return '<div class="empty">감축이력이 없습니다.</div>';
-  return `<div style="font-size:11px;color:var(--text-hint);margin-bottom:10px;">* 감축 모니터링 페이지에서 각 이벤트 상세를 확인할 수 있습니다.</div>
-  <div class="hist-list">
+  return `<div class="hist-list">
     <div class="hist-row" style="background:#f8f9fc;font-weight:500;color:var(--text-sub);font-size:10px;cursor:default;">
       <span>일시</span><span>유형</span><span style="text-align:right;">지시/실적</span><span style="text-align:right;">이행률</span><span style="text-align:center;">정산</span>
     </div>
@@ -1092,17 +791,9 @@ function rmTabCustomersHtml(g){
   // 시험대기·활성·일시중지·비활성 상태에서는 매핑 잠금 (구성 확정 이후 변경 불가)
   const canMap = g.status==='pending';
   const statusLabel = statusLabelRM(g.status);
-  // 상태별 안내 문구
-  const statusHint = g.status==='pending'
-    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* <b>승인대기 상태</b>에서 참여고객을 편입·삭제할 수 있습니다. 시험대기 단계로 넘어가면 구성이 잠깁니다.</div>'
-    : g.status==='waiting'
-    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 시험대기 상태에서는 참여고객 구성이 잠깁니다. 등록시험 합격 후 활성 단계로 전환됩니다.</div>'
-    : g.status==='active'
-    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 활성 상태에서는 참여고객 구성을 변경할 수 없습니다. 변경이 필요하면 신규 자원그룹으로 재편성하세요.</div>'
-    : g.status==='suspended'
-    ? '<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* 일시중지 상태에서는 참여고객을 변경할 수 없습니다. 운영 재개 후에도 구성은 잠긴 상태입니다.</div>'
-    : g.status==='inactive'
-    ? `<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">* <b>비활성 자원</b> (조회 전용) — 사유: ${g.deactivateReason||'-'}${g.deactivateNote?` / ${g.deactivateNote}`:''}${g.deactivatedAt?` · ${g.deactivatedAt}`:''}. 참여고객 히스토리는 유지됩니다.</div>`
+  // 비활성 자원만 사유 표시. 그 외 상태 안내문은 두지 않는다
+  const statusHint = g.status==='inactive'
+    ? `<div style="font-size:11px;color:var(--text-hint);padding:8px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:10px;line-height:1.6;">비활성 사유: ${g.deactivateReason||'-'}${g.deactivateNote?` / ${g.deactivateNote}`:''}${g.deactivatedAt?` · ${g.deactivatedAt}`:''}</div>`
     : '';
 
   if(!cust.length){
@@ -1219,10 +910,11 @@ function rmRemoveExtraDoc(gid, docId){
   rmRenderDetailBody(g);
 }
 // [v0.2 M-06] 승인대기 → 시험대기/활성 전환 사전 조건 체크 (§3-3 Hard Gate 3조건)
-//   1) 참여고객 수 ≥ 10명
-//   2) 참여용량 ≥ 의무감축용량 (해당 유형만; 국민DR 등 용량 필드 없는 유형은 스킵)
+//   1) 참여고객 수 ≥ 10명 (플러스DR은 1명 이상, 정책서 3-3)
+//   2) 참여용량 ≥ 의무감축용량 (해당 유형만; 국민DR·플러스DR 등 용량 필드 없는 유형은 스킵)
 //   3) KPX 자원 등록 완료 (g.kpxRegistered 명시 필드가 있으면 그 값; 없으면 status!=='pending'이면 완료로 간주)
 const RM_MIN_CUSTOMERS = 10;
+function rmMinCustomers(g){ return g?.typeKey==='plus' ? 1 : RM_MIN_CUSTOMERS; }
 function rmKpxRegistered(g){
   if(g && typeof g.kpxRegistered === 'boolean') return g.kpxRegistered;
   return !!(g && g.status && g.status !== 'pending');
@@ -1234,14 +926,16 @@ function rmParticipationCapacity(g){
   }, 0);
 }
 function rmTargetCapacity(g){
-  return g?.reg?.mandatoryCapacity || g?.reg?.estimatedCapacity || g?.reg?.increaseCapacity || 0;
+  // 플러스DR은 목표 용량(의무증대량)이 없다 → 0
+  return g?.reg?.mandatoryCapacity || g?.reg?.estimatedCapacity || 0;
 }
 function rmActivationPrecheck(g){
   if(!g) return {ok:false, reason:'자원그룹 없음'};
   const issues = [];
   const custCnt = (g.customerIds||[]).length;
-  if(custCnt < RM_MIN_CUSTOMERS){
-    issues.push(`참여고객 부족 (현재 ${custCnt}명 / 필요 ${RM_MIN_CUSTOMERS}명)`);
+  const minCust = rmMinCustomers(g);
+  if(custCnt < minCust){
+    issues.push(`참여고객 부족 (현재 ${custCnt}명 / 필요 ${minCust}명)`);
   }
   const target = rmTargetCapacity(g);
   if(target > 0){
@@ -1298,7 +992,7 @@ function rmActivateDirect(gid){
   rmApplyFilter();
   rmOpenDetail(gid);
   refreshSidebarBadges();
-  showToast(`${g.name} 활성 전환 완료 (시험 미대상 직행)`);
+  showToast(`${g.name} 활성 전환 완료`);
 }
 
 function rmActivate(gid){
@@ -1334,7 +1028,7 @@ function rmSuspend(gid){
   $('cm-title').textContent = '운영 일시중지';
   $('cm-sub').textContent = `${g.name} 운영을 일시중지합니다.`;
   // [v0.2 M-08] 정책서 §3-2 하위 사유 4종으로 통일 (등록시험 불합격 · 감축시험 불합격 · 관리자 임시 정지 · 기타)
-  $('cm-body').innerHTML = `<div class="info-box warning">일시중지된 자원은 감축지시 대상에서 제외됩니다. 단, 계량 데이터 수집은 계속됩니다. 재시험·재개 대기 상태로 관리됩니다.</div>
+  $('cm-body').innerHTML = `<div class="info-box warning">일시중지된 자원은 감축지시 대상에서 제외됩니다.</div>
     <div class="form-row"><label class="form-label">중지 사유 <span class="req">*</span></label>
       <select class="form-select" id="sus-reason">
         <option value="">사유 선택</option>
@@ -1624,7 +1318,7 @@ function rmToggleMappingPick(cid){
 }
 function rmRenderMappingSummary(){
   const g = groupById(rmState.selectedGroupId); if(!g) return;
-  const target = g.reg?.mandatoryCapacity || g.reg?.estimatedCapacity || g.reg?.increaseCapacity || 0;
+  const target = rmTargetCapacity(g);
   const mapped = rmGroupCapacityTotal(g);
   let selectedSum = 0;
   rmState.mappingSelected.forEach(id=>{
@@ -1650,7 +1344,7 @@ function rmConfirmMapping(){
   const g = groupById(rmState.selectedGroupId); if(!g) return;
   if(rmState.mappingSelected.size===0){ showToast('매핑할 고객을 선택하세요.'); return; }
   // 용량 초과 검증
-  const target = g.reg?.mandatoryCapacity || g.reg?.estimatedCapacity || g.reg?.increaseCapacity || 0;
+  const target = rmTargetCapacity(g);
   if(target > 0){
     const mapped = rmGroupCapacityTotal(g);
     let selectedSum = 0;
@@ -1668,9 +1362,7 @@ function rmConfirmMapping(){
         <b>매핑 후 용량</b> ${after.toLocaleString()} kW<br>
         <b>초과량</b> <span style="color:var(--red);font-weight:700;">+${over.toLocaleString()} kW</span>
         </div>
-        <div style="font-size:11px;color:var(--text-sub);margin-top:8px;">
-          의무감축용량을 초과하면 정산 시 초과분은 인정되지 않을 수 있습니다. 그래도 진행하시겠습니까?
-        </div>`;
+        <div style="font-size:11px;color:var(--text-sub);margin-top:8px;">그래도 진행하시겠습니까?</div>`;
       $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
         <button class="btn btn-danger" onclick="closeModal('commonModal');rmDoConfirmMapping();">초과 매핑 진행</button>`;
       openModal('commonModal');
@@ -1694,7 +1386,7 @@ function rmUnmap(gid, cid){
   const c = custById(cid);
   $('cm-title').textContent = '참여고객 제거';
   $('cm-sub').textContent = `${c?.name||cid}을(를) 자원그룹에서 제거합니다.`;
-  $('cm-body').innerHTML = `<div class="info-box warning">제거된 고객은 자원 풀에는 남아있으며, 다른 자원그룹에 다시 매핑할 수 있습니다.</div>`;
+  $('cm-body').innerHTML = '';
   $('cm-footer').innerHTML = `<button class="btn btn-secondary" onclick="closeModal('commonModal')">취소</button>
     <button class="btn btn-danger" onclick="rmConfirmUnmap(${gid},'${cid}')">제거</button>`;
   openModal('commonModal');

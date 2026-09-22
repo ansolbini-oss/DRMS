@@ -142,12 +142,9 @@ const store = {
   ],
 
   /* 자원그룹 (자원관리)
-     status: waiting(승인대기) / active(활성) / suspended(일시중지)
+     status: pending(승인대기) / waiting(시험대기) / active(활성) / suspended(일시중지) / inactive(비활성)
      customerIds: 연결된 customer.id 배열 (계약완료 상태여야 함)
-  */
-  /* 자원그룹 (자원관리)
-     status: waiting(승인대기) / active(활성) / suspended(일시중지)
-     customerIds: 연결된 customer.id 배열 (계약완료 상태여야 함)
+     reg: 유형별 필드. 플러스DR은 region(육지권/제주권)만 갖는다 (의무증대량 없음)
      trial: {
        required: boolean       // 등록시험 대상 여부 (국민DR은 false, 표준·중소형·제주DR은 기본 true)
        status:   // NOT_REQUIRED | WAITING | PASSED | FAILED
@@ -206,13 +203,13 @@ const store = {
       customerIds:['C022','C023'],
       trial:{required:false, status:'NOT_REQUIRED', history:[]}},
     { id:12, name:'플러스DR 서울', type:'플러스DR', typeKey:'plus', status:'active', date:'2024-12-01',
-      reg:{region:'육지권', landSubRegion:['서울','인천','경기'], increaseCapacity:1800},
+      reg:{region:'육지권'},
       file:{name:'수요반응자원_등록신청서_플러스DR_서울.pdf', size:678234, uploadedAt:'2024-12-01 11:00'},
       customerIds:['C024'],
       trial:{required:false, status:'NOT_REQUIRED', history:[]}},
     // [Phase 17-EZ] 제주권 플러스DR — 참여고객 1개(쏘카 제주터미널). 실시간 증대·계획증대 화면 구분 시연용
     { id:13, name:'플러스DR 제주', type:'플러스DR', typeKey:'plus', status:'active', date:'2025-12-01',
-      reg:{region:'제주권', increaseCapacity:950},
+      reg:{region:'제주권'},
       file:{name:'수요반응자원_등록신청서_플러스DR_제주.pdf', size:654120, uploadedAt:'2025-12-01 10:30'},
       customerIds:['C025'],
       trial:{required:false, status:'NOT_REQUIRED', history:[]}},
